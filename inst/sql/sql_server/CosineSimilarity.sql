@@ -72,10 +72,12 @@ on t1.cohort_definition_id_2 = vl2.cohort_definition_id
 and t1.covariate_type = vl2.covariate_type
 ;
 
-
-drop table if exists @results_database_schema.@cosine_sim_table;
-create table @results_database_schema.@cosine_sim_table as
-select cohort_definition_id_1, cohort_definition_id_2, avg(cosine_similarity) as cosine_similarity
+INSERT INTO @results_database_schema.@cosine_sim_table_2
+select
+    cohort_definition_id_1,
+    cohort_definition_id_2,
+    'average' as covariate_type,
+    avg(cosine_similarity) as cosine_similarity
 from @results_database_schema.@cosine_sim_table_2
 group by cohort_definition_id_1, cohort_definition_id_2
 ;

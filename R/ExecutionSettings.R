@@ -26,7 +26,7 @@
 #' @param cohortDefinitionSet           CohortGenerator::cohortDefinitionSet
 #' @param tempEmulationSchema           String DatabaseSchema - temp emulation schema for oracle, bigquery
 #' @param exportZipFile                 Path to zip file output of project
-#' @param databaseId                    Database identifier (string)
+#' @param databaseName                  Database identifier (string)
 #' @param incrementalFolder             folder for storage of incremental results for cohort generation
 #' @param vocabularyDatabaseSchema      standard vocabulary database schema
 #' @param cohortTable                   (optional) cohort table
@@ -35,17 +35,18 @@
 #' @param covariateDefTable             (optional) where covariate definitions are stored
 #' @param covariateMeansTable           (optional) where covariate means are stored
 #' @param cosineSimStratifiedTable      (optional) where stratified cosine similarity scores are stored
-#' @param cosineSimTable                (optional) Where cosine similarity scores are stored
 #' @param minExposureSize               (optional) Minimum number of exposures to be included in cosine similarity
 #'                                      analysis (defaults to 1000).
 #' @param logFileLocation               (optional) Log file location
-#'
+#' @param exportDir                     (optional) Folder to store results files in before export (default is tempdir)
+#' @param removeExportDir               (optional) remove the export dir after creating zip files?
+#' @pram .callbackFun                   Used internally - an on.exit call for disconnection from db
 #' @returns executionSettings object
 #' @export
 createExecutionSettings <- function(connectionDetails,
                                     connection = NULL,
-                                    databaseId,
-                                    incrementalFolder = paste0("incremental_", databaseId),
+                                    databaseName,
+                                    incrementalFolder = paste0("incremental_", databaseName),
                                     cdmDatabaseSchema,
                                     vocabularyDatabaseSchema = cdmDatabaseSchema,
                                     resultsDatabaseSchema,
@@ -57,11 +58,13 @@ createExecutionSettings <- function(connectionDetails,
                                     cohortDefinitionTable = "cse_cohort_definition",
                                     covariateDefTable = "cse_covariate_ref",
                                     covariateMeansTable = "cse_covariate_means",
-                                    cosineSimStratifiedTable = "cse_cosine_sim_strat",
-                                    cosineSimTable = "cse_cosine_sim",
+                                    cosineSimStratifiedTable = "cse_cosine_sim",
                                     minExposureSize = 1000,
-                                    logFileLocation = paste0("cse-execution-log-", databaseId, ".txt"),
-                                    exportZipFile) {
+                                    logFileLocation = paste0("cse-execution-log-", databaseName, ".txt"),
+                                    exportDir = tempfile(),
+                                    removeExportDir = TRUE,
+                                    exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", databaseName, ".zip")),
+                                    .callbackFun = NULL) {
 
   checkmate::assertClass(connectionDetails, "connectionDetails")
   checkmate::assertTRUE(is.null(cohortDefinitionSet) || CohortGenerator::isCohortDefinitionSet(cohortDefinitionSet))
@@ -69,7 +72,7 @@ createExecutionSettings <- function(connectionDetails,
   executionSettings <- list(
     connectionDetails = connectionDetails,
     cdmDatabaseSchema = cdmDatabaseSchema,
-    databaseId = databaseId,
+    databaseName = databaseName,
     vocabularyDatabaseSchema = vocabularyDatabaseSchema,
     resultsDatabaseSchema = resultsDatabaseSchema,
     cohortDatabaseSchema = cohortDatabaseSchema,
@@ -83,8 +86,9 @@ createExecutionSettings <- function(connectionDetails,
     covariateDefTable = covariateDefTable,
     covariateMeansTable = covariateMeansTable,
     cosineSimStratifiedTable = cosineSimStratifiedTable,
-    cosineSimTable = cosineSimTable,
     minExposureSize = minExposureSize,
+    exportDir = exportDir,
+    removeExportDir = removeExportDir,
     connection = connection
   )
   class(executionSettings) <- "executionSettings"
@@ -98,6 +102,33 @@ createExecutionSettings <- function(connectionDetails,
     ParallelLogger::addDefaultFileLogger(logFileLocation)
     ParallelLogger::addDefaultConsoleLogger()
   }
+
+  # Get database ID from cdm_source table
+  if (is.null(executionSettings$connection)) {
+    executionSettings$connection <- DatabaseConnector::connect(executionSettings$connectionDetails)
+    if (is.function(.callbackFun)) {
+      .callbackFun({
+        DatabaseConnector::disconnect(executionSettings$connection)
+        executionSettings$connection <- NULL
+      })
+    }
+  }
+
+  fields <- DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
+                                                       "
+                                                       SELECT
+                                                           '@database_name' as database_name,
+                                                           CDM_SOURCE_NAME,
+                                                           CDM_SOURCE_ABBREVIATION,
+                                                           SOURCE_RELEASE_DATE,
+                                                           CDM_RELEASE_DATE
+                                                       FROM @cdm_database_schema.cdm_source;
+                                                       ",
+                                                       cdm_database_schema = executionSettings$cdmDatabaseSchema,
+                                                       database_name = executionSettings$databaseName,
+                                                       snakeCaseToCamelCase = TRUE)
+
+  executionSettings$databaseId <- abs(digest::digest2int(paste(fields, collapse = ""), seed = 999))
 
   return(executionSettings)
 }

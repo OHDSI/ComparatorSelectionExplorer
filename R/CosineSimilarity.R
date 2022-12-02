@@ -20,15 +20,7 @@
 #' @export
 generateSimilarityScores <- function(executionSettings = NULL, ...) {
   if (is.null(executionSettings) || missing(executionSettings)) {
-    executionSettings <- createExecutionSettings(...)
-  }
-
-  if (is.null(executionSettings$connection)) {
-    executionSettings$connection <- DatabaseConnector::connect(executionSettings)
-    on.exit({
-      DatabaseConnector::disconnect(executionSettings$connection)
-      executionSettings$connection <- NULL
-    })
+    executionSettings <- createExecutionSettings(..., .callbackFun = on.exit)
   }
 
   sql <- SqlRender::loadRenderTranslateSql("SelectiveFeatureExtraction.sql",
@@ -54,8 +46,7 @@ generateSimilarityScores <- function(executionSettings = NULL, ...) {
                                            cohort_counts = executionSettings$cohortCountsTable,
                                            covariate_def_table = executionSettings$covariateDefTable,
                                            covariate_means_table = executionSettings$covariateMeansTable,
-                                           cosine_sim_table_2 = executionSettings$cosineSimStratifiedTable,
-                                           cosine_sim_table = executionSettings$cosineSimTable)
+                                           cosine_sim_table_2 = executionSettings$cosineSimStratifiedTable)
 
   DatabaseConnector::executeSql(executionSettings$connection, sql)
 

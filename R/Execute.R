@@ -26,15 +26,7 @@
 execute <- function(executionSettings = NULL, ...) {
 
   if (is.null(executionSettings) || missing(executionSettings)) {
-    executionSettings <- createExecutionSettings(...)
-  }
-
-  if (is.null(executionSettings$connection)) {
-    executionSettings$connection <- DatabaseConnector::connect(executionSettings$connectionDetails)
-    on.exit({
-      DatabaseConnector::disconnect(executionSettings$connection)
-      executionSettings$connection <- NULL
-    })
+    executionSettings <- createExecutionSettings(..., .callbackFun = on.exit)
   }
 
   executionSettings <- executionSettings  |>

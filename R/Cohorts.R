@@ -21,15 +21,7 @@
 #' @export
 createCohorts <- function(executionSettings = NULL, ...) {
   if (is.null(executionSettings) || missing(executionSettings)) {
-    executionSettings <- createExecutionSettings(...)
-  }
-
-  if (is.null(executionSettings$connection)) {
-    executionSettings$connection <- DatabaseConnector::connect(executionSettings)
-    on.exit({
-      DatabaseConnector::disconnect(executionSettings$connection)
-      executionSettings$connection <- NULL
-    })
+    executionSettings <- createExecutionSettings(..., .callbackFun = on.exit)
   }
 
   # Create tables if they don't exist already
@@ -76,6 +68,8 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                        stopOnError = TRUE,
                                        incremental = TRUE,
                                        incrementalFolder = executionSettings$incrementalFolder)
+
+    # TODO: add these definitions to the cohort_definition table
   }
 
   invisible(executionSettings)

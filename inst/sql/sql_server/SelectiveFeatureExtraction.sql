@@ -1,6 +1,3 @@
-{DEFAULT @cohort_counts = cse_exposure_cohort_counts}
-
-
 -- PARAMETERS
 --- @cohort_counts: name of table where cohort sample sizes are stored
 --- @cohort: name of cohort table to use for feature extraction
