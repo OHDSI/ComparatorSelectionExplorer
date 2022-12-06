@@ -10,7 +10,7 @@
 CREATE TABLE @database_schema.@table_prefix@cohort_definition (
   	 cohort_definition_id BIGINT NOT NULL,
 	 concept_id BIGINT,
-	 cohort_name VARCHAR,
+	 cohort_defintion_name VARCHAR,
 	 short_name VARCHAR,
 	 atc_flag INT,
 	 database_id BIGINT NOT NULL,

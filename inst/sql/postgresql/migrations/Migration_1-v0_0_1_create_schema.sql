@@ -11,10 +11,11 @@
 CREATE TABLE @database_schema.@table_prefix@cohort_definition (
   	 cohort_definition_id BIGINT PRIMARY KEY NOT NULL,
 	 concept_id BIGINT,
-	 cohort_name VARCHAR,
+	 cohort_defintion_name VARCHAR,
 	 short_name VARCHAR,
 	 atc_flag INT,
-	 database_id BIGINT PRIMARY KEY NOT NULL
+	 database_id BIGINT PRIMARY KEY NOT NULL,
+	  PRIMARY KEY(cohort_definition_id, database_id)
 );
 
 CREATE TABLE @database_schema.@table_prefix@cdm_source_info (
@@ -32,16 +33,18 @@ CREATE TABLE @database_schema.@table_prefix@cdm_source_info (
 
 CREATE TABLE @database_schema.@table_prefix@cohort_counts (
   	 num_persons BIGINT,
-	 cohort_definition_id BIGINT PRIMARY KEY NOT NULL,
-	 database_id BIGINT PRIMARY KEY NOT NULL
+	 cohort_definition_id BIGINT NOT NULL,
+	 database_id BIGINT NOT NULL,
+	 PRIMARY KEY(cohort_definition_id, database_id)
 );
 
 CREATE TABLE @database_schema.@table_prefix@cosine_similarity (
-  	 database_id BIGINT PRIMARY KEY NOT NULL,
-	 cohort_definition_id_1 BIGINT PRIMARY KEY NOT NULL,
-	 cohort_definition_id_2 BIGINT PRIMARY KEY NOT NULL,
+  	 database_id BIGINT NOT NULL,
+	 cohort_definition_id_1 BIGINT NOT NULL,
+	 cohort_definition_id_2 BIGINT NOT NULL,
 	 covariate_type VARCHAR,
-	 cosine_similarity FLOAT
+	 cosine_similarity FLOAT,
+	 PRIMARY KEY(cohort_definition_id_1, cohort_definition_id_2, database_id)
 ) PARTITION BY LIST (database_id);
 
 CREATE TABLE @database_schema.@table_prefix@covariate_definition (
@@ -54,10 +57,11 @@ CREATE TABLE @database_schema.@table_prefix@covariate_definition (
 );
 
 CREATE TABLE @database_schema.@table_prefix@covariate_mean (
-  	 database_id BIGINT PRIMARY KEY NOT NULL,
-	 cohort_definition_id BIGINT PRIMARY KEY NOT NULL,
+  	 database_id BIGINT NOT NULL,
+	 cohort_definition_id BIGINT NOT NULL,
 	 covariate_id BIGINT,
 	 covariate_mean FLOAT
+	 PRIMARY KEY(cohort_definition_id, database_id)
 ) PARTITION BY LIST (database_id);
 
 CREATE TABLE @database_schema.@table_prefix@package_version (
