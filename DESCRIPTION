@@ -4,7 +4,7 @@ Title: OHDSI Comparator Selection Explorer
 Version: 0.1.0
 Date: 2022-11-29
 Authors@R: c(
-  person("Jamie", "Gilbert", role = c("aut")),
+  person("Jamie", "Gilbert",  email = "gilbert@ohdsi.org", role = c("aut", "cre")),
   person("Justin", "Bohn", role = c("aut")),
   person("Chris", "Knoll", role = c("aut")),
   person("Patrick", "Ryan", role = c("aut")),
@@ -31,7 +31,7 @@ Suggests:
   Eunomia,
   testthat (>= 3.0.0)
 Remotes:
-  ohdsi/ResultModelManager,
+  ohdsi/ResultModelManager@upload_utility,
   ohdsi/CohortGenerator,
   ohdsi/Eunomia
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues

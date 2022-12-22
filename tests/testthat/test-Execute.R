@@ -16,4 +16,11 @@ test_that("Execution", {
                                                                          server = "test.sqlite")
   on.exit(unlink("test.sqlite"), add = TRUE)
   createResultsDataModel(resultsConnectionDetails, "main")
+
+  uploadResults(connectionDetails = resultsConnectionDetails,
+                databaseSchema = "main",
+                zipFileName = executionSettings$exportZipFile,
+                forceOverWriteOfSpecifications = FALSE,
+                purgeSiteDataBeforeUploading = FALSE,
+                tablePrefix = "")
 })

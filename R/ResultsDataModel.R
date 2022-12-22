@@ -68,14 +68,29 @@ createResultsDataModel <- function(connectionDetails, databaseSchema, tablePrefi
   migrateDataModel(connectionDetails, databaseSchema, tablePrefix)
 }
 
-
-#' Import results
-#' @description take a zip file and add results to the tables
-#' @inheritParams getDataMigrator
-#' @param zipFilepath               Path to zipfile to import
+#'Get Results Data Model Specifcations
+#'
 #' @export
-importResults <- function(connectionDetails,
-                          zipFilepath,
-                          databaseSchema) {
+getResultsDataModelSpec <- function() {
+  specPath <- system.file("settings", "resultsDataModel.csv", package = utils::packageName())
+  readr::read_csv(specPath, show_col_types = FALSE)
+}
 
+#' Upload Results
+#' @description
+#'
+#' Upload results to database server
+#'
+#' @param connectionDetails             DatabaseConnector connection details object
+#' @param databaseSchema                String schema where database schema lives
+#' @param tablePrefix                  (Optional) Use if a table prefix is used before table names (e.g. "cd_")
+#' @param zipFileName                  Path to zipFile containing results
+#' @export
+uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tablePrefix = "", ...) {
+  ResultModelManager::uploadResults(connectionDetails = connectionDetails,
+                                    schema = databaseSchema,
+                                    zipFileName = zipFileName,
+                                    tablePrefix = tablePrefix,
+                                    specifications = getResultsDataModelSpec(),
+                                    ...)
 }
