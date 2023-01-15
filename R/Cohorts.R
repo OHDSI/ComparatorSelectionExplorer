@@ -59,17 +59,35 @@ createCohorts <- function(executionSettings = NULL, ...) {
   if (!is.null(executionSettings$cohortDefinitionSet)) {
     # Generate custom cohorts
     ParallelLogger::logInfo("Creating custom cohorts with Cohort Generator")
-    CohortGenerator::generateCohortSet(connection = executionSettings$connection,
-                                       cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
-                                       tempEmulationSchema = executionSettings$tempEmulationSchema,
-                                       cohortDatabaseSchema = executionSettings$cdmDatabaseSchema,
-                                       cohortTableNames = executionSettings$cohortTableNames,
-                                       cohortDefinitionSet = executionSettings$cohortDefinitionSet,
-                                       stopOnError = TRUE,
-                                       incremental = TRUE,
-                                       incrementalFolder = executionSettings$incrementalFolder)
+    if (executionSettings$generateCohortDefinitionSet) {
+      CohortGenerator::generateCohortSet(connection = executionSettings$connection,
+                                         cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                         tempEmulationSchema = executionSettings$tempEmulationSchema,
+                                         cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                         cohortTableNames = executionSettings$cohortTableNames,
+                                         cohortDefinitionSet = executionSettings$cohortDefinitionSet,
+                                         stopOnError = TRUE,
+                                         incremental = TRUE,
+                                         incrementalFolder = executionSettings$incrementalFolder)
+    }
 
-    # TODO: add these definitions to the cohort_definition table
+    cohortRef <- executionSettings$generateCohortDefinitionSet %>%
+      dplyr::select("cohortId", "cohortName") %>%
+      dplyr::mutate(atcFlag = -1,
+                    conceptId = -1,
+                    shortName = cohortName,
+                    isCustomCohort = 1) %>%
+      dplyr::rename("cohortDefinitionName" = "cohortName",
+                    "cohortDefinitionId" = "cohortId")
+
+    DatabaseConnector::insertTable(connection = executionSettings$connection,
+                                   data = cohortRef,
+                                   tableName = executionSettings$cohortDefinitionTable,
+                                   databaseSchema = executionSettings$resultsDatabaseSchema,
+                                   camelCaseToSnakeCase = TRUE,
+                                   dropTableIfExists = FALSE,
+                                   createTable = FALSE,
+                                   tempTable = FALSE)
   }
 
   invisible(executionSettings)

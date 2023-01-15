@@ -88,6 +88,35 @@ shinyServer(function(input, output, session) {
     )
   })
 
+
+  getDatabaseSources <- shiny::reactive({
+    renderTranslateQuerySql(
+      connection = conn,
+      sql = "select distinct *
+             from @schema.@table t",
+      dbms = connectionDetails$dbms,
+      schema = resultsSchema,
+      table = databaseTable,
+      snakeCaseToCamelCase = TRUE
+    )
+  })
+
+  observe({
+    shiny::withProgress({
+      dbSources <- getDatabaseSources()
+      dbChoices <- dbSources$sourceId
+      names(dbChoices) <- dbSources$sourceName
+
+      updateSelectizeInput(
+        session,
+        "selectedDatabase",
+        choices = dbSources$sourceId,
+        selected = dbChoices$sourceId[1],
+        server = TRUE)
+    }, message = "Loading cohort definitions")
+  })
+
+
   observe({
     shiny::withProgress({
       cohortDefinitions <- getCohortDefinitions()
@@ -200,7 +229,6 @@ shinyServer(function(input, output, session) {
 
     rt
   })
-
 
   selectedComparator <- shiny::reactive({
     selection <- reactable::getReactableState("cosineSimilarityTbl", name = "selected")

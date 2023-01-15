@@ -23,13 +23,14 @@ Imports:
   CohortGenerator,
   checkmate,
   SqlRender (>= 1.9.0),
-  readr
+  readr,
+  dplyr
 Suggests:
   shiny,
   reactable,
   ggplot2,
   Eunomia,
-  testthat (>= 3.0.0)
+  testthat (>= 3.0.0),
 Remotes:
   ohdsi/ResultModelManager@upload_utility,
   ohdsi/CohortGenerator,

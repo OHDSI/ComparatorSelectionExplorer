@@ -27,6 +27,7 @@
 #' @param tempEmulationSchema           String DatabaseSchema - temp emulation schema for oracle, bigquery
 #' @param exportZipFile                 Path to zip file output of project
 #' @param databaseName                  Database identifier (string)
+#' @param databaseId                    Database identifier integer (optional)
 #' @param incrementalFolder             folder for storage of incremental results for cohort generation
 #' @param vocabularyDatabaseSchema      standard vocabulary database schema
 #' @param cohortTable                   (optional) cohort table
@@ -45,10 +46,11 @@
 #' @export
 createExecutionSettings <- function(connectionDetails,
                                     connection = NULL,
-                                    databaseName,
-                                    incrementalFolder = paste0("incremental_", databaseName),
+                                    databaseName = NULL,
+                                    databaseId = NULL,
                                     cdmDatabaseSchema,
                                     vocabularyDatabaseSchema = cdmDatabaseSchema,
+                                    incrementalFolder = paste0("incremental_", cdmDatabaseSchema),
                                     resultsDatabaseSchema,
                                     cohortDatabaseSchema = resultsDatabaseSchema,
                                     cohortTable = "cse_cohort",
@@ -60,14 +62,17 @@ createExecutionSettings <- function(connectionDetails,
                                     covariateMeansTable = "cse_covariate_means",
                                     cosineSimStratifiedTable = "cse_cosine_sim",
                                     minExposureSize = 1000,
-                                    logFileLocation = paste0("cse-execution-log-", databaseName, ".txt"),
+                                    logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
                                     exportDir = tempfile(),
                                     removeExportDir = TRUE,
-                                    exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", databaseName, ".zip")),
+                                    generateCohortDefinitionSet = FALSE,
+                                    exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip")),
                                     .callbackFun = NULL) {
 
-  checkmate::assertClass(connectionDetails, "connectionDetails")
+  checkmate::assertClass(connectionDetails, "ConnectionDetails")
   checkmate::assertTRUE(is.null(cohortDefinitionSet) || CohortGenerator::isCohortDefinitionSet(cohortDefinitionSet))
+  checkmate::assertIntegerish(databaseId, null.ok = TRUE)
+  checkmate::assertString(databaseId, null.ok = TRUE)
 
   executionSettings <- list(
     connectionDetails = connectionDetails,
@@ -89,6 +94,7 @@ createExecutionSettings <- function(connectionDetails,
     minExposureSize = minExposureSize,
     exportDir = exportDir,
     removeExportDir = removeExportDir,
+    generateCohortDefinitionSet = generateCohortDefinitionSet,
     connection = connection
   )
   class(executionSettings) <- "executionSettings"
@@ -114,21 +120,30 @@ createExecutionSettings <- function(connectionDetails,
     }
   }
 
-  fields <- DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
-                                                       "
-                                                       SELECT
-                                                           '@database_name' as database_name,
-                                                           CDM_SOURCE_NAME,
-                                                           CDM_SOURCE_ABBREVIATION,
-                                                           SOURCE_RELEASE_DATE,
-                                                           CDM_RELEASE_DATE
-                                                       FROM @cdm_database_schema.cdm_source;
-                                                       ",
-                                                       cdm_database_schema = executionSettings$cdmDatabaseSchema,
-                                                       database_name = executionSettings$databaseName,
-                                                       snakeCaseToCamelCase = TRUE)
+  executionSettings$databaseId <- databaseId
+  if (is.null(executionSettings$databaseId)) {
+    fields <- DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
+                                                         "
+                                                         SELECT
+                                                             CDM_SOURCE_NAME,
+                                                             CDM_SOURCE_ABBREVIATION,
+                                                             SOURCE_RELEASE_DATE,
+                                                             CDM_RELEASE_DATE
+                                                         FROM @cdm_database_schema.cdm_source;
+                                                         ",
+                                                         cdm_database_schema = executionSettings$cdmDatabaseSchema,
+                                                         snakeCaseToCamelCase = TRUE)
 
-  executionSettings$databaseId <- abs(digest::digest2int(paste(fields, collapse = ""), seed = 999))
+    executionSettings$databaseId <- abs(digest::digest2int(paste(fields, collapse = ""), seed = 999))
+  }
+
+  if (is.null(executionSettings$databaseName)) {
+    fields <- DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
+                                                         "SELECT CDM_SOURCE_NAME FROM @cdm_database_schema.cdm_source;",
+                                                         cdm_database_schema = executionSettings$cdmDatabaseSchema,
+                                                         snakeCaseToCamelCase = TRUE)
+    executionSettings$databaseName <- fields$cdmSourceName
+  }
 
   return(executionSettings)
 }

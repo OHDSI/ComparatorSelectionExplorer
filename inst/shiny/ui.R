@@ -24,10 +24,13 @@ shinyUI(fluidPage(
     type = "pills",
     tabPanel(
       title = "Tool",
-
       sidebarLayout(
         sidebarPanel(
           h4(strong("Settings")),
+          shiny::selectizeInput(
+            inputId = "selectedDatabase",
+            choices = NULL,
+            label = "Select target data source:"),
           shiny::selectizeInput(
             inputId = "selectedExposure",
             choices = NULL,

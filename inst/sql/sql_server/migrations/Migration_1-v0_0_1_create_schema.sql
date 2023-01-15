@@ -10,11 +10,10 @@
 CREATE TABLE @database_schema.@table_prefix@cohort_definition (
   	 cohort_definition_id BIGINT NOT NULL,
 	 concept_id BIGINT,
-	 cohort_defintion_name VARCHAR,
+	 cohort_definition_name VARCHAR,
 	 short_name VARCHAR,
 	 atc_flag INT,
-	 database_id BIGINT NOT NULL,
-	 PRIMARY KEY(cohort_definition_id, database_id)
+	 PRIMARY KEY(cohort_definition_id)
 );
  
 CREATE TABLE @database_schema.@table_prefix@cdm_source_info (
@@ -60,7 +59,7 @@ CREATE TABLE @database_schema.@table_prefix@covariate_mean (
 	 cohort_definition_id BIGINT  NOT NULL,
 	 covariate_id BIGINT  NOT NULL,
 	 covariate_mean FLOAT NOT NULL,
-	 PRIMARY KEY(cohort_definition_id, database_id)
+	 PRIMARY KEY(cohort_definition_id, database_id, covariate_id)
 );
 
 CREATE TABLE @database_schema.@table_prefix@package_version (

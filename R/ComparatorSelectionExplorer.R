@@ -18,4 +18,5 @@
 "_PACKAGE"
 
 #' @import DatabaseConnector
+#' @importFrom dplyr %>%
 NULL

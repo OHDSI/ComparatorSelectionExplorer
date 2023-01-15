@@ -47,7 +47,10 @@ exportResults <- function(executionSettings = NULL, ...) {
 
   exportResultsFun <- function(data, position, csvFilename, addDbId = FALSE, ...) {
     if (nrow(data)) {
-      if (addDbId) data$database_id <- executionSettings$databaseId
+      if (addDbId) {
+        data$database_id <- executionSettings$databaseId
+      }
+
       readr::write_csv(data,
                        file = file.path(executionSettings$exportDir, csvFilename),
                        append = position != 1,
@@ -103,7 +106,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
 
   sql <- "
-  SELECT * FROM  @results_database_schema.@table t
+  SELECT t.* FROM  @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id = ct.cohort_definition_id
   WHERE ct.num_persons >= @min_exposure_size"
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
@@ -119,7 +122,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
 
   sql <- "
-  SELECT * FROM  @results_database_schema.@table t
+  SELECT t.* FROM @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id_1 = ct.cohort_definition_id
   INNER JOIN @results_database_schema.@count_table ct2 ON t.cohort_definition_id_2 = ct2.cohort_definition_id
   WHERE ct.num_persons >= @min_exposure_size

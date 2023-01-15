@@ -1,7 +1,6 @@
 test_that("Execution", {
 
   executionSettings <- createExecutionSettings(connectionDetails = connectionDetails,
-                                               databaseName = "eunomia",
                                                cdmDatabaseSchema = "main",
                                                resultsDatabaseSchema = "main",
                                                cohortTable = "cse_cohort")
