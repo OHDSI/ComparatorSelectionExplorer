@@ -14,7 +14,7 @@ CREATE TABLE @database_schema.@table_prefix@cohort_definition (
 	 cohort_definition_name VARCHAR,
 	 short_name VARCHAR,
 	 atc_flag INT,
-	  PRIMARY KEY(cohort_definition_id)
+	 PRIMARY KEY(cohort_definition_id)
 );
 
 CREATE TABLE @database_schema.@table_prefix@cdm_source_info (

@@ -7,8 +7,7 @@ AS SELECT DISTINCT
     CONCEPT_NAME AS COHORT_DEFINITION_NAME,
     CONCAT(VOCABULARY_ID, ' - ', CONCEPT_NAME) AS SHORT_NAME,
     CONCEPT_ID,
-    CASE WHEN vocabulary_id = 'ATC' THEN 1 else 0 END AS ATC_FLAG,
-    0 AS is_custom_cohort
+    CASE WHEN vocabulary_id = 'ATC' THEN 1 else 0 END AS ATC_FLAG
 FROM @vocabulary_schema.concept
 WHERE (concept_class_id = 'Ingredient' AND vocabulary_id = 'RxNorm' AND standard_concept = 'S')
 OR (concept_class_id = 'ATC 4th' AND vocabulary_id = 'ATC');

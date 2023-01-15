@@ -94,6 +94,7 @@ createExecutionSettings <- function(connectionDetails,
     minExposureSize = minExposureSize,
     exportDir = exportDir,
     removeExportDir = removeExportDir,
+    cohortDefinitionSet = cohortDefinitionSet,
     generateCohortDefinitionSet = generateCohortDefinitionSet,
     connection = connection
   )

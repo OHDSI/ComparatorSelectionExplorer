@@ -71,20 +71,20 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                          incrementalFolder = executionSettings$incrementalFolder)
     }
 
-    cohortRef <- executionSettings$generateCohortDefinitionSet %>%
+    cohortRef <- executionSettings$cohortDefinitionSet %>%
       dplyr::select("cohortId", "cohortName") %>%
       dplyr::mutate(atcFlag = -1,
                     conceptId = -1,
-                    shortName = cohortName,
-                    isCustomCohort = 1) %>%
+                    shortName = cohortName) %>%
       dplyr::rename("cohortDefinitionName" = "cohortName",
                     "cohortDefinitionId" = "cohortId")
 
+    colnames(cohortRef) <- toupper(SqlRender::camelCaseToSnakeCase(colnames(cohortRef)))
     DatabaseConnector::insertTable(connection = executionSettings$connection,
                                    data = cohortRef,
                                    tableName = executionSettings$cohortDefinitionTable,
                                    databaseSchema = executionSettings$resultsDatabaseSchema,
-                                   camelCaseToSnakeCase = TRUE,
+                                   camelCaseToSnakeCase = FALSE,
                                    dropTableIfExists = FALSE,
                                    createTable = FALSE,
                                    tempTable = FALSE)
