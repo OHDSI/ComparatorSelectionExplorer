@@ -16,11 +16,10 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: 
+\strong{Maintainer}: Jamie Gilbert \email{gilbert@ohdsi.org}
 
 Authors:
 \itemize{
-  \item Jamie Gilbert
   \item Justin Bohn
   \item Chris Knoll
   \item Patrick Ryan

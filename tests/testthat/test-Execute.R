@@ -10,7 +10,7 @@ test_that("Execution", {
                                                generateCohortDefinitionSet = TRUE,
                                                cdmDatabaseSchema = "main",
                                                resultsDatabaseSchema = "main",
-                                               cohortTable = "cse_cohort", )
+                                               cohortTable = "cse_cohort")
   unlink(executionSettings$exportZipFile)
   on.exit(unlink(executionSettings$exportZipFile))
 

@@ -41,7 +41,7 @@
 #' @param logFileLocation               (optional) Log file location
 #' @param exportDir                     (optional) Folder to store results files in before export (default is tempdir)
 #' @param removeExportDir               (optional) remove the export dir after creating zip files?
-#' @pram .callbackFun                   Used internally - an on.exit call for disconnection from db
+#' @param .callbackFun                   Used internally - an on.exit call for disconnection from db
 #' @returns executionSettings object
 #' @export
 createExecutionSettings <- function(connectionDetails,

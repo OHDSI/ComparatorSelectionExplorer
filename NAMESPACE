@@ -2,6 +2,13 @@
 
 export(createCohorts)
 export(createExecutionSettings)
+export(createResultsDataModel)
 export(execute)
+export(exportResults)
 export(generateSimilarityScores)
+export(getDataMigrator)
+export(getResultsDataModelSpec)
+export(migrateDataModel)
+export(uploadResults)
 import(DatabaseConnector)
+importFrom(dplyr,"%>%")

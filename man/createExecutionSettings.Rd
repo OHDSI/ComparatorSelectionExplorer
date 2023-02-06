@@ -7,36 +7,79 @@
 createExecutionSettings(
   connectionDetails,
   connection = NULL,
-  databaseId,
-  incrementalFolder = paste0("incremental_", databaseId),
+  databaseName = NULL,
+  databaseId = NULL,
   cdmDatabaseSchema,
   vocabularyDatabaseSchema = cdmDatabaseSchema,
+  incrementalFolder = paste0("incremental_", cdmDatabaseSchema),
   resultsDatabaseSchema,
   cohortDatabaseSchema = resultsDatabaseSchema,
   cohortTable = "cse_cohort",
   tempEmulationSchema = getOption("tempEmulationSchema"),
   cohortDefinitionSet = NULL,
-  exportZipFile
+  cohortCountTable = "cse_cohort_count",
+  cohortDefinitionTable = "cse_cohort_definition",
+  covariateDefTable = "cse_covariate_ref",
+  covariateMeansTable = "cse_covariate_means",
+  cosineSimStratifiedTable = "cse_cosine_sim",
+  minExposureSize = 1000,
+  logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
+  exportDir = tempfile(),
+  removeExportDir = TRUE,
+  generateCohortDefinitionSet = FALSE,
+  exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_",
+    cdmDatabaseSchema, ".zip")),
+  .callbackFun = NULL
 )
 }
 \arguments{
 \item{connectionDetails}{DatabaseConnector::connectionDetails instance}
 
-\item{connection}{DatabaseConnector::connection (or null)}
+\item{connection}{DatabaseConnector::connection (defaults to null). Use for persistent storage of
+reference}
+
+\item{databaseName}{Database identifier (string)}
+
+\item{databaseId}{Database identifier integer (optional)}
 
 \item{cdmDatabaseSchema}{String Database schema - where data lives}
+
+\item{vocabularyDatabaseSchema}{standard vocabulary database schema}
+
+\item{incrementalFolder}{folder for storage of incremental results for cohort generation}
 
 \item{resultsDatabaseSchema}{String Database schema - where similarity scores are stored}
 
 \item{cohortDatabaseSchema}{String Database schema - where cohort table is created}
 
+\item{cohortTable}{(optional) cohort table}
+
 \item{tempEmulationSchema}{String DatabaseSchema - temp emulation schema for oracle, bigquery}
 
 \item{cohortDefinitionSet}{CohortGenerator::cohortDefinitionSet}
 
+\item{cohortCountTable}{(optional) count tabls}
+
+\item{cohortDefinitionTable}{(optional) definitions table}
+
+\item{covariateDefTable}{(optional) where covariate definitions are stored}
+
+\item{covariateMeansTable}{(optional) where covariate means are stored}
+
+\item{cosineSimStratifiedTable}{(optional) where stratified cosine similarity scores are stored}
+
+\item{minExposureSize}{(optional) Minimum number of exposures to be included in cosine similarity
+analysis (defaults to 1000).}
+
+\item{logFileLocation}{(optional) Log file location}
+
+\item{exportDir}{(optional) Folder to store results files in before export (default is tempdir)}
+
+\item{removeExportDir}{(optional) remove the export dir after creating zip files?}
+
 \item{exportZipFile}{Path to zip file output of project}
 
-\item{cohortReferenceFilePath}{Path to CSV containing list of exposures}
+\item{.callbackFun}{Used internally - an on.exit call for disconnection from db}
 }
 \value{
 executionSettings object
