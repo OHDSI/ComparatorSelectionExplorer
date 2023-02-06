@@ -13,8 +13,7 @@ CREATE TABLE @database_schema.@table_prefix@cohort_definition (
 	 concept_id BIGINT,
 	 cohort_definition_name VARCHAR,
 	 short_name VARCHAR,
-	 atc_flag INT,
-	 PRIMARY KEY(cohort_definition_id)
+	 atc_flag INT
 );
 
 CREATE TABLE @database_schema.@table_prefix@cdm_source_info (
