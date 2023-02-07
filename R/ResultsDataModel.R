@@ -109,7 +109,7 @@ uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tableP
     for (databaseId in databaseIds) {
       DatabaseConnector::renderTranslateExecuteSql(connection,
                                                    sql,
-                                                   schema = databaseSchema,
+                                                   database_schema = databaseSchema,
                                                    database_id = databaseId,
                                                    table_prefix = tablePrefix)
     }
