@@ -29,7 +29,7 @@ CREATE TABLE @database_schema.@table_prefix@cdm_source_info (
 	 vocabulary_version VARCHAR
 );
  
-CREATE TABLE @database_schema.@table_prefix@cohort_counts (
+CREATE TABLE @database_schema.@table_prefix@cohort_count (
   	 num_persons BIGINT,
 	 cohort_definition_id BIGINT NOT NULL,
 	 database_id BIGINT NOT NULL,
