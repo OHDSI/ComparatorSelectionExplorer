@@ -36,7 +36,7 @@ CREATE TABLE @database_schema.@table_prefix@cohort_counts (
 	 PRIMARY KEY(cohort_definition_id, database_id)
 );
  
-CREATE TABLE @database_schema.@table_prefix@cosine_similarity (
+CREATE TABLE @database_schema.@table_prefix@cosine_similarity_score (
   	 database_id BIGINT NOT NULL,
 	 cohort_definition_id_1 BIGINT NOT NULL,
 	 cohort_definition_id_2 BIGINT NOT NULL,
