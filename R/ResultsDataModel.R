@@ -95,15 +95,19 @@ uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tableP
     on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
 
     sql <- "
-    CREATE TABLE IF NOT EXISTS  @database_schema.@table_prefixcosine_similarity_@database_id
-    PARTITION OF @database_schema.@table_prefixcosine_similarity FOR VALUES IN (@database_id)
+    CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcosine_similarity_@database_id
+    PARTITION OF @database_schema.@table_prefixcosine_similarity FOR VALUES IN (@database_id);
+
+    CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcovariate_mean_@database_id
+    PARTITION OF @database_schema.@table_prefixcovariate_mean FOR VALUES IN (@database_id);
     "
     tFile <- tempdir()
     zip::unzip(zipFileName,
                files = "cdm_source_info.csv",
                exdir = tFile)
 
-    sourceInfo <- readr::read_csv(file.path(tFile, "cdm_source_info.csv"))
+    sourceInfo <- readr::read_csv(file.path(tFile, "cdm_source_info.csv"),
+                                  show_col_types = FALSE)
     databaseIds <- unique(sourceInfo$database_id)
 
     for (databaseId in databaseIds) {
