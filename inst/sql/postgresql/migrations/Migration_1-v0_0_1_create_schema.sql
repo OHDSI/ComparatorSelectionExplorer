@@ -45,9 +45,9 @@ CREATE TABLE @database_schema.@table_prefix@cosine_similarity_score (
   	 database_id BIGINT NOT NULL,
 	 cohort_definition_id_1 BIGINT NOT NULL,
 	 cohort_definition_id_2 BIGINT NOT NULL,
-	 covariate_type VARCHAR,
+	 covariate_type VARCHAR(25),
 	 cosine_similarity FLOAT,
-	 PRIMARY KEY(cohort_definition_id_1, cohort_definition_id_2, database_id)
+	 PRIMARY KEY(cohort_definition_id_1, cohort_definition_id_2, database_id, covariate_type)
 ) PARTITION BY LIST (database_id);
 
 DROP TABLE IF EXISTS @database_schema.@table_prefix@covariate_definition;
