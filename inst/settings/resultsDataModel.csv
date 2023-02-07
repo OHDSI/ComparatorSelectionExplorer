@@ -15,12 +15,12 @@ cdm_source_info,cdm_release_date,date,Yes,no,no,cdm info,Yes
 cdm_source_info,cdm_version,varchar,Yes,no,no,cdm info,Yes
 cdm_source_info,vocabulary_version,varchar,Yes,no,no,cdm info,Yes
 cohort_count,num_persons,bigint,No,no,Yes,cohort size,Yes
-cohort_count,cohort_definition_id,bigint,Yes,No,no,cohort definition id,Yes
+cohort_count,cohort_definition_id,bigint,Yes,Yes,no,cohort definition id,Yes
 cohort_count,database_id,bigint,No,Yes,no,database definition id,Yes
 cosine_similarity_score,database_id,bigint,No,Yes,no,database definition id,Yes
 cosine_similarity_score,cohort_definition_id_1,bigint,No,Yes,no,cohort definition id,Yes
 cosine_similarity_score,cohort_definition_id_2,bigint,No,Yes,no,cohort definition id,Yes
-cosine_similarity_score,covariate_type,varchar,No,no,no,type of strata,Yes
+cosine_similarity_score,covariate_type,varchar,No,yes,no,type of strata,Yes
 cosine_similarity_score,cosine_similarity,float,No,no,no,similarity score,Yes
 covariate_definition,covariate_id,bigint,No,yes,no,covariate id,Yes
 covariate_definition,covariate_name,varchar,No,no,no,covariate name,Yes
