@@ -88,6 +88,32 @@ getResultsDataModelSpec <- function() {
 #' @param zipFileName                  Path to zipFile containing results
 #' @export
 uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tablePrefix = "", ...) {
+
+  if (connectionDetails$dbms == "postgresql") {
+    # this would be much cleaner with a trigger on insert to cdm_source_info table
+    connection <- DatabaseConnector::connect(connectionDetails)
+    on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
+
+    sql <- "
+    CREATE TABLE IF NOT EXISTS  @database_schema.@table_prefixcosine_similarity_@database_id
+    PARTITION OF @database_schema.@table_prefix@cosine_similarity FOR VALUES IN (@database_id)
+    "
+    tFile <- tempdir()
+    zip::unzip(zipFileName,
+               files = "cdm_source_info.csv",
+               exdir = tFile)
+
+    sourceInfo <- readr::read_csv(file.path(tFile, "cdm_source_info.csv"))
+    databaseIds <- unique(sourceInfo$database_id)
+
+    for (databaseId in databaseIds) {
+      DatabaseConnector::renderTranslateExecuteSql(connection,
+                                                   sql,
+                                                   schema = databaseSchema,
+                                                   database_id = databaseId,
+                                                   table_prefix = tablePrefix)
+    }
+  }
   ResultModelManager::uploadResults(connectionDetails = connectionDetails,
                                     schema = databaseSchema,
                                     zipFileName = zipFileName,
