@@ -96,7 +96,7 @@ uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tableP
 
     sql <- "
     CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcosine_similarity_@database_id
-    PARTITION OF @database_schema.@table_prefixcosine_similarity FOR VALUES IN (@database_id);
+    PARTITION OF @database_schema.@table_prefixcosine_similarity_score FOR VALUES IN (@database_id);
 
     CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcovariate_mean_@database_id
     PARTITION OF @database_schema.@table_prefixcovariate_mean FOR VALUES IN (@database_id);
