@@ -9,9 +9,3 @@ connectionDetails <- DatabaseConnector::createConnectionDetails(
   server = paste0(Sys.getenv("phenotypeLibraryServer"), "/", Sys.getenv("phenotypeLibrarydb")),
   port = 5432
 )
-
-# params
-# resultsSchema <- "reward_truven_ccae_v1676"
-resultsSchema <- "comparator_selector"
-similarityTable <- "oscsp_similarity_for_shiny"
-covDataTable <- "oscsp_covdata_for_shiny"

@@ -105,6 +105,20 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       table = executionSettings$cohortDefinitionTable,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
 
+  sql <- SqlRender::readSql(system.file(file.path("sql", "sql_server", "GetAtcLevels.sql"),
+                                        package = utils::packageName()))
+
+  DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
+                                                      sql,
+                                                      fun = exportResultsFun,
+                                                      args = list(
+                                                        csvFilename = "atc_level.csv",
+                                                        addDbId = FALSE
+                                                      ),
+                                                      table = executionSettings$cohortDefinitionTable,
+                                                      vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema,
+                                                      results_database_schema = executionSettings$resultsDatabaseSchema)
+
   sql <- "
   SELECT t.* FROM  @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id = ct.cohort_definition_id
