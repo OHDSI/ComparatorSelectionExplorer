@@ -1,13 +1,12 @@
 with classes as (
 
     select
-        s.cohort_definition_id,
+        cd.cohort_definition_id,
         ca.ancestor_concept_id as atc_concept_id
     from  @results_database_schema.@table cd
-        on s.cohort_definition_id_1 = cd.cohort_definition_id
-    join @vocabulary_schema.concept_ancestor ca
-        on cd.drug_conceptset_id = ca.descendant_concept_id
-    join @vocabulary_schema.concept c
+    join @vocabulary_database_schema.concept_ancestor ca
+        on cd.concept_id = ca.descendant_concept_id
+    join @vocabulary_database_schema.concept c
         on ca.ancestor_concept_id = c.concept_id and c.vocabulary_id = 'ATC'
 ),
 
