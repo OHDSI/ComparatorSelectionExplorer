@@ -28,7 +28,7 @@ classmates as (
     join classes c2
         on c1.atc_concept_id = c2.atc_concept_id and
            c1.cohort_definition_id <> c2.cohort_definition_id
-    left join concept as c
+    left join @vocabulary_database_schema.concept as c
         on c1.atc_concept_id = c.concept_id
 )
 
