@@ -101,7 +101,8 @@ shinyServer(function(input, output, session) {
                t.cohort_definition_id,
                short_name,
                atc_flag as is_atc,
-               c.num_persons
+               c.num_persons,
+               c.database_id
              from @schema.@table_prefix@table t
              inner join @schema.@table_prefixcohort_count c ON c.cohort_definition_id = t.cohort_definition_id
              where t.cohort_definition_id is not null
@@ -189,13 +190,12 @@ shinyServer(function(input, output, session) {
                ec.num_persons,
                t.covariate_type
              from @schema.@table_prefix@table t
-             inner join @schema.@table_prefixcohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2
+             inner join @schema.@table_prefixcohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
              inner join @schema.@table_prefixcohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
 
              inner join @schema.@table_prefixatc_level atc on t.cohort_definition_id_1 = atc.cohort_definition_id_1 and t.cohort_definition_id_2 = atc.cohort_definition_id_2
              where t.cohort_definition_id_1 = @targetCohortId
              and cd2.atc_flag in (@atc)
-             AND ec.num_persons >= 1000
              and t.database_id = @database_id
            ",
         dbms = connectionDetails$dbms,
