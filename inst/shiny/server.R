@@ -193,7 +193,7 @@ shinyServer(function(input, output, session) {
              inner join @schema.@table_prefixcohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
              inner join @schema.@table_prefixcohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
 
-             inner join @schema.@table_prefixatc_level atc on t.cohort_definition_id_1 = atc.cohort_definition_id_1 and t.cohort_definition_id_2 = atc.cohort_definition_id_2
+             left join @schema.@table_prefixatc_level atc on t.cohort_definition_id_1 = atc.cohort_definition_id_1 and t.cohort_definition_id_2 = atc.cohort_definition_id_2
              where t.cohort_definition_id_1 = @targetCohortId
              and cd2.atc_flag in (@atc)
              and t.database_id = @database_id
@@ -209,15 +209,30 @@ shinyServer(function(input, output, session) {
     }, message = "Loading similarity scores", value = 0.5)
 
     resultsData %>%
-        tidyr::pivot_wider(names_from = covariateType,
-                           values_from = cosineSimilarity) %>%
-        dplyr::rename(cosineSimAll = average,
-                      cosineSimDemo = Demographics,
-                      cosineSimPres = Presentation,
-                      cosineSimMhist = "Medical history",
-                      cosineSimPmeds = "prior meds",
-                      cosineSimVisit = "visit context")
+      tidyr::pivot_wider(names_from = covariateType,
+                         values_from = cosineSimilarity) %>%
+      dplyr::rename(cosineSimAll = average,
+                    cosineSimDemo = Demographics,
+                    cosineSimPres = Presentation,
+                    cosineSimMhist = "Medical history",
+                    cosineSimPmeds = "prior meds",
+                    cosineSimVisit = "visit context")
 
+  })
+
+  # displays target name and counts
+  output$selectedCohortInfo <- shiny::renderText({
+    targetId <- input$selectedExposure
+    if (targetId == "")
+      return("")
+
+    cohortDefinitions <- getCohortDefinitionsWithCounts() %>%
+      dplyr::filter(.data$cohortDefinitionId == targetId)
+
+    numPersons <- format(round(cohortDefinitions$numPersons), big.mark = ",")
+    cohortText <- paste0(cohortDefinitions$shortName, " (", numPersons, " persons)")
+
+    return(cohortText)
   })
 
   #### ---- cosine similarity reactable ---- ####
@@ -235,7 +250,7 @@ shinyServer(function(input, output, session) {
           "cosineSimPmeds" = reactable::colDef(name = "Prior Medications", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
           "cosineSimVisit" = reactable::colDef(name = "Visit Context", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
           "shortName" = reactable::colDef(name = "Name", cell = function(value) { ifelse(substr(value, 1, 6) == "RxNorm", gsub("RxNorm - ", "", value), gsub("ATC - ", "", value)) }, align = "left", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "numPersons" = reactable::colDef(name = "Sample size", cell = function(value) format(round(value), big.mark=","), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE),
+          "numPersons" = reactable::colDef(name = "Sample size", cell = function(value) format(round(value), big.mark = ","), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE),
           "atc3Related" = reactable::colDef(name = "At Level 3", cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE),
           "atc4Related" = reactable::colDef(name = "At Level 4", cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE)),
         searchable = TRUE,
@@ -256,6 +271,8 @@ shinyServer(function(input, output, session) {
         striped = TRUE,
         highlight = TRUE,
         compact = TRUE,
+        defaultSorted = list(cosineSimAll = "desc",
+                             numPersons = "desc"),
         selection = "single",
         theme = reactable::reactableTheme(
           borderColor = "#dfe2e5",
@@ -474,9 +491,9 @@ shinyServer(function(input, output, session) {
       count() %>%
       pull()
 
-    percentBalanced <- round(inBalanceCount/nrow(covData) * 100, 1)
-    paste( inBalanceCount, " of", nrow(covData), "covariates", paste0("(", percentBalanced, "%)"),
-           "have absolute standardized difference less than 0.1")
+    percentBalanced <- round(inBalanceCount / nrow(covData) * 100, 1)
+    paste(inBalanceCount, " of", nrow(covData), "covariates", paste0("(", percentBalanced, "%)"),
+          "have absolute standardized difference less than 0.1")
   }
 
   output$covTableDemoBalance <- shiny::renderText({
@@ -756,5 +773,30 @@ shinyServer(function(input, output, session) {
       message = "Rendering tables",
       value = 0.7)
     rt
+  })
+
+  output$dataSources <- reactable::renderReactable({
+    dataSourceData <- renderTranslateQuerySql(
+      connection = conn,
+      sql = "select
+              cdm_source_abbreviation,
+              cdm_holder,
+              source_description,
+              cdm_version,
+              vocabulary_version,
+              source_release_date
+      from @schema.@table_prefix@table t",
+      dbms = connectionDetails$dbms,
+      table_prefix = tablePrefix,
+      schema = resultsSchema,
+      table = "cdm_source_info",
+      snakeCaseToCamelCase = TRUE)
+
+    colnames(dataSourceData) <- SqlRender::camelCaseToTitleCase(colnames(dataSourceData))
+    reactable::reactable(data = dataSourceData,
+                         columns = list(
+                           "Source Description" = reactable::colDef(minWidth = 300)
+                         ),
+                         defaultPageSize = 5)
   })
 })

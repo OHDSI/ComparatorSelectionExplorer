@@ -23,7 +23,7 @@ shinyUI(fluidPage(
   tabsetPanel(
     type = "pills",
     tabPanel(
-      title = "Tool",
+      title = "Comparator selection",
       sidebarLayout(
         sidebarPanel(
           h4(strong("Settings")),
@@ -66,7 +66,8 @@ shinyUI(fluidPage(
 
         # display table
         mainPanel(
-          h3(strong("Comparator listing")),
+          h3("Comparator listing"),
+          shiny::textOutput("selectedCohortInfo"),
           p("Select comparator to view covariate distributions"),
           shinycssloaders::withSpinner(reactable::reactableOutput("cosineSimilarityTbl")),
 
@@ -100,7 +101,11 @@ shinyUI(fluidPage(
       title = "About",
       shiny::fluidRow(
         shiny::column(
-          width = 8,
+          width = 12,
+          h3("Data sources used"),
+          shinycssloaders::withSpinner(
+            reactable::reactableOutput("dataSources")
+          ),
           shiny::htmlTemplate("about.html")
         )
       )
