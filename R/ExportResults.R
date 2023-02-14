@@ -46,16 +46,18 @@ exportResults <- function(executionSettings = NULL, ...) {
   }
 
   exportResultsFun <- function(data, position, csvFilename, addDbId = FALSE, ...) {
-    if (nrow(data)) {
-      if (addDbId) {
+    if (addDbId) {
+      if (nrow(data)) {
         data$database_id <- executionSettings$databaseId
+      } else {
+        colnames(data) <- c(colnames(data), "database_id")
       }
-
-      readr::write_csv(data,
-                       file = file.path(executionSettings$exportDir, csvFilename),
-                       append = position != 1,
-                       na = "")
     }
+
+    readr::write_csv(data,
+                     file = file.path(executionSettings$exportDir, csvFilename),
+                     append = position != 1,
+                     na = "")
 
     invisible(NULL)
   }
@@ -65,7 +67,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       fun = exportResultsFun,
                                                       args = list(
                                                         csvFilename = "covariate_definition.csv",
-                                                        addDbId = TRUE
+                                                        addDbId = FALSE
                                                       ),
                                                       covariate_def_table = executionSettings$covariateDefTable,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)

@@ -74,7 +74,9 @@ createResultsDataModel <- function(connectionDetails, databaseSchema, tablePrefi
 #' @export
 getResultsDataModelSpec <- function() {
   specPath <- system.file("settings", "resultsDataModel.csv", package = utils::packageName())
-  readr::read_csv(specPath, show_col_types = FALSE)
+  spec <- readr::read_csv(specPath, show_col_types = FALSE)
+  colnames(spec) <- SqlRender::snakeCaseToCamelCase(colnames(spec))
+  return(spec)
 }
 
 #' Upload Results
@@ -86,8 +88,15 @@ getResultsDataModelSpec <- function() {
 #' @param databaseSchema                String schema where database schema lives
 #' @param tablePrefix                  (Optional) Use if a table prefix is used before table names (e.g. "cd_")
 #' @param zipFileName                  Path to zipFile containing results
+#' @param importFilpath                file path to export zipped results to before upload (optional - default is temporary)
 #' @export
-uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tablePrefix = "", ...) {
+uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tablePrefix = "", importFilpath = tempfile(), ...) {
+
+  if (!dir.exists(importFilpath)) {
+    dir.create(importFilpath)
+  }
+
+  ResultModelManager::unzipResults(zipFileName, importFilpath)
 
   if (connectionDetails$dbms == "postgresql") {
     # this would be much cleaner with a trigger on insert to cdm_source_info table
@@ -101,12 +110,8 @@ uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tableP
     CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcovariate_mean_@database_id
     PARTITION OF @database_schema.@table_prefixcovariate_mean FOR VALUES IN (@database_id);
     "
-    tFile <- tempdir()
-    zip::unzip(zipFileName,
-               files = "cdm_source_info.csv",
-               exdir = tFile)
 
-    sourceInfo <- readr::read_csv(file.path(tFile, "cdm_source_info.csv"),
+    sourceInfo <- readr::read_csv(file.path(importFilpath, "cdm_source_info.csv"),
                                   show_col_types = FALSE)
     databaseIds <- unique(sourceInfo$database_id)
 
@@ -120,8 +125,9 @@ uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tableP
   }
   ResultModelManager::uploadResults(connectionDetails = connectionDetails,
                                     schema = databaseSchema,
-                                    zipFileName = zipFileName,
+                                    resultsFolder = importFilpath,
                                     tablePrefix = tablePrefix,
                                     specifications = getResultsDataModelSpec(),
+                                    cdmSourceFile = "cdm_source_info.csv",
                                     ...)
 }
