@@ -19,7 +19,7 @@ Depends:
   R (>= 4.0.0)
 Imports:
   DatabaseConnector (>= 6.0.0),
-  ResultModelManager,
+  ResultModelManager (>= 0.3.0),
   CohortGenerator,
   checkmate,
   SqlRender (>= 1.9.0),
