@@ -18,7 +18,7 @@ Encoding: UTF-8
 Depends:
   R (>= 4.0.0)
 Imports:
-  DatabaseConnector (>= 5.0.0),
+  DatabaseConnector (>= 6.0.0),
   ResultModelManager,
   CohortGenerator,
   checkmate,
@@ -33,7 +33,7 @@ Suggests:
   Eunomia,
   testthat (>= 3.0.0),
 Remotes:
-  ohdsi/ResultModelManager@upload_utility,
+  ohdsi/ResultModelManager,
   ohdsi/CohortGenerator,
   ohdsi/Eunomia
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
