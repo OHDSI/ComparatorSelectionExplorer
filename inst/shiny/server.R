@@ -243,7 +243,7 @@ shinyServer(function(input, output, session) {
         data = res,
         columns = list(
           "isAtc2" = reactable::colDef(name = "Type", cell = function(value) { ifelse(value == 1, "ATC Class", "RxNorm Ingredient") }, align = "right", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "cosineSimAll" = reactable::colDef(name = "Avg.", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
+          "cosineSimAll" = reactable::colDef(name = "Cohort Similarity Score", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
           "cosineSimDemo" = reactable::colDef(name = "Demographics", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
           "cosineSimPres" = reactable::colDef(name = "Presentation", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
           "cosineSimMhist" = reactable::colDef(name = "Medical History", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
@@ -259,13 +259,12 @@ shinyServer(function(input, output, session) {
             "Comparator",
             c("shortName", "isAtc2")),
           reactable::colGroup(
-            "Covariate Domain",
+            "Domain-Specific Cosine Similarity",
             c("cosineSimAll", "cosineSimDemo", "cosineSimPres", "cosineSimMhist", "cosineSimPmeds", "cosineSimVisit")),
           reactable::colGroup(
-            "ATC Relationship to Target",
+            "In ATC Class with Target",
             c("atc3Related", "atc4Related"))),
         fullWidth = TRUE,
-        bordered = TRUE,
         showPageSizeOptions = TRUE,
         pageSizeOptions = c(5, 10, 20, 50, 100, 1000),
         striped = TRUE,
@@ -509,13 +508,13 @@ shinyServer(function(input, output, session) {
 
     # create column names with cohort sample sizes
     colNameTarget <- paste0(
-      cohortDefinitions$cohortShortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
       " (n = ",
       prettyNum(first(covData$n1), big.mark = ","),
       ")")
 
     colNameComparator <- paste0(
-      cohortDefinitions$cohortShortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
       " (n = ",
       prettyNum(first(covData$n2), big.mark = ","),
       ")")
@@ -524,16 +523,30 @@ shinyServer(function(input, output, session) {
     tableData <- covData %>%
       filter(covariateType == "Demographics") %>%
       arrange(desc(covariateShortName)) %>%
-      select(covariateShortName, mean1, mean2, stdDiff)
+      select(covariateShortName, mean1, mean2, stdDiff) %>%
+      mutate(covariateShortName = stringr::str_to_sentence(covariateShortName))
 
     # table code
     reactable::reactable(
       data = tableData,
       columns = list(
         "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { percent(value, accuracy = 0.1) }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { percent(value, accuracy = 0.1) }, align = "center", vAlign = "bottom"),
-        "stdDiff" = reactable::colDef(name = "Std. Diff.", cell = function(value) { sprintf("%.2f", value) }, align = "center", vAlign = "bottom")),
+        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "stdDiff" = reactable::colDef(
+          name = "Std. Diff.",
+
+          cell = function(value, index) {
+
+            if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+
+              sprintf("%.2f", value)
+
+            } else {
+
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf("%.2f", value)), paste0("(\u2264) ", sprintf("%.2f", value)))}},
+          align = "center",
+          vAlign = "bottom")),
       bordered = TRUE,
       searchable = TRUE,
       showPageSizeOptions = TRUE,
@@ -563,13 +576,13 @@ shinyServer(function(input, output, session) {
 
     # create column names with cohort sample sizes
     colNameTarget <- paste0(
-      cohortDefinitions$cohortShortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
       " (n = ",
       prettyNum(first(covData$n1), big.mark = ","),
       ")")
 
     colNameComparator <- paste0(
-      cohortDefinitions$cohortShortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
       " (n = ",
       prettyNum(first(covData$n2), big.mark = ","),
       ")")
@@ -578,16 +591,30 @@ shinyServer(function(input, output, session) {
     tableData <- covData %>%
       filter(covariateType == "Presentation") %>%
       arrange(desc(abs(stdDiff))) %>%
-      select(covariateShortName, mean1, mean2, stdDiff)
+      select(covariateShortName, mean1, mean2, stdDiff) %>%
+      mutate(covariateShortName = gsub("Condition in <=30d prior:", "", covariateShortName))
 
     # table code
     reactable::reactable(
       data = tableData,
       columns = list(
         "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { percent(value, accuracy = 0.1) }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { percent(value, accuracy = 0.1) }, align = "center", vAlign = "bottom"),
-        "stdDiff" = reactable::colDef(name = "Std. Diff.", cell = function(value) { sprintf("%.2f", value) }, align = "center", vAlign = "bottom")),
+        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "stdDiff" = reactable::colDef(
+          name = "Std. Diff.",
+
+          cell = function(value, index) {
+
+            if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+
+              sprintf("%.2f", value)
+
+            } else {
+
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf("%.2f", value)), paste0("(\u2264) ", sprintf("%.2f", value)))}},
+          align = "center",
+          vAlign = "bottom")),
       bordered = TRUE,
       searchable = TRUE,
       showPageSizeOptions = TRUE,
@@ -618,13 +645,13 @@ shinyServer(function(input, output, session) {
 
     # create column names with cohort sample sizes
     colNameTarget <- paste0(
-      cohortDefinitions$cohortShortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
       " (n = ",
       prettyNum(first(covData$n1), big.mark = ","),
       ")")
 
     colNameComparator <- paste0(
-      cohortDefinitions$cohortShortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
       " (n = ",
       prettyNum(first(covData$n2), big.mark = ","),
       ")")
@@ -633,16 +660,30 @@ shinyServer(function(input, output, session) {
     tableData <- covData %>%
       filter(covariateType == "Medical history") %>%
       arrange(desc(abs(stdDiff))) %>%
-      select(covariateShortName, mean1, mean2, stdDiff)
+      select(covariateShortName, mean1, mean2, stdDiff) %>%
+      mutate(covariateShortName = gsub("Condition in >30d prior:", "", covariateShortName))
 
     # table code
     reactable::reactable(
       data = tableData,
       columns = list(
         "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { percent(value, accuracy = 0.1) }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { percent(value, accuracy = 0.1) }, align = "center", vAlign = "bottom"),
-        "stdDiff" = reactable::colDef(name = "Std. Diff.", cell = function(value) { sprintf("%.2f", value) }, align = "center", vAlign = "bottom")),
+        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "stdDiff" = reactable::colDef(
+          name = "Std. Diff.",
+
+          cell = function(value, index) {
+
+            if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+
+              sprintf("%.2f", value)
+
+            } else {
+
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf("%.2f", value)), paste0("(\u2264) ", sprintf("%.2f", value)))}},
+          align = "center",
+          vAlign = "bottom")),
       bordered = TRUE,
       searchable = TRUE,
       showPageSizeOptions = TRUE,
@@ -673,13 +714,13 @@ shinyServer(function(input, output, session) {
 
     # create column names with cohort sample sizes
     colNameTarget <- paste0(
-      cohortDefinitions$cohortShortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
       " (n = ",
       prettyNum(first(covData$n1), big.mark = ","),
       ")")
 
     colNameComparator <- paste0(
-      cohortDefinitions$cohortShortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
       " (n = ",
       prettyNum(first(covData$n2), big.mark = ","),
       ")")
@@ -688,16 +729,30 @@ shinyServer(function(input, output, session) {
     tableData <- covData %>%
       filter(covariateType == "prior meds") %>%
       arrange(desc(abs(stdDiff))) %>%
-      select(covariateShortName, mean1, mean2, stdDiff)
+      select(covariateShortName, mean1, mean2, stdDiff) %>%
+      mutate(covariateShortName = gsub("Drug with start >30d prior:", "", covariateShortName))
 
     # table code
     reactable::reactable(
       data = tableData,
       columns = list(
         "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { percent(value, accuracy = 0.1) }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { percent(value, accuracy = 0.1) }, align = "center", vAlign = "bottom"),
-        "stdDiff" = reactable::colDef(name = "Std. Diff.", cell = function(value) { sprintf("%.2f", value) }, align = "center", vAlign = "bottom")),
+        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "stdDiff" = reactable::colDef(
+          name = "Std. Diff.",
+
+          cell = function(value, index) {
+
+            if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+
+              sprintf("%.2f", value)
+
+            } else {
+
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf("%.2f", value)), paste0("(\u2264) ", sprintf("%.2f", value)))}},
+          align = "center",
+          vAlign = "bottom")),
       bordered = TRUE,
       searchable = TRUE,
       showPageSizeOptions = TRUE,
@@ -729,13 +784,13 @@ shinyServer(function(input, output, session) {
     shiny::withProgress({
       # create column names with cohort sample sizes
       colNameTarget <- paste0(
-        cohortDefinitions$cohortShortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
+        cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
         " (n = ",
         prettyNum(first(covData$n1), big.mark = ","),
         ")")
 
       colNameComparator <- paste0(
-        cohortDefinitions$cohortShortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
+        cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
         " (n = ",
         prettyNum(first(covData$n2), big.mark = ","),
         ")")
@@ -744,16 +799,30 @@ shinyServer(function(input, output, session) {
       tableData <- covData %>%
         filter(covariateType == "visit context") %>%
         arrange(covariateShortName) %>%
-        select(covariateShortName, mean1, mean2, stdDiff)
+        select(covariateShortName, mean1, mean2, stdDiff)%>%
+        mutate(covariateShortName = stringr::str_to_sentence(gsub("<=30d prior|Visit:", "", covariateShortName)))
 
       # table code
       rt <- reactable::reactable(
         data = tableData,
         columns = list(
           "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-          "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { percent(value, accuracy = 0.1) }, align = "center", vAlign = "bottom"),
-          "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { percent(value, accuracy = 0.1) }, align = "center", vAlign = "bottom"),
-          "stdDiff" = reactable::colDef(name = "Std. Diff.", cell = function(value) { sprintf("%.2f", value) }, align = "center", vAlign = "bottom")),
+          "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+          "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+          "stdDiff" = reactable::colDef(
+            name = "Std. Diff.",
+
+            cell = function(value, index) {
+
+              if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+
+                sprintf("%.2f", value)
+
+              } else {
+
+                ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf("%.2f", value)), paste0("(\u2264) ", sprintf("%.2f", value)))}},
+            align = "center",
+            vAlign = "bottom")),
         bordered = TRUE,
         searchable = TRUE,
         showPageSizeOptions = TRUE,
