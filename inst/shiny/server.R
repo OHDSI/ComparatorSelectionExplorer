@@ -421,32 +421,53 @@ shinyServer(function(input, output, session) {
                     need(selectedComparator(), 'must select comparator'))
 
     plot <- getCovData() %>%
-      mutate(type = NA,
-             type = ifelse(covariateType == "Demographic", "Demographics", type),
-             type = ifelse(covariateType == "Presentation", "Presentation", type),
-             type = ifelse(covariateType == "Medical history", "Medical History", type),
-             type = ifelse(covariateType == "prior meds", "Prior Medications", type),
-             type = ifelse(covariateType == "visit context", "Visit Context", type),
-             type = factor(type, levels = c("Demographics", "Presentation", "Medical History", "Prior Medications", "Visit Context"))) %>%
-      ggplot(aes(x = mean1, y = mean2, color = type)) +
-      geom_abline(linetype = 2) +
-      geom_point(alpha = 0.7) +
-      scale_color_manual(
-        values = c("Demographics" = "#F28E2B",
-                   "Presentation" = "#E15759",
-                   "Medical History" = "#76B7B2",
-                   "Prior Medications" = "#59A14F",
-                   "Visit Context" = "#EDC948")) +
-      guides(color = guide_legend(override.aes = list(alpha = 1))) +
-      theme_minimal(base_size = 9) +
-      theme(legend.position = "bottom") +
-      guides(color = guide_legend(ncol = 2)) +
-      labs(x = "Prevalence in Target Cohort",
-           y = "Prevalence in Comparator Cohort",
-           color = "Covariate Domain")
-
-
-    plotly::ggplotly(plot)
+      mutate(
+        covariateShortName = gsub("Condition in <=30d prior:", "", covariateShortName),
+        covariateShortName = gsub("Condition in >30d prior:", "", covariateShortName),
+        covariateShortName = gsub("Drug with start >30d prior:", "", covariateShortName),
+        covariateShortName = stringr::str_to_sentence(gsub("<=30d prior|Visit:", "", covariateShortName))) %>%
+      mutate(
+        type = NA,
+        type = ifelse(covariateType == "Demographics", "Demographics", type),
+        type = ifelse(covariateType == "Presentation", "Presentation", type),
+        type = ifelse(covariateType == "Medical history", "Medical History", type),
+        type = ifelse(covariateType == "prior meds", "Prior Medications", type),
+        type = ifelse(covariateType == "visit context", "Visit Context", type),
+        type = factor(type, levels = c("Demographics", "Presentation", "Medical History", "Prior Medications", "Visit Context")),
+        tooltip = paste0(
+          "<b>",
+          covariateShortName, "</b>\n",
+          "Target: ", ifelse(mean1 < 0.01, "<1%", scales::percent(mean1, accuracy = 0.1)), "\n",
+          "Comparator: ", ifelse(mean2 < 0.01, "<1%", scales::percent(mean2, accuracy = 0.1)), "\n",
+          "Std. Diff.: ", ifelse(mean1 < 0.01 | mean2 < 0.01,
+                                 ifelse(mean1 < 0.01, paste0("(\u2265) ", sprintf("%.2f", stdDiff)), paste0("(\u2264) ", sprintf("%.2f", stdDiff))),
+                                 sprintf("%.2f", stdDiff))
+        )) %>%
+      plotly::plot_ly(
+        type = 'scatter',
+        mode = 'markers',
+        x = ~mean1,
+        y = ~mean2,
+        color = ~type,
+        text = ~tooltip,
+        marker = list(opacity = 0.7),
+        hovertemplate = "%{text}"
+      ) %>%
+      plotly::layout(
+        xaxis = list(title = "Prevalence in\nTarget Cohort", tickformat = ".0%"),
+        yaxis = list(title = "Prevalence in\nComparator Cohort", tickformat = ".0%"),
+        legend = list(orientation = 'h', y = -0.5),
+        shapes = list(list(
+          type = "line",
+          x0 = 0,
+          x1 = ~max(mean1, mean2),
+          xref = "x",
+          y0 = 0,
+          y1 = ~max(mean1, mean2),
+          yref = "y",
+          line = list(color = "black", dash = "dot")
+        ))
+        )
   })
 
   #### ---- plot of std. diffs. ---- ####
