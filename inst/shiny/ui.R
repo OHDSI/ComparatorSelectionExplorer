@@ -35,7 +35,6 @@ shinyUI(fluidPage(
             inputId = "selectedExposure",
             choices = NULL,
             label = "Select target exposure:"),
-          p("Available exposures are limited to those with 1000 or more subjects"),
           shiny::selectInput(inputId = "selectedComparatorTypes",
                              label = "Select comparator type(s):",
                              choices = c("RxNorm Ingredients", "ATC Classes"),
