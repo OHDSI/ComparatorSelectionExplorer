@@ -12,5 +12,5 @@ CREATE TABLE @database_schema.@table_prefix@atc_level (
 	atc_3_related int,
 	atc_4_related int,
 	atc_5_related int,
-    PRIMARY KEY (cohort_definition_id_1, cohort_definition_id_1)
+    PRIMARY KEY (cohort_definition_id_1, cohort_definition_id_2)
 );

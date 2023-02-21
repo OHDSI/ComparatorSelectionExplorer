@@ -8,3 +8,6 @@ connectionDetails <- DatabaseConnector::createConnectionDetails(
   server = paste0(Sys.getenv("phenotypeLibraryServer"), "/", Sys.getenv("phenotypeLibrarydb")),
   port = 5432
 )
+
+tablePrefix <- "cse0223_"
+resultsSchema <- "comparator_selector"
