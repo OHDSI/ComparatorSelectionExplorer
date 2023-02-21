@@ -16,7 +16,6 @@ shinyUI(fluidPage(
   titlePanel(
     title = "Comparator Selection Explorer",
     windowTitle = "Comparator Selection Explorer"),
-  #p("Authors: Justin Bohn, James P. Gilbert, Christopher Knoll, Patrick B. Ryan, David M. Kern"),
   p("Janssen Research & Development"),
   # sidebar with option for target cohort selection
 
