@@ -237,34 +237,72 @@ shinyServer(function(input, output, session) {
 
   #### ---- cosine similarity reactable ---- ####
   output$cosineSimilarityTbl <- reactable::renderReactable({
-    res <- getSimilarity() %>% dplyr::select(-cohortDefinitionId2)
+    res <- getSimilarity() %>%
+      dplyr::arrange(desc(cosineSimAll)) %>%
+      dplyr::mutate(rankAll = row_number()) %>%
+      dplyr::select(
+        isAtc2,
+        shortName,
+        numPersons,
+        cosineSimAll,
+        rankAll,
+        atc3Related,
+        atc4Related,
+        cosineSimDemo,
+        cosineSimPres,
+        cosineSimMhist,
+        cosineSimPmeds,
+        cosineSimVisit)
+
+
     shiny::withProgress({
       rt <- reactable::reactable(
         data = res,
         columns = list(
+          "rankAll" = reactable::colDef(name = "Overall Rank", cell = function(value) prettyNum(value, big.mark = ","), align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 65),
           "isAtc2" = reactable::colDef(name = "Type", cell = function(value) { ifelse(value == 1, "ATC Class", "RxNorm Ingredient") }, align = "right", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "cosineSimAll" = reactable::colDef(name = "Cohort Similarity Score", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
+          "cosineSimAll" = reactable::colDef(
+            name = "Cohort Similarity Score",
+            cell = function(value) { sprintf("%.3f", value) },
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125,
+            filterable = TRUE,
+            filterMethod =  htmlwidgets::JS("function(rows, columnId, filterValue) {
+                                              return rows.filter(function(row) {
+                                              return row.values[columnId] >= filterValue})}")),
           "cosineSimDemo" = reactable::colDef(name = "Demographics", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
           "cosineSimPres" = reactable::colDef(name = "Presentation", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
           "cosineSimMhist" = reactable::colDef(name = "Medical History", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
           "cosineSimPmeds" = reactable::colDef(name = "Prior Medications", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
           "cosineSimVisit" = reactable::colDef(name = "Visit Context", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "shortName" = reactable::colDef(name = "Name", cell = function(value) { ifelse(substr(value, 1, 6) == "RxNorm", gsub("RxNorm - ", "", value), gsub("ATC - ", "", value)) }, align = "left", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "numPersons" = reactable::colDef(name = "Sample size", cell = function(value) format(round(value), big.mark = ","), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE),
+          "shortName" = reactable::colDef(name = "Name", cell = function(value) { ifelse(substr(value, 1, 6) == "RxNorm", gsub("RxNorm - ", "", value), gsub("ATC - ", "", value)) }, align = "left", vAlign = "center", headerVAlign = "bottom", minWidth = 125, resizable = TRUE),
+          "numPersons" = reactable::colDef(
+            name = "Sample Size",
+            cell = function(value) format(round(value), big.mark = ","),
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            filterable = TRUE,
+            filterMethod =  htmlwidgets::JS("function(rows, columnId, filterValue) {
+                                              return rows.filter(function(row) {
+                                              return row.values[columnId] >= filterValue})}")),
           "atc3Related" = reactable::colDef(name = "At Level 3", cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE),
           "atc4Related" = reactable::colDef(name = "At Level 4", cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE)),
         searchable = TRUE,
         columnGroups = list(
           reactable::colGroup(
             "Comparator",
-            c("shortName", "isAtc2")),
+            c("shortName", "isAtc2"), sticky = "left"),
           reactable::colGroup(
             "Domain-Specific Cosine Similarity",
-            c("cosineSimAll", "cosineSimDemo", "cosineSimPres", "cosineSimMhist", "cosineSimPmeds", "cosineSimVisit")),
+            c("cosineSimDemo", "cosineSimPres", "cosineSimMhist", "cosineSimPmeds", "cosineSimVisit")),
           reactable::colGroup(
             "In ATC Class with Target",
             c("atc3Related", "atc4Related"))),
         fullWidth = TRUE,
+        defaultPageSize = 10,
         showPageSizeOptions = TRUE,
         pageSizeOptions = c(5, 10, 20, 50, 100, 1000),
         striped = TRUE,
@@ -283,6 +321,7 @@ shinyServer(function(input, output, session) {
     }, message = "Rendering results", value = 0.7)
 
     rt
+
   })
 
   selectedComparator <- shiny::reactive({
