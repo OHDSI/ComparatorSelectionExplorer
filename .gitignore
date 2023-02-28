@@ -4,3 +4,4 @@
 .Ruserdata
 /renv/
 /tests/testthat/errorReportSql.txt
+/inst/shiny/global.R
