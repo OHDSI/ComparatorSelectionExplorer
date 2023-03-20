@@ -1,15 +1,5 @@
-#
-# This is the user-interface definition of a Shiny web application. You can
-# run the application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
 
-# Define UI for application
 shinyUI(fluidPage(
 
   # Application title
@@ -17,35 +7,34 @@ shinyUI(fluidPage(
     title = "Comparator Selection Explorer",
     windowTitle = "Comparator Selection Explorer"),
   p("Janssen Research & Development"),
-  # sidebar with option for target cohort selection
 
-  tabsetPanel(
+  tabsetPanel( # tabs panel
     type = "pills",
-    tabPanel(
-      title = "App",
+    tabPanel( # tab 1: single-source explorer
+      title = "Explore Single Source",
       sidebarLayout(
         sidebarPanel(
           h4(strong("Settings")),
-          shiny::selectizeInput(
+          selectizeInput(
             inputId = "selectedDatabase",
             choices = NULL,
             label = "Select target data source:"),
-          shiny::selectizeInput(
+          selectizeInput(
             inputId = "selectedExposure",
             choices = NULL,
             label = "Select target exposure:"),
-          shiny::selectInput(inputId = "selectedComparatorTypes",
-                             label = "Select comparator type(s):",
-                             choices = c("RxNorm Ingredients", "ATC Classes"),
-                             selected = "RxNorm Ingredients",
-                             multiple = TRUE),
+          selectInput(inputId = "selectedComparatorTypes",
+                      label = "Select comparator type(s):",
+                      choices = c("RxNorm Ingredients", "ATC Classes"),
+                      selected = "RxNorm Ingredients",
+                      multiple = TRUE),
           h4(strong("Visualizations")),
           h6(em("Similarity scores by domain-specific ranking")),
           shinycssloaders::withSpinner(
             plotOutput(
               outputId = "stepPlot"),
           ),
-          shiny::conditionalPanel(
+          conditionalPanel(
             condition = "output.selectedComparator == true",
             h6(em("Covariate prevalence")),
             shinycssloaders::withSpinner(
@@ -65,49 +54,90 @@ shinyUI(fluidPage(
         # display table
         mainPanel(
           h3("Comparator listing"),
-          shiny::textOutput("selectedCohortInfo"),
+          textOutput("selectedCohortInfo"),
           p("Select comparator to view covariate distributions"),
           shinycssloaders::withSpinner(reactable::reactableOutput("cosineSimilarityTbl")),
 
-          shiny::conditionalPanel(
+          conditionalPanel(
             condition = "output.selectedComparator == true",
             h3(strong("Distribution of covariates")),
             h4(strong("Demographics")),
-            shiny::textOutput("covTableDemoBalance"),
+            textOutput("covTableDemoBalance"),
             shinycssloaders::withSpinner(reactable::reactableOutput("covTableDemo")),
             h4(strong("Presentation")),
             h5(em("One covariate per condition observed in 30 days prior to index")),
-            shiny::textOutput("covTablePresBalance"),
+            textOutput("covTablePresBalance"),
             shinycssloaders::withSpinner(reactable::reactableOutput("covTablePres")),
             h4(strong("Medical history")),
             h5(em("One covariate per condition observed more than 30 days prior to index")),
-            shiny::textOutput("covTableMhistBalance"),
+            textOutput("covTableMhistBalance"),
             shinycssloaders::withSpinner(reactable::reactableOutput("covTableMhist")),
             h4(strong("Prior medications")),
             h5(em("One covariate per RxNorm ingredient observed more than 30 days prior to index")),
-            shiny::textOutput("covTablePmedsBalance"),
+            textOutput("covTablePmedsBalance"),
             shinycssloaders::withSpinner(reactable::reactableOutput("covTablePmeds")),
             h4(strong("Visit context")),
             h5(em("Inpatient and emergency department visits observed in 30 days prior to index")),
-            shiny::textOutput("covTableVisitBalance"),
+            textOutput("covTableVisitBalance"),
             shinycssloaders::withSpinner(reactable::reactableOutput("covTableVisit"))
           ),
         )
       )
     ),
-    tabPanel(
+    tabPanel( # tab 2: multi-source explorer
+      title = "Synthesize Across Sources",
+      sidebarLayout(
+        sidebarPanel(
+          h4(strong("Settings")),
+          selectizeInput(
+            inputId = "selectedExposure2",
+            choices = NULL,
+            label = "Select target exposure:"),
+          selectInput(
+            inputId = "selectedComparatorTypes",
+            label = "Select comparator type(s):",
+            choices = c("RxNorm Ingredients", "ATC Classes"),
+            selected = "RxNorm Ingredients",
+            multiple = TRUE),
+          checkboxGroupInput(
+            inputId = "selectedDatabases",
+            label = "Select data source(s):",
+            choices = NULL,
+            selected = NULL,
+            inline = FALSE,
+            width = NULL,
+            choiceNames = NULL,
+            choiceValues = NULL),
+          sliderInput(
+            inputId = "minNumDatabases",
+            label = "Require comparator presence in at least x databases:",
+            min = 1,
+            max = 10, # placeholder
+            value = 1,
+            step = 1),
+          radioButtons(
+            inputId = "avgOn",
+            label = "Rank comparators on:",
+            choices = c("Average similarity score", "Average source-specific rank"),
+            selected = "Average similarity score")),
+        mainPanel(
+          h3("Comparator listing"),
+          shinycssloaders::withSpinner(reactable::reactableOutput("multiDatabaseSimTable"))
+        )),
+    ),
+    tabPanel( # tab 3: about
       title = "About",
-      shiny::fluidRow(
-        shiny::column(
+      fluidRow(
+        column(
           width = 12,
           h3("Description"),
-          shiny::htmlTemplate("about.html"),
+          htmlTemplate("about.html"),
           h3("Currently Available Data Sources"),
           shinycssloaders::withSpinner(
             reactable::reactableOutput("dataSources")
           ),
           h3("License"),
-          shiny::htmlTemplate("license.html"),
+          htmlTemplate("license.html"),
         )
       )
     )
