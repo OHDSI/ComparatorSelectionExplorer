@@ -113,7 +113,7 @@ shinyUI(fluidPage(
             label = "Require comparator presence in at least x databases:",
             min = 1,
             max = 10,
-            value = 1,
+            value = 2,
             step = 1),
           radioButtons(
             inputId = "avgOn",

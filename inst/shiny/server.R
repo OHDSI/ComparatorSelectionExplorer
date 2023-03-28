@@ -140,8 +140,8 @@ shinyServer(function(input, output, session) {
       updateSelectizeInput(
         session,
         "selectedDatabase",
-        choices = dbChoices,
-        selected = dbChoices[1],
+        choices = dbChoices[order(names(dbChoices))],
+        selected = dbChoices[order(names(dbChoices))][1],
         server = TRUE)
     }, message = "Loading database sources")
   })
@@ -155,8 +155,8 @@ shinyServer(function(input, output, session) {
       updateCheckboxGroupInput(
         session,
         "selectedDatabases",
-        choices = dbChoices,
-        selected = dbChoices)
+        choices = dbChoices[order(names(dbChoices))],
+        selected = dbChoices[order(names(dbChoices))])
     }, message = "Loading database sources")
   })
 
@@ -403,17 +403,80 @@ shinyServer(function(input, output, session) {
 
   #### ---- multi-database cosine similarity reactable ---- ####
   output$multiDatabaseSimTable <- reactable::renderReactable({
-    res <- getSimilarityAllDatabases() %>% dplyr::select(-cohortDefinitionId2, -databaseId)
+
+    resAll <- getSimilarityAllDatabases() %>%
+      filter(databaseId %in% input$selectedDatabases) %>%
+      arrange(databaseId, cdmSourceAbbreviation, desc(cosineSimilarity)) %>%
+      group_by(databaseId, cdmSourceAbbreviation, .add = FALSE) %>%
+      mutate(cdmSpecificRank = row_number()) %>%
+      ungroup() %>%
+      group_by(cohortDefinitionId2) %>%
+      filter(n() >= input$minNumDatabases) %>%
+      ungroup()
+
+    resSum <- resAll %>%
+      ungroup() %>%
+      group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) %>%
+      summarise(
+        nDatabases = n(),
+        avg = mean(ifelse(input$avgOn == "Average similarity score", cosineSimilarity, cdmSpecificRank))) %>%
+      ungroup() %>%
+      arrange(desc(avg * ifelse(input$avgOn == "Average similarity score", 1, -1))) %>%
+      mutate(rank = row_number())
+
     shiny::withProgress({
       rt <- reactable::reactable(
-        data = res,
+        data = select(resSum, isAtc2, shortName, rank, avg, nDatabases, atc3Related, atc4Related),
         columns = list(
-          "cdmSourceAbbreviation" = reactable::colDef(name = "Database", align = "left", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "isAtc2" = reactable::colDef(name = "Type", cell = function(value) { ifelse(value == 1, "ATC Class", "RxNorm Ingredient") }, align = "right", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "cosineSimilarity" = reactable::colDef(name = "Cohort Similarity Score", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "shortName" = reactable::colDef(name = "Name", cell = function(value) { ifelse(substr(value, 1, 6) == "RxNorm", gsub("RxNorm - ", "", value), gsub("ATC - ", "", value)) }, align = "left", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "atc3Related" = reactable::colDef(name = "At Level 3", cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE),
-          "atc4Related" = reactable::colDef(name = "At Level 4", cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE)),
+          "isAtc2" = reactable::colDef(
+            name = "Type",
+            cell = function(value) { ifelse(value == 1, "ATC Class", "RxNorm Ingredient") },
+            align = "right",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "rank" = reactable::colDef(
+            name = "Overall Rank",
+            cell = function(value) { prettyNum(value, big.mark = ",") },
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "avg" =  reactable::colDef(
+            name = stringr::str_to_title(input$avgOn),
+            cell = function(value) { if(input$avgOn == "Average similarity score") {sprintf("%.3f", value)} else {sprintf("%.1f", value)} },
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "shortName" = reactable::colDef(
+            name = "Name",
+            cell = function(value) { ifelse(substr(value, 1, 6) == "RxNorm", gsub("RxNorm - ", "", value), gsub("ATC - ", "", value)) },
+            align = "left",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "nDatabases" = reactable::colDef(
+            name = "Number of Databases",
+            cell = function(value) { prettyNum(value, big.mark = ",") },
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "atc3Related" = reactable::colDef(
+            name = "At Level 3",
+            cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"),
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            filterable = TRUE),
+          "atc4Related" = reactable::colDef(
+            name = "At Level 4",
+            cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"),
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            filterable = TRUE)),
         searchable = TRUE,
         columnGroups = list(
           reactable::colGroup(
@@ -428,7 +491,7 @@ shinyServer(function(input, output, session) {
         striped = TRUE,
         highlight = TRUE,
         compact = TRUE,
-        defaultSorted = list(cosineSimilarity = "desc"),
+        defaultSorted = list(rank = "asc"),
         selection = "single",
         theme = reactable::reactableTheme(
           borderColor = "#dfe2e5",
