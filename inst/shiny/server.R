@@ -146,6 +146,34 @@ shinyServer(function(input, output, session) {
     }, message = "Loading database sources")
   })
 
+  observe({
+    shiny::withProgress({
+      dbSources <- getDatabaseSources()
+      dbChoices <- dbSources$databaseId
+      names(dbChoices) <- dbSources$cdmSourceAbbreviation
+
+      updateCheckboxGroupInput(
+        session,
+        "selectedDatabases",
+        choices = dbChoices,
+        selected = dbChoices)
+    }, message = "Loading database sources")
+  })
+
+  observe({
+    shiny::withProgress({
+      dbSources <- getDatabaseSources()
+      dbChoices <- dbSources$databaseId
+
+      updateSliderInput(
+        session,
+        inputId = "minNumDatabases",
+        min = 1,
+        max = length(dbChoices),
+        step = 1)
+    }, message = "Loading database sources")
+  })
+
 
   observe({
     shiny::withProgress({
@@ -164,8 +192,27 @@ shinyServer(function(input, output, session) {
     }, message = "Loading cohort definitions")
   })
 
+  observe({
+    shiny::withProgress({
+      cohortDefinitions <- getCohortDefinitions()
+      if (nrow(cohortDefinitions)) {
 
-  #### ---- function to get cosine similarity data (for table and plot) ---- ####
+        exposureSelection <- cohortDefinitions$cohortDefinitionId
+        names(exposureSelection) <- cohortDefinitions$shortName
+        updateSelectizeInput(
+          session,
+          "selectedExposure2",
+          choices = exposureSelection,
+          selected = 8826,
+          server = TRUE)
+      }
+    }, message = "Loading cohort definitions")
+  })
+
+
+
+
+  #### ---- function to get cosine similarity data for single database-target pair ---- ####
   getSimilarity <- shiny::reactive({
     # identify target cohort
     targetCohortId <- input$selectedExposure
@@ -233,6 +280,62 @@ shinyServer(function(input, output, session) {
                     cosineSimVisit = "visit context")
   })
 
+  #### ---- function to get cosine similarity data for target in all databases ---- ####
+  getSimilarityAllDatabases <- shiny::reactive({
+    # identify target cohort
+    targetCohortId <- input$selectedExposure2
+    validate(need(input$selectedExposure2, "must select exposure"))
+
+    shiny::withProgress({
+      # identify selected comparator types
+      if (length(input$selectedComparatorTypes) == 2L) { atcSelection <- c(0, 1) }
+      else if (input$selectedComparatorTypes == "RxNorm Ingredients") { atcSelection <- c(0) }
+      else if (input$selectedComparatorTypes == "ATC Classes") { atcSelection <- c(1) }
+
+      # send query to get results data
+      resultsData <- renderTranslateQuerySql(
+        connection = conn,
+        sql = "
+            select distinct
+               csi.database_id,
+               csi.cdm_source_abbreviation,
+               CASE
+                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN t.cohort_definition_id_2
+                  ELSE t.cohort_definition_id_1
+               END as cohort_definition_id_2,
+
+               CASE
+                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN cd2.atc_flag
+                  ELSE cd.atc_flag
+               END as is_atc_2,
+
+               CASE
+                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN cd2.short_name
+                  ELSE cd.short_name
+               END as short_name,
+               cosine_similarity,
+               atc.atc_4_related,
+               atc.atc_3_related
+             from (select * from @schema.@table_prefix@table where covariate_type = 'average') t
+             inner join @schema.@table_prefixcdm_source_info csi ON csi.database_id = t.database_id
+             inner join @schema.@table_prefixcohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
+             inner join @schema.@table_prefixcohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
+             left join @schema.@table_prefixatc_level atc on (t.cohort_definition_id_1 = atc.cohort_definition_id_1 and t.cohort_definition_id_2 = atc.cohort_definition_id_2) or (t.cohort_definition_id_2 = atc.cohort_definition_id_1 and t.cohort_definition_id_1 = atc.cohort_definition_id_2)
+             where (t.cohort_definition_id_1 = @targetCohortId or t.cohort_definition_id_2 = @targetCohortId)
+           ",
+        dbms = connectionDetails$dbms,
+        table_prefix = tablePrefix,
+        schema = resultsSchema,
+        table = "cosine_similarity_score",
+        snakeCaseToCamelCase = TRUE,
+        targetCohortId = targetCohortId)
+    }, message = "Loading similarity scores", value = 0.5)
+
+    resultsData %>%
+      dplyr::filter(.data$isAtc2 %in% atcSelection)
+
+  })
+
   # displays target name and counts
   output$selectedCohortInfo <- shiny::renderText({
     targetId <- input$selectedExposure
@@ -248,7 +351,7 @@ shinyServer(function(input, output, session) {
     return(cohortText)
   })
 
-  #### ---- cosine similarity reactable ---- ####
+  #### ---- single-database cosine similarity reactable ---- ####
   output$cosineSimilarityTbl <- reactable::renderReactable({
     res <- getSimilarity() %>% dplyr::select(-cohortDefinitionId2)
     shiny::withProgress({
@@ -285,6 +388,47 @@ shinyServer(function(input, output, session) {
         compact = TRUE,
         defaultSorted = list(cosineSimAll = "desc",
                              numPersons = "desc"),
+        selection = "single",
+        theme = reactable::reactableTheme(
+          borderColor = "#dfe2e5",
+          stripedColor = "#f6f8fa",
+          highlightColor = "#eab676",
+          cellPadding = "8px 12px",
+          searchInputStyle = list(width = "100%")),
+        showSortIcon = TRUE)
+    }, message = "Rendering results", value = 0.7)
+
+    rt
+  })
+
+  #### ---- multi-database cosine similarity reactable ---- ####
+  output$multiDatabaseSimTable <- reactable::renderReactable({
+    res <- getSimilarityAllDatabases() %>% dplyr::select(-cohortDefinitionId2, -databaseId)
+    shiny::withProgress({
+      rt <- reactable::reactable(
+        data = res,
+        columns = list(
+          "cdmSourceAbbreviation" = reactable::colDef(name = "Database", align = "left", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
+          "isAtc2" = reactable::colDef(name = "Type", cell = function(value) { ifelse(value == 1, "ATC Class", "RxNorm Ingredient") }, align = "right", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
+          "cosineSimilarity" = reactable::colDef(name = "Cohort Similarity Score", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
+          "shortName" = reactable::colDef(name = "Name", cell = function(value) { ifelse(substr(value, 1, 6) == "RxNorm", gsub("RxNorm - ", "", value), gsub("ATC - ", "", value)) }, align = "left", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
+          "atc3Related" = reactable::colDef(name = "At Level 3", cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE),
+          "atc4Related" = reactable::colDef(name = "At Level 4", cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE)),
+        searchable = TRUE,
+        columnGroups = list(
+          reactable::colGroup(
+            "Comparator",
+            c("shortName", "isAtc2")),
+          reactable::colGroup(
+            "In ATC Class with Target",
+            c("atc3Related", "atc4Related"))),
+        fullWidth = TRUE,
+        showPageSizeOptions = TRUE,
+        pageSizeOptions = c(5, 10, 20, 50, 100, 1000),
+        striped = TRUE,
+        highlight = TRUE,
+        compact = TRUE,
+        defaultSorted = list(cosineSimilarity = "desc"),
         selection = "single",
         theme = reactable::reactableTheme(
           borderColor = "#dfe2e5",

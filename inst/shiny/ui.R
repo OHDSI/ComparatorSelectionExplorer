@@ -24,7 +24,7 @@ shinyUI(fluidPage(
             choices = NULL,
             label = "Select target exposure:"),
           selectInput(inputId = "selectedComparatorTypes",
-                      label = "Select comparator type(s):",
+                      label = "Select comparator types:",
                       choices = c("RxNorm Ingredients", "ATC Classes"),
                       selected = "RxNorm Ingredients",
                       multiple = TRUE),
@@ -95,13 +95,13 @@ shinyUI(fluidPage(
             label = "Select target exposure:"),
           selectInput(
             inputId = "selectedComparatorTypes",
-            label = "Select comparator type(s):",
+            label = "Select comparator types:",
             choices = c("RxNorm Ingredients", "ATC Classes"),
             selected = "RxNorm Ingredients",
             multiple = TRUE),
           checkboxGroupInput(
             inputId = "selectedDatabases",
-            label = "Select data source(s):",
+            label = "Select data sources:",
             choices = NULL,
             selected = NULL,
             inline = FALSE,
@@ -112,7 +112,7 @@ shinyUI(fluidPage(
             inputId = "minNumDatabases",
             label = "Require comparator presence in at least x databases:",
             min = 1,
-            max = 10, # placeholder
+            max = 10,
             value = 1,
             step = 1),
           radioButtons(
