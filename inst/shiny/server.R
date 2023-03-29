@@ -358,17 +358,83 @@ shinyServer(function(input, output, session) {
       rt <- reactable::reactable(
         data = res,
         columns = list(
-          "isAtc2" = reactable::colDef(name = "Type", cell = function(value) { ifelse(value == 1, "ATC Class", "RxNorm Ingredient") }, align = "right", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "cosineSimAll" = reactable::colDef(name = "Cohort Similarity Score", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "cosineSimDemo" = reactable::colDef(name = "Demographics", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "cosineSimPres" = reactable::colDef(name = "Presentation", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "cosineSimMhist" = reactable::colDef(name = "Medical History", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "cosineSimPmeds" = reactable::colDef(name = "Prior Medications", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "cosineSimVisit" = reactable::colDef(name = "Visit Context", cell = function(value) { sprintf("%.3f", value) }, align = "center", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "shortName" = reactable::colDef(name = "Name", cell = function(value) { ifelse(substr(value, 1, 6) == "RxNorm", gsub("RxNorm - ", "", value), gsub("ATC - ", "", value)) }, align = "left", vAlign = "center", headerVAlign = "bottom", minWidth = 125),
-          "numPersons" = reactable::colDef(name = "Sample size", cell = function(value) format(round(value), big.mark = ","), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE),
-          "atc3Related" = reactable::colDef(name = "At Level 3", cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE),
-          "atc4Related" = reactable::colDef(name = "At Level 4", cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"), align = "center", vAlign = "center", headerVAlign = "bottom", filterable = TRUE)),
+          "isAtc2" = reactable::colDef(
+            name = "Type",
+            cell = function(value) { ifelse(value == 1, "ATC Class", "RxNorm Ingredient") },
+            align = "right",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "cosineSimAll" = reactable::colDef(
+            name = "Cohort Similarity Score",
+            cell = function(value) { sprintf("%.3f", value) },
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "cosineSimDemo" = reactable::colDef(
+            name = "Demographics",
+            cell = function(value) { sprintf("%.3f", value) },
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "cosineSimPres" = reactable::colDef(
+            name = "Presentation",
+            cell = function(value) { sprintf("%.3f", value) },
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "cosineSimMhist" = reactable::colDef(
+            name = "Medical History",
+            cell = function(value) { sprintf("%.3f", value) },
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "cosineSimPmeds" = reactable::colDef(
+            name = "Prior Medications",
+            cell = function(value) { sprintf("%.3f", value) },
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "cosineSimVisit" = reactable::colDef(
+            name = "Visit Context",
+            cell = function(value) { sprintf("%.3f", value) },
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "shortName" = reactable::colDef(
+            name = "Name",
+            cell = function(value) { ifelse(substr(value, 1, 6) == "RxNorm", gsub("RxNorm - ", "", value), gsub("ATC - ", "", value)) },
+            align = "left",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            minWidth = 125),
+          "numPersons" = reactable::colDef(
+            name = "Sample size",
+            cell = function(value) format(round(value), big.mark = ","),
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            filterable = TRUE),
+          "atc3Related" = reactable::colDef(
+            name = "At Level 3",
+            cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"),
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            filterable = TRUE),
+          "atc4Related" = reactable::colDef(
+            name = "At Level 4",
+            cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"),
+            align = "center",
+            vAlign = "center",
+            headerVAlign = "bottom",
+            filterable = TRUE)),
         searchable = TRUE,
         columnGroups = list(
           reactable::colGroup(
@@ -399,6 +465,7 @@ shinyServer(function(input, output, session) {
     }, message = "Rendering results", value = 0.7)
 
     rt
+
   })
 
   #### ---- multi-database cosine similarity reactable ---- ####
@@ -408,8 +475,14 @@ shinyServer(function(input, output, session) {
       filter(databaseId %in% input$selectedDatabases) %>%
       arrange(databaseId, cdmSourceAbbreviation, desc(cosineSimilarity)) %>%
       group_by(databaseId, cdmSourceAbbreviation, .add = FALSE) %>%
-      mutate(cdmSpecificRank = row_number()) %>%
+      mutate(cdmSpecificRank = row_number(),
+             comparatorsInCdm = n_distinct(cohortDefinitionId2)) %>%
       ungroup() %>%
+      mutate(
+        cdmSpecificRankStr = paste(
+          prettyNum(cdmSpecificRank, big.mark = ","),
+          "of",
+          prettyNum(comparatorsInCdm, big.mark = ","))) %>%
       group_by(cohortDefinitionId2) %>%
       filter(n() >= input$minNumDatabases) %>%
       ungroup()
@@ -427,6 +500,36 @@ shinyServer(function(input, output, session) {
     shiny::withProgress({
       rt <- reactable::reactable(
         data = select(resSum, isAtc2, shortName, rank, avg, nDatabases, atc3Related, atc4Related),
+        details = function(index) {
+
+          detailData <- resAll[resAll$shortName == resSum$shortName[index], c("cdmSourceAbbreviation", "cosineSimilarity", "cdmSpecificRankStr")]
+          detailData <- detailData[order(detailData$cdmSourceAbbreviation), ]
+
+          htmltools::div(
+            style = "padding: 1rem",
+            reactable::reactable(
+              data = detailData,
+              columns = list(
+                "cdmSourceAbbreviation" = reactable::colDef(
+                  name = "Data Source",
+                  align = "right",
+                  vAlign = "center",
+                  headerVAlign = "bottom",
+                  minWidth = 125),
+                "cosineSimilarity" = reactable::colDef(
+                  name = "Cohort Similarity Score",
+                  cell = function(value) { sprintf("%.3f", value) },
+                  align = "right",
+                  vAlign = "center",
+                  headerVAlign = "bottom",
+                  minWidth = 125),
+                "cdmSpecificRankStr" = reactable::colDef(
+                  name = "Source-Specific Rank",
+                  align = "right",
+                  vAlign = "center",
+                  headerVAlign = "bottom",
+                  minWidth = 125)),
+              outlined = TRUE))},
         columns = list(
           "isAtc2" = reactable::colDef(
             name = "Type",
