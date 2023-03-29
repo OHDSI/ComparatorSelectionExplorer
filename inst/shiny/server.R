@@ -315,8 +315,14 @@ shinyServer(function(input, output, session) {
                END as short_name,
                cosine_similarity,
                atc.atc_4_related,
-               atc.atc_3_related
+               atc.atc_3_related,
+               CASE
+                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN ec.num_persons
+                  ELSE ec2.num_persons
+               END as num_persons
              from (select * from @schema.@table_prefix@table where covariate_type = 'average') t
+             inner join @schema.@table_prefixcohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
+             inner join @schema.@table_prefixcohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1 and ec2.database_id = t.database_id
              inner join @schema.@table_prefixcdm_source_info csi ON csi.database_id = t.database_id
              inner join @schema.@table_prefixcohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
              inner join @schema.@table_prefixcohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
@@ -497,12 +503,39 @@ shinyServer(function(input, output, session) {
       arrange(desc(avg * ifelse(input$avgOn == "Average similarity score", 1, -1))) %>%
       mutate(rank = row_number())
 
+    if(input$avgOn == "Average similarity score") {
+
+      resSum <- resAll %>%
+        ungroup() %>%
+        group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) %>%
+        summarise(
+          nDatabases = n(),
+          avg = mean(cosineSimilarity)) %>%
+        ungroup() %>%
+        arrange(desc(avg)) %>%
+        mutate(rank = row_number())
+
+
+    } else if(input$avgOn == "Average source-specific rank") {
+
+      resSum <- resAll %>%
+        ungroup() %>%
+        group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) %>%
+        summarise(
+          nDatabases = n(),
+          avg = mean(cdmSpecificRank)) %>%
+        ungroup() %>%
+        arrange(avg) %>%
+        mutate(rank = row_number())
+
+    }
+
     shiny::withProgress({
       rt <- reactable::reactable(
         data = select(resSum, isAtc2, shortName, rank, avg, nDatabases, atc3Related, atc4Related),
         details = function(index) {
 
-          detailData <- resAll[resAll$shortName == resSum$shortName[index], c("cdmSourceAbbreviation", "cosineSimilarity", "cdmSpecificRankStr")]
+          detailData <- resAll[resAll$shortName == resSum$shortName[index], c("cdmSourceAbbreviation", "numPersons", "cosineSimilarity", "cdmSpecificRankStr")]
           detailData <- detailData[order(detailData$cdmSourceAbbreviation), ]
 
           htmltools::div(
@@ -516,10 +549,17 @@ shinyServer(function(input, output, session) {
                   vAlign = "center",
                   headerVAlign = "bottom",
                   minWidth = 125),
+                "numPersons" = reactable::colDef(
+                  name = "Sample Size",
+                  align = "center",
+                  cell = function(value) { prettyNum(value, big.mark = ",") },
+                  vAlign = "center",
+                  headerVAlign = "bottom",
+                  minWidth = 125),
                 "cosineSimilarity" = reactable::colDef(
                   name = "Cohort Similarity Score",
                   cell = function(value) { sprintf("%.3f", value) },
-                  align = "right",
+                  align = "center",
                   vAlign = "center",
                   headerVAlign = "bottom",
                   minWidth = 125),
@@ -547,7 +587,7 @@ shinyServer(function(input, output, session) {
             minWidth = 125),
           "avg" =  reactable::colDef(
             name = stringr::str_to_title(input$avgOn),
-            cell = function(value) { if(input$avgOn == "Average similarity score") {sprintf("%.3f", value)} else {sprintf("%.1f", value)} },
+            cell = function(value) { if(input$avgOn == "Average similarity score") {sprintf("%.3f", value)} else {format(round(value, 1), nsmall = 1, big.mark = ",")} },
             align = "center",
             vAlign = "center",
             headerVAlign = "bottom",
@@ -595,7 +635,6 @@ shinyServer(function(input, output, session) {
         highlight = TRUE,
         compact = TRUE,
         defaultSorted = list(rank = "asc"),
-        selection = "single",
         theme = reactable::reactableTheme(
           borderColor = "#dfe2e5",
           stripedColor = "#f6f8fa",
@@ -606,6 +645,7 @@ shinyServer(function(input, output, session) {
     }, message = "Rendering results", value = 0.7)
 
     rt
+
   })
 
   selectedComparator <- shiny::reactive({
