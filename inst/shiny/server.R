@@ -269,15 +269,8 @@ shinyServer(function(input, output, session) {
     }, message = "Loading similarity scores", value = 0.5)
 
     resultsData %>%
-      dplyr::filter(.data$isAtc2 %in% atcSelection) %>%
-      tidyr::pivot_wider(names_from = covariateType,
-                         values_from = cosineSimilarity) %>%
-      dplyr::rename(cosineSimAll = average,
-                    cosineSimDemo = Demographics,
-                    cosineSimPres = Presentation,
-                    cosineSimMhist = "Medical history",
-                    cosineSimPmeds = "prior meds",
-                    cosineSimVisit = "visit context")
+      dplyr::filter(.data$isAtc2 %in% atcSelection)
+
   })
 
   #### ---- function to get cosine similarity data for target in all databases ---- ####
@@ -359,10 +352,53 @@ shinyServer(function(input, output, session) {
 
   #### ---- single-database cosine similarity reactable ---- ####
   output$cosineSimilarityTbl <- reactable::renderReactable({
-    res <- getSimilarity() %>% dplyr::select(-cohortDefinitionId2)
+
+    resAll <- getSimilarity() %>%
+      dplyr::mutate(
+        covariateType = gsub("prior meds", "Prior medications", covariateType),
+        covariateType = gsub("visit context", "Visit context", covariateType)
+      )
+
+    resAvg <- resAll %>%
+      dplyr::filter(covariateType == "average") %>%
+      dplyr::arrange(desc(cosineSimilarity)) %>%
+      dplyr::mutate(rank = row_number())
+
     shiny::withProgress({
       rt <- reactable::reactable(
-        data = res,
+        data = dplyr::select(resAvg, isAtc2, shortName, numPersons, rank, cosineSimilarity, atc3Related, atc4Related),
+        details = function(index) {
+
+          detailData <- resAll[(resAll$shortName == resAvg$shortName[index]), c("covariateType", "cosineSimilarity")] %>%
+            dplyr::filter(covariateType != "average") %>%
+            dplyr::mutate(
+              covariateType = factor(
+                covariateType,
+                levels = c("Demographics",
+                           "Presentation",
+                           "Medical history",
+                           "Prior medications",
+                           "Visit context")))
+
+          htmltools::div(
+            style = "padding: 1rem",
+            reactable::reactable(
+              data = detailData,
+              columns = list(
+                "covariateType" = reactable::colDef(
+                  name = "Covariate Domain",
+                  align = "right",
+                  vAlign = "center",
+                  headerVAlign = "bottom",
+                  minWidth = 125),
+                "cosineSimilarity" = reactable::colDef(
+                  name = "Cosine Similarity",
+                  align = "left",
+                  cell = function(value) { sprintf("%.3f", value) },
+                  vAlign = "center",
+                  headerVAlign = "bottom",
+                  minWidth = 125)),
+              outlined = TRUE))},
         columns = list(
           "isAtc2" = reactable::colDef(
             name = "Type",
@@ -371,44 +407,16 @@ shinyServer(function(input, output, session) {
             vAlign = "center",
             headerVAlign = "bottom",
             minWidth = 125),
-          "cosineSimAll" = reactable::colDef(
+          "cosineSimilarity" = reactable::colDef(
             name = "Cohort Similarity Score",
             cell = function(value) { sprintf("%.3f", value) },
             align = "center",
             vAlign = "center",
             headerVAlign = "bottom",
             minWidth = 125),
-          "cosineSimDemo" = reactable::colDef(
-            name = "Demographics",
-            cell = function(value) { sprintf("%.3f", value) },
-            align = "center",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            minWidth = 125),
-          "cosineSimPres" = reactable::colDef(
-            name = "Presentation",
-            cell = function(value) { sprintf("%.3f", value) },
-            align = "center",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            minWidth = 125),
-          "cosineSimMhist" = reactable::colDef(
-            name = "Medical History",
-            cell = function(value) { sprintf("%.3f", value) },
-            align = "center",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            minWidth = 125),
-          "cosineSimPmeds" = reactable::colDef(
-            name = "Prior Medications",
-            cell = function(value) { sprintf("%.3f", value) },
-            align = "center",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            minWidth = 125),
-          "cosineSimVisit" = reactable::colDef(
-            name = "Visit Context",
-            cell = function(value) { sprintf("%.3f", value) },
+          "rank" = reactable::colDef(
+            name = "Rank",
+            cell = function(value) { paste(prettyNum(value, big.mark = ","), "of", prettyNum(nrow(resAvg), big.mark = ",")) },
             align = "center",
             vAlign = "center",
             headerVAlign = "bottom",
@@ -445,10 +453,8 @@ shinyServer(function(input, output, session) {
         columnGroups = list(
           reactable::colGroup(
             "Comparator",
-            c("shortName", "isAtc2")),
-          reactable::colGroup(
-            "Domain-Specific Cosine Similarity",
-            c("cosineSimAll", "cosineSimDemo", "cosineSimPres", "cosineSimMhist", "cosineSimPmeds", "cosineSimVisit")),
+            c("shortName", "isAtc2"),
+            sticky = "left"),
           reactable::colGroup(
             "In ATC Class with Target",
             c("atc3Related", "atc4Related"))),
@@ -458,7 +464,7 @@ shinyServer(function(input, output, session) {
         striped = TRUE,
         highlight = TRUE,
         compact = TRUE,
-        defaultSorted = list(cosineSimAll = "desc",
+        defaultSorted = list(cosineSimilarity = "desc",
                              numPersons = "desc"),
         selection = "single",
         theme = reactable::reactableTheme(
@@ -664,39 +670,58 @@ shinyServer(function(input, output, session) {
                        suspendWhenHidden = FALSE)
 
   #### ---- step-function plot of cosine similarity by rank ---- ####
-  output$stepPlot <- renderPlot({
-    getSimilarity() %>%
-      pivot_longer(
-        c(cosineSimAll, cosineSimDemo, cosineSimPres, cosineSimMhist, cosineSimPmeds, cosineSimVisit),
-        values_to = "cosineSimilarity",
-        names_to = "var") %>%
-      mutate(simType = NA,
-             simType = ifelse(var == "cosineSimAll", "Avg.", simType),
-             simType = ifelse(var == "cosineSimDemo", "Demographics", simType),
-             simType = ifelse(var == "cosineSimPres", "Presentation", simType),
-             simType = ifelse(var == "cosineSimMhist", "Medical History", simType),
-             simType = ifelse(var == "cosineSimPmeds", "Prior Medications", simType),
-             simType = ifelse(var == "cosineSimVisit", "Visit Context", simType),
-             simType = factor(simType, levels = c("Avg.", "Demographics", "Presentation", "Medical History", "Prior Medications", "Visit Context"))) %>%
-      group_by(simType) %>%
-      mutate(simRank = row_number(desc(cosineSimilarity))) %>%
+  output$stepPlot <- plotly::renderPlotly({
+
+    resWide <- getSimilarity() %>%
+      dplyr::mutate(var = NA) %>%
+      dplyr::mutate(
+        var = ifelse(covariateType == "average", "cohortSimScore", var),
+        var = ifelse(covariateType == "Demographics", "csDemo", var),
+        var = ifelse(covariateType == "Presentation", "csPres", var),
+        var = ifelse(covariateType == "Medical history", "csMhis", var),
+        var = ifelse(covariateType == "prior meds", "csPmed", var),
+        var = ifelse(covariateType == "visit context", "csVisc", var)) %>%
+      dplyr::mutate(
+        var = factor(var, levels = c("cohortSimScore", "csDemo", "csPres", "csMhis", "csPmed", "csVisc"))) %>%
+      tidyr::pivot_wider(
+        id_cols = c("cohortDefinitionId2", "isAtc2", "shortName", "numPersons", "atc3Related", "atc4Related"),
+        names_from = var,
+        id_expand = TRUE,
+        values_fill = NA,
+        values_from = cosineSimilarity) %>%
       ungroup() %>%
-      ggplot(aes(x = simRank, y = cosineSimilarity, color = simType)) +
-      geom_step() +
-      scale_x_continuous(labels = comma) +
-      scale_color_manual(
-        values = c("Avg." = "#4E79A7",
-                   "Demographics" = "#F28E2B",
-                   "Presentation" = "#E15759",
-                   "Medical History" = "#76B7B2",
-                   "Prior Medications" = "#59A14F",
-                   "Visit Context" = "#EDC948")) +
-      labs(y = "Cosine Similarity",
-           x = "Comparator Rank",
-           color = "Covariate Domain") +
-      theme_minimal(base_size = 9) +
-      theme(legend.position = "bottom") +
-      guides(color = guide_legend(ncol = 2))
+      dplyr::arrange(desc(cohortSimScore)) %>%
+      dplyr::mutate(
+        rank = row_number(),
+        tooltip = paste0(
+          "<b>",
+          isAtc2,
+          "-",
+          shortName,
+          "</b>\n",
+          "Cohort similarity score: ", sprintf("%.3f", cohortSimScore), "\n",
+          "Rank:", prettyNum(row_number(), big.mark = ","), " of ", prettyNum(nrow(.), big.mark = ","), "\n",
+          "Domain-specific cosine similarity:",
+          "\t<i> Demographics: </i>", sprintf("%.3f", csDemo), "\n",
+          "\t<i> Presentation: </i>", sprintf("%.3f", csPres), "\n",
+          "\t<i> Medical history: </i>", sprintf("%.3f", csMhis), "\n",
+          "\t<i> Prior medications: </i>", sprintf("%.3f", csPmed), "\n",
+          "\t<i> Visit context: </i>", sprintf("%.3f", csVisc), "\n"))
+
+    plotly::plot_ly(
+      data = resWide,
+      x = ~rank,
+      y = ~cohortSimScore,
+      type = "scatter",
+      mode = "lines",
+      text = ~tooltip,
+      hovertemplate = "%{text}") %>%
+    plotly::layout(
+        hovermode = "x unified",
+        xaxis = list(title = "Rank"),
+        yaxis = list(title = "Cohort Similarity Score"),
+        legend = list(orientation = 'h', y = -0.5))
+
   })
 
   ##### ---- function to get covariate data for a given comparison ---- ####

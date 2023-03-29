@@ -31,7 +31,7 @@ shinyUI(fluidPage(
           h4(strong("Visualizations")),
           h6(em("Similarity scores by domain-specific ranking")),
           shinycssloaders::withSpinner(
-            plotOutput(
+            plotly::plotlyOutput(
               outputId = "stepPlot"),
           ),
           conditionalPanel(
