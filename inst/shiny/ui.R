@@ -110,11 +110,12 @@ shinyUI(fluidPage(
             choiceValues = NULL),
           sliderInput(
             inputId = "minNumDatabases",
-            label = "Require comparator presence in at least x databases:",
+            label = "Minimum data sources with comparator presence:",
             min = 1,
             max = 10,
             value = 2,
-            step = 1),
+            step = 1,
+            ticks = FALSE),
           radioButtons(
             inputId = "avgOn",
             label = "Rank comparators on:",

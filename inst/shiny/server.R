@@ -5,6 +5,10 @@ library(scales)
 library(tidyr)
 library(dplyr, warn.conflicts = FALSE)
 
+# decimal formatters
+fmtSim <- "%.3f"
+fmtSmd <- "%.2f"
+
 # Override default DatabaseConnector query function
 renderTranslateQuerySql <-
   function(connection,
@@ -378,7 +382,8 @@ shinyServer(function(input, output, session) {
                            "Presentation",
                            "Medical history",
                            "Prior medications",
-                           "Visit context")))
+                           "Visit context"))) %>%
+            dplyr::arrange(covariateType)
 
           htmltools::div(
             style = "padding: 1rem",
@@ -394,7 +399,7 @@ shinyServer(function(input, output, session) {
                 "cosineSimilarity" = reactable::colDef(
                   name = "Cosine Similarity",
                   align = "left",
-                  cell = function(value) { sprintf("%.3f", value) },
+                  cell = function(value) { sprintf(fmtSim, value) },
                   vAlign = "center",
                   headerVAlign = "bottom",
                   minWidth = 125)),
@@ -409,7 +414,7 @@ shinyServer(function(input, output, session) {
             minWidth = 125),
           "cosineSimilarity" = reactable::colDef(
             name = "Cohort Similarity Score",
-            cell = function(value) { sprintf("%.3f", value) },
+            cell = function(value) { sprintf(fmtSim, value) },
             align = "center",
             vAlign = "center",
             headerVAlign = "bottom",
@@ -564,7 +569,7 @@ shinyServer(function(input, output, session) {
                   minWidth = 125),
                 "cosineSimilarity" = reactable::colDef(
                   name = "Cohort Similarity Score",
-                  cell = function(value) { sprintf("%.3f", value) },
+                  cell = function(value) { sprintf(fmtSim, value) },
                   align = "center",
                   vAlign = "center",
                   headerVAlign = "bottom",
@@ -593,7 +598,7 @@ shinyServer(function(input, output, session) {
             minWidth = 125),
           "avg" =  reactable::colDef(
             name = stringr::str_to_title(input$avgOn),
-            cell = function(value) { if(input$avgOn == "Average similarity score") {sprintf("%.3f", value)} else {format(round(value, 1), nsmall = 1, big.mark = ",")} },
+            cell = function(value) { if(input$avgOn == "Average similarity score") {sprintf(fmtSim, value)} else {format(round(value, 1), nsmall = 1, big.mark = ",")} },
             align = "center",
             vAlign = "center",
             headerVAlign = "bottom",
@@ -686,27 +691,29 @@ shinyServer(function(input, output, session) {
       tidyr::pivot_wider(
         id_cols = c("cohortDefinitionId2", "isAtc2", "shortName", "numPersons", "atc3Related", "atc4Related"),
         names_from = var,
-        id_expand = TRUE,
         values_fill = NA,
         values_from = cosineSimilarity) %>%
-      ungroup() %>%
+      ungroup()
+
+    if(!"csVisc" %in% colnames(resWide)) resWide$csVisc <- NA
+
+    resWide <- resWide %>%
       dplyr::arrange(desc(cohortSimScore)) %>%
       dplyr::mutate(
         rank = row_number(),
         tooltip = paste0(
+          "<extra></extra>",
           "<b>",
-          isAtc2,
-          "-",
-          shortName,
+          stringr::str_wrap(string = shortName, width = 20, indent = 1, exdent = 1),
           "</b>\n",
-          "Cohort similarity score: ", sprintf("%.3f", cohortSimScore), "\n",
+          "Cohort similarity score: ", sprintf(fmtSim, cohortSimScore), "\n",
           "Rank:", prettyNum(row_number(), big.mark = ","), " of ", prettyNum(nrow(.), big.mark = ","), "\n",
-          "Domain-specific cosine similarity:",
-          "\t<i> Demographics: </i>", sprintf("%.3f", csDemo), "\n",
-          "\t<i> Presentation: </i>", sprintf("%.3f", csPres), "\n",
-          "\t<i> Medical history: </i>", sprintf("%.3f", csMhis), "\n",
-          "\t<i> Prior medications: </i>", sprintf("%.3f", csPmed), "\n",
-          "\t<i> Visit context: </i>", sprintf("%.3f", csVisc), "\n"))
+          "Domain-specific cosine similarity:\n",
+          "\t<i> Demographics: </i>", sprintf(fmtSim, csDemo), "\n",
+          "\t<i> Presentation: </i>", sprintf(fmtSim, csPres), "\n",
+          "\t<i> Medical history: </i>", sprintf(fmtSim, csMhis), "\n",
+          "\t<i> Prior medications: </i>", sprintf(fmtSim, csPmed), "\n",
+          "\t<i> Visit context: </i>", ifelse(is.na(csVisc), "n/a", sprintf(fmtSim, csVisc))))
 
     plotly::plot_ly(
       data = resWide,
@@ -824,12 +831,13 @@ shinyServer(function(input, output, session) {
         type = factor(type, levels = c("Demographics", "Presentation", "Medical History", "Prior Medications", "Visit Context")),
         tooltip = paste0(
           "<b>",
-          covariateShortName, "</b>\n",
+          stringr::str_wrap(string = covariateShortName, width = 20, indent = 1, exdent = 1),
+          "</b>\n",
           "Target: ", ifelse(mean1 < 0.01, "<1%", scales::percent(mean1, accuracy = 0.1)), "\n",
           "Comparator: ", ifelse(mean2 < 0.01, "<1%", scales::percent(mean2, accuracy = 0.1)), "\n",
           "Std. Diff.: ", ifelse(mean1 < 0.01 | mean2 < 0.01,
-                                 ifelse(mean1 < 0.01, paste0("(\u2265) ", sprintf("%.2f", stdDiff)), paste0("(\u2264) ", sprintf("%.2f", stdDiff))),
-                                 sprintf("%.2f", stdDiff))
+                                 ifelse(mean1 < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, stdDiff)), paste0("(\u2264) ", sprintf(fmtSmd, stdDiff))),
+                                 sprintf(fmtSmd, stdDiff))
         )) %>%
       plotly::plot_ly(
         type = 'scatter',
@@ -891,17 +899,15 @@ shinyServer(function(input, output, session) {
         type = factor(type, levels = (c("Demographics", "Presentation", "Medical History", "Prior Medications", "Visit Context"))),
         tooltip = paste0(
           "<b>",
-          covariateShortName, "</b>\n",
+          stringr::str_wrap(string = covariateShortName, width = 20, indent = 1, exdent = 1),
+          "</b>\n",
           "Target: ", ifelse(mean1 < 0.01, "<1%", scales::percent(mean1, accuracy = 0.1)), "\n",
           "Comparator: ", ifelse(mean2 < 0.01, "<1%", scales::percent(mean2, accuracy = 0.1)), "\n",
           "Std. Diff.: ", ifelse(mean1 < 0.01 | mean2 < 0.01,
-                                 ifelse(mean1 < 0.01, paste0("(\u2265) ", sprintf("%.2f", stdDiff)), paste0("(\u2264) ", sprintf("%.2f", stdDiff))),
-                                 sprintf("%.2f", stdDiff))
+                                 ifelse(mean1 < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, stdDiff)), paste0("(\u2264) ", sprintf(fmtSmd, stdDiff))),
+                                 sprintf(fmtSmd, stdDiff))
         )) %>%
       plotly::plot_ly(
-        # x = ~stdDiff,
-        # type = "box",
-        # color = ~type,
         hovertemplate = "%{text}"
       ) %>%
       plotly::add_markers(
@@ -975,11 +981,11 @@ shinyServer(function(input, output, session) {
 
             if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
 
-              sprintf("%.2f", value)
+              sprintf(fmtSmd, value)
 
             } else {
 
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf("%.2f", value)), paste0("(\u2264) ", sprintf("%.2f", value)))}},
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value)))}},
           align = "center",
           vAlign = "bottom")),
       bordered = TRUE,
@@ -1043,11 +1049,11 @@ shinyServer(function(input, output, session) {
 
             if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
 
-              sprintf("%.2f", value)
+              sprintf(fmtSmd, value)
 
             } else {
 
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf("%.2f", value)), paste0("(\u2264) ", sprintf("%.2f", value)))}},
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value)))}},
           align = "center",
           vAlign = "bottom")),
       bordered = TRUE,
@@ -1112,11 +1118,11 @@ shinyServer(function(input, output, session) {
 
             if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
 
-              sprintf("%.2f", value)
+              sprintf(fmtSmd, value)
 
             } else {
 
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf("%.2f", value)), paste0("(\u2264) ", sprintf("%.2f", value)))}},
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value)))}},
           align = "center",
           vAlign = "bottom")),
       bordered = TRUE,
@@ -1181,11 +1187,11 @@ shinyServer(function(input, output, session) {
 
             if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
 
-              sprintf("%.2f", value)
+              sprintf(fmtSmd, value)
 
             } else {
 
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf("%.2f", value)), paste0("(\u2264) ", sprintf("%.2f", value)))}},
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value)))}},
           align = "center",
           vAlign = "bottom")),
       bordered = TRUE,
@@ -1251,11 +1257,11 @@ shinyServer(function(input, output, session) {
 
               if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
 
-                sprintf("%.2f", value)
+                sprintf(fmtSmd, value)
 
               } else {
 
-                ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf("%.2f", value)), paste0("(\u2264) ", sprintf("%.2f", value)))}},
+                ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value)))}},
             align = "center",
             vAlign = "bottom")),
         bordered = TRUE,
