@@ -273,3 +273,46 @@ from
 (select distinct covariate_id from #cov_summary) cs1
 inner join @cdm_database_schema.concept c1
 on cs1.covariate_id = c1.concept_id;
+
+--visit intensity: avg. number of occurrences, by visit_concept_id, in interval [-365, 0]
+drop table if exists #cov_summary;
+create table #cov_summary as
+select 
+	scd1.cohort_definition_id, 
+	t1.visit_concept_id as covariate_id, 
+	1.0*t1.num_visits/scd1.num_persons as covariate_mean
+from @results_database_schema.@cohort_counts scd1
+inner join 
+(
+select 
+	sc1.cohort_definition_id, 
+	vo1.visit_concept_id, 
+	count(distinct sc1.visit_occurrence_id) as num_visits
+from @cohort_database_schema.@cohort sc1
+inner join @cdm_database_schema.visit_occurrence vo1
+on sc1.subject_id = vo1.person_id
+and sc1.cohort_start_date >= dateadd(day,-30,vo1.visit_start_date)
+and sc1.cohort_start_date <= vo1.visit_start_date
+group by sc1.cohort_definition_id, vo1.visit_concept_id
+) t1
+on scd1.cohort_definition_id = t1.cohort_definition_id
+where 1.0*t1.num_visits/scd1.num_persons >= 0.01 -- not sure about this
+and t1.visit_concept_id > 0
+;
+
+insert into @results_database_schema.@covariate_means_table (cohort_definition_id, covariate_id, covariate_mean)
+select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
+
+
+insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, concept_id, time_at_risk_start, time_at_risk_end, covariate_type)
+select 
+	covariate_id, 
+	'Num. visits in 365d prior: ' || c1.concept_name as covariate_name, 
+	covariate_id as concept_id, 
+	-365 as time_at_risk_start, 
+	0 as time_at_risk_end, 
+	'Visit intensity' as covariate_type
+from
+(select distinct covariate_id from #cov_summary) cs1
+inner join @cdm_database_schema.concept c1
+on cs1.covariate_id = c1.concept_id;
