@@ -15,7 +15,7 @@ create table @results_database_schema.@covariate_def_table
   concept_id bigint,
   time_at_risk_start int,
   time_at_risk_end int,
-  covariate_type varchar(255)  --demographic, presentation, treatment, prognosis
+  covariate_type varchar(255)  
 );
 
 
@@ -195,42 +195,6 @@ inner join @cdm_database_schema.concept c1
 on cs1.covariate_id/1000 = c1.concept_id
 ;
 
-
---drug for conmed start<=0d, end>0d
--- skipped
---drop table if exists #cov_summary;
---create table #cov_summary as
---select scd1.cohort_definition_id,  t1.drug_concept_id as covariate_id, 1.0*t1.num_persons/scd1.num_persons as covariate_mean
---from @results_database_schema.@cohort_definition scd1
---inner join
---(
---select sc1.cohort_definition_id, de1.drug_concept_id, count(distinct sc1.subject_id) as num_persons
---from @cohort_database_schema.@cohort sc1
---inner join @cdm_database_schema.drug_era de1
---on sc1.subject_id = de1.person_id
---and sc1.cohort_start_date >= dateadd(day,0,de1.drug_era_start_date)
---and sc1.cohort_start_date < dateadd(day,0,de1.drug_era_end_date)
---group by sc1.cohort_definition_id, de1.drug_concept_id
---) t1
---on scd1.cohort_definition_id = t1.cohort_definition_id
---where 1.0*t1.num_persons/scd1.num_persons >= 0.01
---and t1.drug_concept_id > 0
---;
---
---
---insert into @results_database_schema.@covariate_means_table (cohort_definition_id, covariate_id, covariate_mean)
---select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
---
---
---insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, concept_id, time_at_risk_start, time_at_risk_end, covariate_type)
---select covariate_id, 'Drug with overlap: ' || c1.concept_name as covariate_name, covariate_id as concept_id, 0 as time_at_risk_start, 30 as time_at_risk_end, 'conmed' as covariate_type
---from
---(select distinct covariate_id from #cov_summary) cs1
---inner join @cdm_database_schema.concept c1
---on cs1.covariate_id = c1.concept_id
---;
-
-
 --drug for conmed start>=30d, end>0d
 -- comment was --drug for conmed start<=0d, end>0d
 drop table if exists #cov_summary;
@@ -260,74 +224,52 @@ select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
 
 
 insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, concept_id, time_at_risk_start, time_at_risk_end, covariate_type)
-select covariate_id, 'Drug with start >30d prior: ' || c1.concept_name as covariate_name, covariate_id/1000 as concept_id, 0 as time_at_risk_start, 30 as time_at_risk_end, 'prior meds' as covariate_type
+select covariate_id, 'Drug with start >30d prior: ' || c1.concept_name as covariate_name, covariate_id/1000 as concept_id, 0 as time_at_risk_start, 30 as time_at_risk_end, 'Prior medications' as covariate_type
 from
 (select distinct covariate_id from #cov_summary) cs1
 inner join @cdm_database_schema.concept c1
 on cs1.covariate_id/1000 = c1.concept_id
 ;
 
---visit context:  IP <=30d prior
-
+--visit context: all visits, by visit_concept_id, in interval [-30, 0]
 drop table if exists #cov_summary;
 create table #cov_summary as
-select scd1.cohort_definition_id,  9201 as covariate_id, 1.0*t1.num_persons/scd1.num_persons as covariate_mean
+select 
+	scd1.cohort_definition_id, 
+	t1.visit_concept_id as covariate_id, 
+	1.0*t1.num_persons/scd1.num_persons as covariate_mean
 from @results_database_schema.@cohort_counts scd1
 inner join 
 (
-select cohort_definition_id, count(distinct sc1.subject_id) as num_persons
+select 
+	sc1.cohort_definition_id, 
+	vo1.visit_concept_id, 
+	count(distinct sc1.subject_id) as num_persons
 from @cohort_database_schema.@cohort sc1
 inner join @cdm_database_schema.visit_occurrence vo1
 on sc1.subject_id = vo1.person_id
-and vo1.visit_start_date >= dateadd(day, -30, sc1.cohort_start_date)
-and vo1.visit_start_date <= dateadd(day, 0, sc1.cohort_start_date)
-where vo1.visit_concept_id in (select descendant_concept_id from @cdm_database_schema.concept_ancestor where ancestor_concept_id in (9201, 262))
-group by cohort_definition_id
+and sc1.cohort_start_date >= dateadd(day,-30,vo1.visit_start_date)
+and sc1.cohort_start_date <= vo1.visit_start_date
+group by sc1.cohort_definition_id, vo1.visit_concept_id
 ) t1
 on scd1.cohort_definition_id = t1.cohort_definition_id
 where 1.0*t1.num_persons/scd1.num_persons >= 0.01
+and t1.visit_concept_id > 0
 ;
 
 insert into @results_database_schema.@covariate_means_table (cohort_definition_id, covariate_id, covariate_mean)
 select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
 
-insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, covariate_type)
-select covariate_id, 'Visit: Inpatient <=30d prior' as covariate_name, 'visit context' as covariate_type
+
+insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, concept_id, time_at_risk_start, time_at_risk_end, covariate_type)
+select 
+	covariate_id, 
+	'Visit in <=30d prior: ' || c1.concept_name as covariate_name, 
+	covariate_id as concept_id, 
+	-30 as time_at_risk_start, 
+	0 as time_at_risk_end, 
+	'Visit context' as covariate_type
 from
 (select distinct covariate_id from #cov_summary) cs1
 inner join @cdm_database_schema.concept c1
-on cs1.covariate_id = c1.concept_id
-;
-
-
-
---visit context:  ER <=30d prior
-drop table if exists #cov_summary;
-create table #cov_summary as
-select scd1.cohort_definition_id,  9203 as covariate_id, 1.0*t1.num_persons/scd1.num_persons as covariate_mean
-from @results_database_schema.@cohort_counts scd1
-inner join 
-(
-select cohort_definition_id, count(distinct sc1.subject_id) as num_persons
-from @cohort_database_schema.@cohort sc1
-inner join @cdm_database_schema.visit_occurrence vo1
-on sc1.subject_id = vo1.person_id
-and vo1.visit_start_date >= dateadd(day, -30, sc1.cohort_start_date)
-and vo1.visit_start_date <= dateadd(day, 0, sc1.cohort_start_date)
-where vo1.visit_concept_id in (select descendant_concept_id from @cdm_database_schema.concept_ancestor where ancestor_concept_id in (9203, 262))
-group by cohort_definition_id
-) t1
-on scd1.cohort_definition_id = t1.cohort_definition_id
-where 1.0*t1.num_persons/scd1.num_persons >= 0.01
-;
-
-insert into @results_database_schema.@covariate_means_table (cohort_definition_id, covariate_id, covariate_mean)
-select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
-
-insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, covariate_type)
-select covariate_id, 'Visit: Emergency room <=30d prior' as covariate_name, 'visit context' as covariate_type
-from
-(select distinct covariate_id from #cov_summary) cs1
-inner join @cdm_database_schema.concept c1
-on cs1.covariate_id = c1.concept_id
-;
+on cs1.covariate_id = c1.concept_id;

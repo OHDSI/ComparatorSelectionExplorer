@@ -34,7 +34,6 @@ group by scs1.cohort_definition_id, scd1.covariate_type
 }
 
 --dotproduct for all cohort-cohort combinations, used in numerator of cos similarity calculation
---combinations to compare:  1) same database, same year, different concepts; 2) same database, same concept, different years,  3) (for when pooling across databases) different database, same concept, same year
 drop table if exists #dotproduct_concept;
 create table #dotproduct_concept as
 select scs1.cohort_definition_id as cohort_definition_id_1, scs2.cohort_definition_id as cohort_definition_id_2,
@@ -76,7 +75,7 @@ INSERT INTO @results_database_schema.@cosine_sim_table_2
 select
     cohort_definition_id_1,
     cohort_definition_id_2,
-    'average' as covariate_type,
+    'Average' as covariate_type,
     avg(cosine_similarity) as cosine_similarity
 from @results_database_schema.@cosine_sim_table_2
 group by cohort_definition_id_1, cohort_definition_id_2
