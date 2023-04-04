@@ -331,3 +331,104 @@ from
 inner join @cdm_database_schema.concept c1
 on cs1.covariate_id = c1.concept_id
 ;
+
+
+/*****
+* conditions/drugs/procedures/measurements/observations that are same-day co-occurrence
+* Used for excluding co variates in ps matching.
+*****/
+
+drop table if exists #cov_summary;
+create table #cov_summary as
+select
+	scd1.cohort_definition_id,
+	cast(t1.concept_id as bigint)*-1 as covariate_id,    --need to create unique ID for all concepts to avoid collision - other ones used ID and ID*1000, doing -1 as placeholder
+	1.0*t1.num_persons/scd1.num_persons as covariate_mean
+from @results_database_schema.@cohort_counts scd1
+inner join
+(
+select
+	sc1.cohort_definition_id,
+	co1.condition_concept_id as concept_id,
+	count(distinct sc1.subject_id) as num_persons
+from @cohort_database_schema.@cohort sc1
+inner join @cdm_database_schema.condition_occurrence co1
+on sc1.subject_id = co1.person_id
+and sc1.cohort_start_date = co1.condition_start_date
+group by sc1.cohort_definition_id, co1.condition_concept_id
+
+union all
+
+select
+	sc1.cohort_definition_id,
+	de1.drug_concept_id as concept_id,
+	count(distinct sc1.subject_id) as num_persons
+from @cohort_database_schema.@cohort sc1
+inner join @cdm_database_schema.drug_era de1
+on sc1.subject_id = de1.person_id
+and sc1.cohort_start_date = de1.drug_era_start_date
+group by sc1.cohort_definition_id, de1.drug_concept_id
+
+union all
+
+select
+	sc1.cohort_definition_id,
+	po1.procedure_concept_id as concept_id,
+	count(distinct sc1.subject_id) as num_persons
+from @cohort_database_schema.@cohort sc1
+inner join @cdm_database_schema.procedure_occurrence po1
+on sc1.subject_id = po1.person_id
+and sc1.cohort_start_date = po1.procedure_date
+group by sc1.cohort_definition_id, po1.procedure_concept_id
+
+union all
+
+select
+	sc1.cohort_definition_id,
+	o1.observation_concept_id as concept_id,
+	count(distinct sc1.subject_id) as num_persons
+from @cohort_database_schema.@cohort sc1
+
+inner join @cdm_database_schema.observation o1
+
+on sc1.subject_id = o1.person_id
+and sc1.cohort_start_date = o1.observation_date
+group by sc1.cohort_definition_id, o1.observation_concept_id
+
+union all
+
+select
+	sc1.cohort_definition_id,
+	m1.measurement_concept_id as concept_id,
+	count(distinct sc1.subject_id) as num_persons
+from @cohort_database_schema.@cohort sc1
+inner join @cdm_database_schema.observation o1
+inner join measurement m1
+on sc1.subject_id = m1.person_id
+and sc1.cohort_start_date = m1.measurement_date
+group by sc1.cohort_definition_id, m1.measurement_concept_id
+
+
+) t1
+on scd1.cohort_definition_id = t1.cohort_definition_id
+where 1.0*t1.num_persons/scd1.num_persons >= 0.01
+and t1.concept_id > 0
+;
+
+
+insert into @results_database_schema.@covariate_means_table (cohort_definition_id, covariate_id, covariate_mean)
+select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
+
+insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, concept_id, time_at_risk_start, time_at_risk_end, covariate_type)
+select
+	covariate_id,
+	'concept co-occurrence: ' || c1.concept_name as covariate_name,
+	covariate_id/-1 as concept_id,   --normalize back to conceptId from the mask
+	0 as time_at_risk_start,
+	0 as time_at_risk_end,
+	'Co-occurrence' as covariate_type
+from
+(select distinct covariate_id from #cov_summary) cs1
+inner join @cdm_database_schema.concept c1
+on cs1.covariate_id/-1 = c1.concept_id  --normalize back to conceptId from the mask
+;
