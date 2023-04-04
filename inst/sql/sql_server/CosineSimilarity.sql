@@ -1,6 +1,6 @@
 {DEFAULT @dotproduct_concept = ''}
 {DEFAULT @vector_length = ''}
-
+{DEFAULT @exclude_co_occurrence_average = TRUE}
 /***
 compute cosine similarity for all relavant cohort-cohort comparisons
 
@@ -64,12 +64,12 @@ create table @results_database_schema.@cosine_sim_table_2 as
 select t1.cohort_definition_id_1, t1.cohort_definition_id_2, t1.covariate_type,
 t1.dotproduct / (vl1.vector_length * vl2.vector_length) as cosine_similarity
 from #dotproduct_concept t1
-inner join #vector_length vl1
-on t1.cohort_definition_id_1 = vl1.cohort_definition_id
-and t1.covariate_type = vl1.covariate_type
-inner join #vector_length vl2
-on t1.cohort_definition_id_2 = vl2.cohort_definition_id
-and t1.covariate_type = vl2.covariate_type
+inner join #vector_length vl1 on (
+    t1.cohort_definition_id_1 = vl1.cohort_definition_id and t1.covariate_type = vl1.covariate_type
+)
+inner join #vector_length vl2 on (
+    t1.cohort_definition_id_2 = vl2.cohort_definition_id and t1.covariate_type = vl2.covariate_type
+)
 ;
 
 INSERT INTO @results_database_schema.@cosine_sim_table_2
@@ -79,5 +79,6 @@ select
     'average' as covariate_type,
     avg(cosine_similarity) as cosine_similarity
 from @results_database_schema.@cosine_sim_table_2
+{@exclude_co_occurrence_average} ? {WHERE covariate_type != 'Co-occurrence'}
 group by cohort_definition_id_1, cohort_definition_id_2
 ;
