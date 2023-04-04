@@ -1,7 +1,7 @@
 Package: ComparatorSelectionExplorer
 Type: Package
 Title: OHDSI Comparator Selection Explorer
-Version: 0.1.0
+Version: 0.2.0
 Date: 2022-11-29
 Authors@R: c(
   person("Jamie", "Gilbert",  email = "gilbert@ohdsi.org", role = c("aut", "cre")),
@@ -11,7 +11,7 @@ Authors@R: c(
   person("David", "Kern", role = c("aut"))
   )
 Maintainer: Jamie Gilbert <gilbert@ohdsi.org>
-Description: Comparator Selection Explorer package - generate cosine similarity scores for pairs of exposure cohorts
+Description: Comparator Selection Explorer package, generate cosine similarity scores for pairs of exposure cohorts
 License: Apache License
 VignetteBuilder: knitr
 Encoding: UTF-8
@@ -20,18 +20,20 @@ Depends:
 Imports:
   DatabaseConnector (>= 6.0.0),
   ResultModelManager (>= 0.3.0),
+  ParallelLogger,
   CohortGenerator,
   checkmate,
   SqlRender (>= 1.9.0),
   readr,
   dplyr,
-  zip
+  digest
 Suggests:
   shiny,
   reactable,
   ggplot2,
   Eunomia,
   testthat (>= 3.0.0),
+  knitr
 Remotes:
   ohdsi/ResultModelManager,
   ohdsi/CohortGenerator,
@@ -39,4 +41,4 @@ Remotes:
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
 Copyright: See file COPYRIGHTS
 Config/testthat/edition: 3
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.3

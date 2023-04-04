@@ -75,7 +75,7 @@ createCohorts <- function(executionSettings = NULL, ...) {
       dplyr::select("cohortId", "cohortName") %>%
       dplyr::mutate(atcFlag = -1,
                     conceptId = -1,
-                    shortName = cohortName) %>%
+                    shortName = .data$cohortName) %>%
       dplyr::rename("cohortDefinitionName" = "cohortName",
                     "cohortDefinitionId" = "cohortId")
 

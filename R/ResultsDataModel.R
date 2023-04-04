@@ -89,6 +89,7 @@ getResultsDataModelSpec <- function() {
 #' @param tablePrefix                  (Optional) Use if a table prefix is used before table names (e.g. "cd_")
 #' @param zipFileName                  Path to zipFile containing results
 #' @param importFilpath                file path to export zipped results to before upload (optional - default is temporary)
+#' @param ...                          Elipsis  - see ResultModelManager::uploadResults
 #' @export
 uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tablePrefix = "", importFilpath = tempfile(), ...) {
 

@@ -77,6 +77,8 @@ analysis (defaults to 1000).}
 
 \item{removeExportDir}{(optional) remove the export dir after creating zip files?}
 
+\item{generateCohortDefinitionSet}{Boolean - generate the user specified cohortDefinitionSet}
+
 \item{exportZipFile}{Path to zip file output of project}
 
 \item{.callbackFun}{Used internally - an on.exit call for disconnection from db}

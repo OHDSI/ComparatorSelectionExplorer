@@ -41,9 +41,11 @@
 #' @param logFileLocation               (optional) Log file location
 #' @param exportDir                     (optional) Folder to store results files in before export (default is tempdir)
 #' @param removeExportDir               (optional) remove the export dir after creating zip files?
-#' @param .callbackFun                   Used internally - an on.exit call for disconnection from db
+#' @param .callbackFun                  Used internally - an on.exit call for disconnection from db
+#' @param generateCohortDefinitionSet   Boolean - generate the user specified cohortDefinitionSet
 #' @returns executionSettings object
 #' @export
+#' @importFrom digest digest2int
 createExecutionSettings <- function(connectionDetails,
                                     connection = NULL,
                                     databaseName = NULL,

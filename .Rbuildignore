@@ -2,3 +2,8 @@
 ^renv\.lock$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+.idea/
+$.log
+cse-execution-log-main.txt
+errorReportSql.txt
+.github/
