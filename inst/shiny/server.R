@@ -140,27 +140,32 @@ shinyServer(function(input, output, session) {
       dbSources <- getDatabaseSources()
       dbChoices <- dbSources$databaseId
       names(dbChoices) <- dbSources$cdmSourceAbbreviation
+      dbChoices <- dbChoices[order(names(dbChoices))]
 
       updateSelectizeInput(
         session,
         "selectedDatabase",
-        choices = dbChoices[order(names(dbChoices))],
-        selected = dbChoices[order(names(dbChoices))][1],
+        choices = dbChoices,
+        # default choice: CCAE
+        selected = dbChoices[which(names(dbChoices) == "IBM CCAE")],
         server = TRUE)
     }, message = "Loading database sources")
   })
 
   observe({
     shiny::withProgress({
+
       dbSources <- getDatabaseSources()
       dbChoices <- dbSources$databaseId
       names(dbChoices) <- dbSources$cdmSourceAbbreviation
+      dbChoices <- dbChoices[order(names(dbChoices))]
 
       updateCheckboxGroupInput(
         session,
         "selectedDatabases",
-        choices = dbChoices[order(names(dbChoices))],
-        selected = dbChoices[order(names(dbChoices))])
+        choices = dbChoices,
+        # default choice: everything except optum DoD, since it's duplicative with SES
+        selected = dbChoices[which(names(dbChoices) != "OPTUM Extended DOD")])
     }, message = "Loading database sources")
   })
 
@@ -285,9 +290,9 @@ shinyServer(function(input, output, session) {
 
     shiny::withProgress({
       # identify selected comparator types
-      if (length(input$selectedComparatorTypes) == 2L) { atcSelection <- c(0, 1) }
-      else if (input$selectedComparatorTypes == "RxNorm Ingredients") { atcSelection <- c(0) }
-      else if (input$selectedComparatorTypes == "ATC Classes") { atcSelection <- c(1) }
+      if (length(input$selectedComparatorTypes2) == 2L) { atcSelection <- c(0, 1) }
+      else if (input$selectedComparatorTypes2 == "RxNorm Ingredients") { atcSelection <- c(0) }
+      else if (input$selectedComparatorTypes2 == "ATC Classes") { atcSelection <- c(1) }
 
       # send query to get results data
       resultsData <- renderTranslateQuerySql(
@@ -509,8 +514,8 @@ shinyServer(function(input, output, session) {
       group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) %>%
       summarise(
         nDatabases = n(),
-        avg = mean(ifelse(input$avgOn == "Average similarity score", cosineSimilarity, cdmSpecificRank))) %>%
-      ungroup() %>%
+        avg = mean(ifelse(input$avgOn == "Average similarity score", cosineSimilarity, cdmSpecificRank)),
+        .groups = "drop") %>%
       arrange(desc(avg * ifelse(input$avgOn == "Average similarity score", 1, -1))) %>%
       mutate(rank = row_number())
 
@@ -521,8 +526,8 @@ shinyServer(function(input, output, session) {
         group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) %>%
         summarise(
           nDatabases = n(),
-          avg = mean(cosineSimilarity)) %>%
-        ungroup() %>%
+          avg = mean(cosineSimilarity),
+          .groups = "drop") %>%
         arrange(desc(avg)) %>%
         mutate(rank = row_number())
 
@@ -534,8 +539,8 @@ shinyServer(function(input, output, session) {
         group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) %>%
         summarise(
           nDatabases = n(),
-          avg = mean(cdmSpecificRank)) %>%
-        ungroup() %>%
+          avg = mean(cdmSpecificRank),
+          .groups = "drop") %>%
         arrange(avg) %>%
         mutate(rank = row_number())
 
@@ -1303,10 +1308,11 @@ shinyServer(function(input, output, session) {
       snakeCaseToCamelCase = TRUE)
 
     colnames(dataSourceData) <- SqlRender::camelCaseToTitleCase(colnames(dataSourceData))
-    reactable::reactable(data = dataSourceData,
-                         columns = list(
-                           "Source Description" = reactable::colDef(minWidth = 300)
-                         ),
-                         defaultPageSize = 5)
+    reactable::reactable(
+      data = dataSourceData,
+      columns = list(
+        "Source Description" = reactable::colDef(
+          minWidth = 300)),
+      defaultPageSize = 5)
   })
 })
