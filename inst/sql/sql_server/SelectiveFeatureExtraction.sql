@@ -395,7 +395,7 @@ select
 	m1.measurement_concept_id as concept_id,
 	count(distinct sc1.subject_id) as num_persons
 from @cohort_database_schema.@cohort sc1
-inner join @cdm_database_schema.measurement m1 (on sc1.subject_id = m1.person_id and sc1.cohort_start_date = m1.measurement_date)
+inner join @cdm_database_schema.measurement m1 on (sc1.subject_id = m1.person_id and sc1.cohort_start_date = m1.measurement_date)
 group by sc1.cohort_definition_id, m1.measurement_concept_id
 
 
