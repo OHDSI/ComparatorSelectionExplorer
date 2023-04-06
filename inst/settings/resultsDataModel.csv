@@ -13,6 +13,7 @@ cdm_source_info,cdm_etl_reference,varchar,no,no,cdm info,Yes
 cdm_source_info,source_release_date,date,no,no,cdm info,Yes
 cdm_source_info,cdm_release_date,date,no,no,cdm info,Yes
 cdm_source_info,cdm_version,varchar,no,no,cdm info,Yes
+cdm_source_info,cdm_version_concept_id,int,no,no,cdm info,Yes
 cdm_source_info,vocabulary_version,varchar,no,no,cdm info,Yes
 cohort_count,num_persons,bigint,no,Yes,cohort size,Yes
 cohort_count,cohort_definition_id,bigint,Yes,no,cohort definition id,Yes
