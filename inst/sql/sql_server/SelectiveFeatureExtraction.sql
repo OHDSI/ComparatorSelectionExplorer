@@ -352,9 +352,7 @@ select
 	co1.condition_concept_id as concept_id,
 	count(distinct sc1.subject_id) as num_persons
 from @cohort_database_schema.@cohort sc1
-inner join @cdm_database_schema.condition_occurrence co1
-on sc1.subject_id = co1.person_id
-and sc1.cohort_start_date = co1.condition_start_date
+inner join @cdm_database_schema.condition_occurrence co1 on (sc1.subject_id = co1.person_id and sc1.cohort_start_date = co1.condition_start_date)
 group by sc1.cohort_definition_id, co1.condition_concept_id
 
 union all
@@ -377,8 +375,7 @@ select
 	count(distinct sc1.subject_id) as num_persons
 from @cohort_database_schema.@cohort sc1
 inner join @cdm_database_schema.procedure_occurrence po1
-on sc1.subject_id = po1.person_id
-and sc1.cohort_start_date = po1.procedure_date
+    on (sc1.subject_id = po1.person_id and sc1.cohort_start_date = po1.procedure_date)
 group by sc1.cohort_definition_id, po1.procedure_concept_id
 
 union all
@@ -388,11 +385,7 @@ select
 	o1.observation_concept_id as concept_id,
 	count(distinct sc1.subject_id) as num_persons
 from @cohort_database_schema.@cohort sc1
-
-inner join @cdm_database_schema.observation o1
-
-on sc1.subject_id = o1.person_id
-and sc1.cohort_start_date = o1.observation_date
+inner join @cdm_database_schema.observation o1 on (sc1.subject_id = o1.person_id and sc1.cohort_start_date = o1.observation_date)
 group by sc1.cohort_definition_id, o1.observation_concept_id
 
 union all
@@ -402,15 +395,12 @@ select
 	m1.measurement_concept_id as concept_id,
 	count(distinct sc1.subject_id) as num_persons
 from @cohort_database_schema.@cohort sc1
-inner join @cdm_database_schema.observation o1
-inner join measurement m1
-on sc1.subject_id = m1.person_id
-and sc1.cohort_start_date = m1.measurement_date
+inner join @cdm_database_schema.measurement m1 (on sc1.subject_id = m1.person_id and sc1.cohort_start_date = m1.measurement_date)
 group by sc1.cohort_definition_id, m1.measurement_concept_id
 
 
 ) t1
-on scd1.cohort_definition_id = t1.cohort_definition_id
+on (scd1.cohort_definition_id = t1.cohort_definition_id)
 where 1.0*t1.num_persons/scd1.num_persons >= 0.01
 and t1.concept_id > 0
 ;
