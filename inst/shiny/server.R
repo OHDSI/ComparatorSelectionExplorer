@@ -9,130 +9,131 @@ library(dplyr, warn.conflicts = FALSE)
 fmtSim <- "%.3f"
 fmtSmd <- "%.2f"
 
-# Override default DatabaseConnector query function
-renderTranslateQuerySql <-
-  function(connection,
-           sql,
-           dbms,
-           ...,
-           snakeCaseToCamelCase = FALSE) {
-    if (is(connection, "Pool")) {
-      sql <- SqlRender::render(sql, ...)
-      sql <- SqlRender::translate(sql, targetDialect = dbms)
+dataModelSpec <- ResultModelManager::loadResultsDataModelSpecifications("resultsDataModel.csv")
+qns <- ResultModelManager::createQueryNamespace(connectionDetails = connectionDetails,
+                                                usePooledConnection = TRUE,
+                                                schema = resultsSchema,
+                                                tablePrefix = tablePrefix,
+                                                tableSpecification = dataModelSpec)
 
-      tryCatch(
-      {
-        data <- DatabaseConnector::dbGetQuery(connection, sql)
-      },
-        error = function(err) {
-          writeLines(sql)
-          if (dbms %in% c("postgresql", "redshift")) {
-            DatabaseConnector::dbExecute(connection, "ABORT;")
-          }
-          stop(err)
-        }
-      )
-      if (snakeCaseToCamelCase) {
-        colnames(data) <- SqlRender::snakeCaseToCamelCase(colnames(data))
-      }
-      return(data)
-    } else {
-      return(
-        DatabaseConnector::renderTranslateQuerySql(
-          connection = connection,
-          sql = sql,
-          ...,
-          snakeCaseToCamelCase = snakeCaseToCamelCase
+
+withTooltip <- function(value, tooltip, ...) {
+  shiny::div(style = "text-decoration: underline; text-decoration-style: dotted; cursor: help",
+             tippy::tippy(value, tooltip, ...))
+}
+
+
+modalUi <- function() {
+  shiny::tagList(
+    h3(strong("Visualizations")),
+    tabsetPanel(
+      tabPanel(
+        title = "Covariate prevalence",
+        h6(em("Covariate prevalence")),
+        shinycssloaders::withSpinner(
+          plotly::plotlyOutput(
+            outputId = "scatterPlot"
+          )
+        )
+      ),
+      tabPanel(
+        title = "Standardized mean differences",
+        h6(em("Standardized mean differences")),
+        shinycssloaders::withSpinner(
+          plotly::plotlyOutput(
+            outputId = "smdPlot"
+          )
         )
       )
-    }
-  }
-
-conn <-
-  pool::dbPool(
-    drv = DatabaseConnector::DatabaseConnectorDriver(),
-    dbms = connectionDetails$dbms,
-    server = connectionDetails$server(),
-    port = connectionDetails$port(),
-    user = connectionDetails$user(),
-    password = connectionDetails$password(),
-    connectionString = connectionDetails$connectionString()
+    ),
+    # display table
+    h3(strong("Covariate Tables")),
+    tabsetPanel(
+      tabPanel(
+        title = "Demographics",
+        h4(strong("Demographics")),
+        textOutput("covTableDemoBalance"),
+        shinycssloaders::withSpinner(reactable::reactableOutput("covTableDemo"))
+      ),
+      tabPanel(
+        title = "Presentation",
+        h4(strong("Presentation")),
+        h5(em("One covariate per condition observed in 30 days prior to index")),
+        textOutput("covTablePresBalance"),
+        shinycssloaders::withSpinner(reactable::reactableOutput("covTablePres"))
+      ),
+      tabPanel(
+        title = "Medical history",
+        h4(strong("Medical history")),
+        h5(em("One covariate per condition observed more than 30 days prior to index")),
+        textOutput("covTableMhistBalance"),
+        shinycssloaders::withSpinner(reactable::reactableOutput("covTableMhist"))
+      ),
+      tabPanel(
+        title = "Prior medications",
+        h4(strong("Prior medications")),
+        h5(em("One covariate per RxNorm ingredient observed more than 30 days prior to index")),
+        textOutput("covTablePmedsBalance"),
+        shinycssloaders::withSpinner(reactable::reactableOutput("covTablePmeds"))
+      ),
+      tabPanel(
+        title = "Visit context",
+        h4(strong("Visit context")),
+        h5(em("Inpatient and emergency department visits observed in 30 days prior to index")),
+        textOutput("covTableVisitBalance"),
+        shinycssloaders::withSpinner(reactable::reactableOutput("covTableVisit"))
+      )
+    )
   )
-
-# Handle closing connection cleanly
-shiny::onStop(function() {
-  if (DBI::dbIsValid(conn)) {
-    writeLines("Closing database pool")
-    pool::poolClose(conn)
-  }
-})
+}
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output, session) {
-  databaseSelection <- shiny::reactive({
-    input$selectedDatabase
+
+  selectedDatabase <- shiny::reactive({
+    input$show_details$index[2]
   })
 
   getCohortDefinitions <- shiny::reactive({
-    renderTranslateQuerySql(
-      connection = conn,
-      sql = "select distinct
+    qns$queryDb("select distinct
                t.cohort_definition_id,
                short_name,
                atc_flag as is_atc
-             from @schema.@table_prefix@table t
+             from @schema.@cohort_definition t
              where t.cohort_definition_id is not null
              and   atc_flag in (0, 1)
-             order by short_name",
-      dbms = connectionDetails$dbms,
-      schema = resultsSchema,
-      table = "cohort_definition",
-      table_prefix = tablePrefix,
-      snakeCaseToCamelCase = TRUE
-    )
+             order by short_name")
   })
 
+  selectedComparator <- shiny::reactive({
+    input$show_details$index[1]
+  })
 
   # initial query to get list of cohort definitions
   getCohortDefinitionsWithCounts <- shiny::reactive({
-    dbSel <- databaseSelection()
+    dbSel <- selectedDatabase()
     if (is.null(dbSel) || dbSel == "")
       return(data.frame())
 
-    renderTranslateQuerySql(
-      connection = conn,
+    qns$queryDb(
       sql = "select distinct
                t.cohort_definition_id,
                short_name,
                atc_flag as is_atc,
                c.num_persons,
                c.database_id
-             from @schema.@table_prefix@table t
-             inner join @schema.@table_prefixcohort_count c ON c.cohort_definition_id = t.cohort_definition_id
+             from @schema.@cohort_definition t
+             inner join @schema.@cohort_count c ON c.cohort_definition_id = t.cohort_definition_id
              where t.cohort_definition_id is not null
              and   atc_flag in (0, 1)
              and c.database_id = @database_id
              order by short_name",
-      dbms = connectionDetails$dbms,
-      schema = resultsSchema,
-      table = "cohort_definition",
-      database_id = dbSel,
-      table_prefix = tablePrefix,
-      snakeCaseToCamelCase = TRUE
+      database_id = dbSel
     )
   })
 
   getDatabaseSources <- shiny::reactive({
-    renderTranslateQuerySql(
-      connection = conn,
-      sql = "select distinct *
-             from @schema.@table_prefix@table t",
-      dbms = connectionDetails$dbms,
-      schema = resultsSchema,
-      table = "cdm_source_info",
-      table_prefix = tablePrefix,
-      snakeCaseToCamelCase = TRUE
-    )
+    qns$queryDb(sql = "select distinct * from @schema.@cdm_source_info t")
   })
 
   observe({
@@ -210,7 +211,7 @@ shinyServer(function(input, output, session) {
         names(exposureSelection) <- cohortDefinitions$shortName
         updateSelectizeInput(
           session,
-          "selectedExposure2",
+          "selectedExposure",
           choices = exposureSelection,
           selected = 8826,
           server = TRUE)
@@ -219,10 +220,8 @@ shinyServer(function(input, output, session) {
   })
 
 
-
-
   #### ---- function to get cosine similarity data for single database-target pair ---- ####
-  getSimilarity <- shiny::reactive({
+  getDbSimilarity <- shiny::reactive({
     # identify target cohort
     targetCohortId <- input$selectedExposure
     validate(need(input$selectedExposure, "must select exposure"))
@@ -233,8 +232,7 @@ shinyServer(function(input, output, session) {
       else if (input$selectedComparatorTypes == "RxNorm Ingredients") { atcSelection <- c(0) }
       else if (input$selectedComparatorTypes == "ATC Classes") { atcSelection <- c(1) }
       # send query to get results data
-      resultsData <- renderTranslateQuerySql(
-        connection = conn,
+      resultsData <- qns$queryDb(
         sql = "
             select distinct
                CASE
@@ -252,29 +250,21 @@ shinyServer(function(input, output, session) {
                   ELSE cd.short_name
                END as short_name,
                cosine_similarity,
-               atc.atc_4_related,
-               atc.atc_3_related,
                CASE
                   WHEN t.cohort_definition_id_1 = @targetCohortId THEN ec.num_persons
                   ELSE ec2.num_persons
                END as num_persons,
                t.covariate_type
-             from @schema.@table_prefix@table t
-             inner join @schema.@table_prefixcohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
-             inner join @schema.@table_prefixcohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1 and ec2.database_id = t.database_id
-             inner join @schema.@table_prefixcohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
-             inner join @schema.@table_prefixcohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
-             left join @schema.@table_prefixatc_level atc on (t.cohort_definition_id_1 = atc.cohort_definition_id_1 and t.cohort_definition_id_2 = atc.cohort_definition_id_2) or (t.cohort_definition_id_2 = atc.cohort_definition_id_1 and t.cohort_definition_id_1 = atc.cohort_definition_id_2)
+             from @schema.@cosine_similarity_score t
+             inner join @schema.@cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
+             inner join @schema.@cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1 and ec2.database_id = t.database_id
+             inner join @schema.@cohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
+             inner join @schema.@cohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
              where (t.cohort_definition_id_1 = @targetCohortId or t.cohort_definition_id_2 = @targetCohortId)
              and t.database_id = @database_id
            ",
-        dbms = connectionDetails$dbms,
-        table_prefix = tablePrefix,
-        schema = resultsSchema,
-        table = "cosine_similarity_score",
-        snakeCaseToCamelCase = TRUE,
         targetCohortId = targetCohortId,
-        database_id = databaseSelection())
+        database_id = selectedDatabase())
     }, message = "Loading similarity scores", value = 0.5)
 
     resultsData %>%
@@ -285,18 +275,17 @@ shinyServer(function(input, output, session) {
   #### ---- function to get cosine similarity data for target in all databases ---- ####
   getSimilarityAllDatabases <- shiny::reactive({
     # identify target cohort
-    targetCohortId <- input$selectedExposure2
-    validate(need(input$selectedExposure2, "must select exposure"))
+    targetCohortId <- input$selectedExposure
+    validate(need(input$selectedExposure, "must select exposure"))
 
     shiny::withProgress({
       # identify selected comparator types
-      if (length(input$selectedComparatorTypes2) == 2L) { atcSelection <- c(0, 1) }
-      else if (input$selectedComparatorTypes2 == "RxNorm Ingredients") { atcSelection <- c(0) }
-      else if (input$selectedComparatorTypes2 == "ATC Classes") { atcSelection <- c(1) }
+      if (length(input$selectedComparatorTypes) == 2L) { atcSelection <- c(0, 1) }
+      else if (input$selectedComparatorTypes == "RxNorm Ingredients") { atcSelection <- c(0) }
+      else if (input$selectedComparatorTypes == "ATC Classes") { atcSelection <- c(1) }
 
       # send query to get results data
-      resultsData <- renderTranslateQuerySql(
-        connection = conn,
+      resultsData <- qns$queryDb(
         sql = "
             select distinct
                csi.database_id,
@@ -322,20 +311,16 @@ shinyServer(function(input, output, session) {
                   WHEN t.cohort_definition_id_1 = @targetCohortId THEN ec.num_persons
                   ELSE ec2.num_persons
                END as num_persons
-             from (select * from @schema.@table_prefix@table where covariate_type = 'average') t
-             inner join @schema.@table_prefixcohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
-             inner join @schema.@table_prefixcohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1 and ec2.database_id = t.database_id
-             inner join @schema.@table_prefixcdm_source_info csi ON csi.database_id = t.database_id
-             inner join @schema.@table_prefixcohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
-             inner join @schema.@table_prefixcohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
-             left join @schema.@table_prefixatc_level atc on (t.cohort_definition_id_1 = atc.cohort_definition_id_1 and t.cohort_definition_id_2 = atc.cohort_definition_id_2) or (t.cohort_definition_id_2 = atc.cohort_definition_id_1 and t.cohort_definition_id_1 = atc.cohort_definition_id_2)
+             from @schema.@cosine_similarity_score  t
+             inner join @schema.@cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
+             inner join @schema.@cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1 and ec2.database_id = t.database_id
+             inner join @schema.@cdm_source_info csi ON csi.database_id = t.database_id
+             inner join @schema.@cohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
+             inner join @schema.@cohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
+             left join @schema.@atc_level atc on (t.cohort_definition_id_1 = atc.cohort_definition_id_1 and t.cohort_definition_id_2 = atc.cohort_definition_id_2) or (t.cohort_definition_id_2 = atc.cohort_definition_id_1 and t.cohort_definition_id_1 = atc.cohort_definition_id_2)
              where (t.cohort_definition_id_1 = @targetCohortId or t.cohort_definition_id_2 = @targetCohortId)
+             and t.covariate_type = 'average'
            ",
-        dbms = connectionDetails$dbms,
-        table_prefix = tablePrefix,
-        schema = resultsSchema,
-        table = "cosine_similarity_score",
-        snakeCaseToCamelCase = TRUE,
         targetCohortId = targetCohortId)
     }, message = "Loading similarity scores", value = 0.5)
 
@@ -345,155 +330,81 @@ shinyServer(function(input, output, session) {
   })
 
   # displays target name and counts
-  output$selectedCohortInfo <- shiny::renderText({
+  selectedCohortInfo <- function() {
+
     targetId <- input$selectedExposure
     if (targetId == "")
       return("")
+    dbName <- getDatabaseSources() %>%
+      filter(databaseId == selectedDatabase()) %>%
+      select(cdmSourceAbbreviation) %>%
+      pull()
 
-    cohortDefinitions <- getCohortDefinitionsWithCounts() %>%
-      dplyr::filter(.data$cohortDefinitionId == targetId)
+    cohortDefinitions <- getCohortDefinitionsWithCounts()
 
-    numPersons <- format(round(cohortDefinitions$numPersons), big.mark = ",")
-    cohortText <- paste0(cohortDefinitions$shortName, " (", numPersons, " persons)")
+    target <- cohortDefinitions[cohortDefinitions$cohortDefinitionId == targetId,]
+    comparator <- cohortDefinitions[cohortDefinitions$cohortDefinitionId == selectedComparator(),]
 
-    return(cohortText)
-  })
+    numPersons <- format(round(target$numPersons), big.mark = ",")
+    targetText <- paste0(target$shortName, " (", numPersons, " persons)")
+
+    numPersons <- format(round(comparator$numPersons), big.mark = ",")
+    comparatorText <- paste0(comparator$shortName, " (", numPersons, " persons)")
+
+
+    return(div(
+      tags$b(paste("Database:", dbName)),
+      tags$br(),
+      tags$b(paste("Target:", targetText)),
+      tags$br(),
+      tags$b(paste("Comparator:", comparatorText))
+    ))
+  }
 
   #### ---- single-database cosine similarity reactable ---- ####
   output$cosineSimilarityTbl <- reactable::renderReactable({
+    sql <- "SELECT covariate_type, cosine_similarity FROM @schema.@cosine_similarity_score
+    WHERE database_id = @database_id
+    AND cohort_definition_id_1 in (@target, @comparator)
+    AND cohort_definition_id_2 in (@target, @comparator)
+    "
+    detailData <- qns$queryDb(sql,
+                              database_id = selectedDatabase(),
+                              target = input$selectedExposure,
+                              comparator = selectedComparator())
 
-    resAll <- getSimilarity() %>%
+
+    detailData <- detailData %>%
+      dplyr::filter(!covariateType %in% c('Co-occurrence')) %>%
       dplyr::mutate(
-        covariateType = gsub("prior meds", "Prior medications", covariateType),
-        covariateType = gsub("visit context", "Visit context", covariateType)
+        covariateType = factor(
+          covariateType,
+          levels = c("Demographics",
+                     "Presentation",
+                     "Medical history",
+                     "prior meds",
+                     "visit context",
+                     "average"))) %>%
+      dplyr::arrange(covariateType)
+
+    rt <- reactable::reactable(
+      data = detailData,
+      columns = list(
+        "covariateType" = reactable::colDef(
+          name = "Covariate Domain"),
+        "cosineSimilarity" = reactable::colDef(
+          name = "Cosine Similarity",
+          cell = function(value) { sprintf(fmtSim, value) }
+        )
       )
-
-    resAvg <- resAll %>%
-      dplyr::filter(covariateType == "average") %>%
-      dplyr::arrange(desc(cosineSimilarity)) %>%
-      dplyr::mutate(rank = row_number())
-
-    shiny::withProgress({
-      rt <- reactable::reactable(
-        data = dplyr::select(resAvg, isAtc2, shortName, numPersons, rank, cosineSimilarity, atc3Related, atc4Related),
-        details = function(index) {
-
-          detailData <- resAll[(resAll$shortName == resAvg$shortName[index]), c("covariateType", "cosineSimilarity")] %>%
-            dplyr::filter(covariateType != "average") %>%
-            dplyr::mutate(
-              covariateType = factor(
-                covariateType,
-                levels = c("Demographics",
-                           "Presentation",
-                           "Medical history",
-                           "Prior medications",
-                           "Visit context"))) %>%
-            dplyr::arrange(covariateType)
-
-          htmltools::div(
-            style = "padding: 1rem",
-            reactable::reactable(
-              data = detailData,
-              columns = list(
-                "covariateType" = reactable::colDef(
-                  name = "Covariate Domain",
-                  align = "right",
-                  vAlign = "center",
-                  headerVAlign = "bottom",
-                  minWidth = 125),
-                "cosineSimilarity" = reactable::colDef(
-                  name = "Cosine Similarity",
-                  align = "left",
-                  cell = function(value) { sprintf(fmtSim, value) },
-                  vAlign = "center",
-                  headerVAlign = "bottom",
-                  minWidth = 125)),
-              outlined = TRUE))},
-        columns = list(
-          "isAtc2" = reactable::colDef(
-            name = "Type",
-            cell = function(value) { ifelse(value == 1, "ATC Class", "RxNorm Ingredient") },
-            align = "right",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            minWidth = 125),
-          "cosineSimilarity" = reactable::colDef(
-            name = "Cohort Similarity Score",
-            cell = function(value) { sprintf(fmtSim, value) },
-            align = "center",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            minWidth = 125),
-          "rank" = reactable::colDef(
-            name = "Rank",
-            cell = function(value) { paste(prettyNum(value, big.mark = ","), "of", prettyNum(nrow(resAvg), big.mark = ",")) },
-            align = "center",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            minWidth = 125),
-          "shortName" = reactable::colDef(
-            name = "Name",
-            cell = function(value) { ifelse(substr(value, 1, 6) == "RxNorm", gsub("RxNorm - ", "", value), gsub("ATC - ", "", value)) },
-            align = "left",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            minWidth = 125),
-          "numPersons" = reactable::colDef(
-            name = "Sample size",
-            cell = function(value) format(round(value), big.mark = ","),
-            align = "center",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            filterable = TRUE),
-          "atc3Related" = reactable::colDef(
-            name = "At Level 3",
-            cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"),
-            align = "center",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            filterable = TRUE),
-          "atc4Related" = reactable::colDef(
-            name = "At Level 4",
-            cell = function(value) ifelse(is.na(value) | value == 0, "No", "Yes"),
-            align = "center",
-            vAlign = "center",
-            headerVAlign = "bottom",
-            filterable = TRUE)),
-        searchable = TRUE,
-        columnGroups = list(
-          reactable::colGroup(
-            "Comparator",
-            c("shortName", "isAtc2"),
-            sticky = "left"),
-          reactable::colGroup(
-            "In ATC Class with Target",
-            c("atc3Related", "atc4Related"))),
-        fullWidth = TRUE,
-        showPageSizeOptions = TRUE,
-        pageSizeOptions = c(5, 10, 20, 50, 100, 1000),
-        striped = TRUE,
-        highlight = TRUE,
-        compact = TRUE,
-        defaultSorted = list(cosineSimilarity = "desc",
-                             numPersons = "desc"),
-        selection = "single",
-        theme = reactable::reactableTheme(
-          borderColor = "#dfe2e5",
-          stripedColor = "#f6f8fa",
-          highlightColor = "#eab676",
-          cellPadding = "8px 12px",
-          searchInputStyle = list(width = "100%")),
-        showSortIcon = TRUE)
-    }, message = "Rendering results", value = 0.7)
-
+    )
     rt
 
   })
 
-  #### ---- multi-database cosine similarity reactable ---- ####
-  output$multiDatabaseSimTable <- reactable::renderReactable({
 
-    resAll <- getSimilarityAllDatabases() %>%
+  getAllDbSimFiltered <- shiny::reactive({
+    getSimilarityAllDatabases() %>%
       filter(databaseId %in% input$selectedDatabases) %>%
       arrange(databaseId, cdmSourceAbbreviation, desc(cosineSimilarity)) %>%
       group_by(databaseId, cdmSourceAbbreviation, .add = FALSE) %>%
@@ -508,6 +419,11 @@ shinyServer(function(input, output, session) {
       group_by(cohortDefinitionId2) %>%
       filter(n() >= input$minNumDatabases) %>%
       ungroup()
+  })
+
+
+  getResSum <- reactive({
+    resAll <- getAllDbSimFiltered()
 
     resSum <- resAll %>%
       ungroup() %>%
@@ -519,8 +435,7 @@ shinyServer(function(input, output, session) {
       arrange(desc(avg * ifelse(input$avgOn == "Average similarity score", 1, -1))) %>%
       mutate(rank = row_number())
 
-    if(input$avgOn == "Average similarity score") {
-
+    if (input$avgOn == "Average similarity score") {
       resSum <- resAll %>%
         ungroup() %>%
         group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) %>%
@@ -532,8 +447,7 @@ shinyServer(function(input, output, session) {
         mutate(rank = row_number())
 
 
-    } else if(input$avgOn == "Average source-specific rank") {
-
+    } else if (input$avgOn == "Average source-specific rank") {
       resSum <- resAll %>%
         ungroup() %>%
         group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) %>%
@@ -546,13 +460,40 @@ shinyServer(function(input, output, session) {
 
     }
 
-    shiny::withProgress({
-      rt <- reactable::reactable(
-        data = select(resSum, isAtc2, shortName, rank, avg, nDatabases, atc3Related, atc4Related),
-        details = function(index) {
+    return(resSum)
+  })
 
-          detailData <- resAll[resAll$shortName == resSum$shortName[index], c("cdmSourceAbbreviation", "numPersons", "cosineSimilarity", "cdmSpecificRankStr")]
-          detailData <- detailData[order(detailData$cdmSourceAbbreviation), ]
+  #### ---- multi-database cosine similarity reactable ---- ####
+  output$multiDatabaseSimTable <- reactable::renderReactable({
+    resAll <- getAllDbSimFiltered()
+    resSum <- getResSum()
+    shiny::withProgress({
+
+      outerOnClick <- sprintf("function(rowInfo, column) {
+          // Send the click event to Shiny, which will be available in input$show_details
+          // Note that the row index starts at 0 in JavaScript, so we add 1
+          if(column.id == 'cohortDefinitionId2'){
+            Shiny.setInputValue('%s', { index: rowInfo.values.cohortDefinitionId2 }, { priority: 'event' })
+          }
+        }", session$ns('show_exclusion')
+      )
+
+      rt <- reactable::reactable(
+        data = select(resSum, isAtc2, shortName, rank, avg, nDatabases, atc3Related, atc4Related, cohortDefinitionId2),
+        details = function(index) {
+          cohortId <- resSum$cohortDefinitionId2[index]
+          detailData <- resAll[resAll$shortName == resSum$shortName[index], c("databaseId", "cdmSourceAbbreviation", "numPersons", "cosineSimilarity", "cdmSpecificRankStr")]
+          detailData <- detailData[order(detailData$cdmSourceAbbreviation),]
+
+          selectionJs <- sprintf("
+
+          function(rowInfo, column) {
+          // Send the click event to Shiny, which will be available in input$show_details
+          // Note that the row index starts at 0 in JavaScript, so we add 1
+          if(column.id == 'databaseId'){
+            Shiny.setInputValue('%s', { index: [%f, rowInfo.values.databaseId] }, { priority: 'event' })
+          }
+        }", session$ns('show_details'), cohortId)
 
           htmltools::div(
             style = "padding: 1rem",
@@ -584,9 +525,25 @@ shinyServer(function(input, output, session) {
                   align = "right",
                   vAlign = "center",
                   headerVAlign = "bottom",
-                  minWidth = 125)),
-              outlined = TRUE))},
+                  minWidth = 125),
+                "databaseId" = reactable::colDef(
+                  name = "",
+                  sortable = FALSE,
+                  filterable = FALSE,
+                  cell = function() htmltools::tags$button("View Covariates")
+                )
+              ),
+              onClick = reactable::JS(selectionJs),
+              outlined = TRUE)
+          )
+        },
         columns = list(
+          "cohortDefinitionId2" = reactable::colDef(
+            name = "",
+            sortable = FALSE,
+            filterable = FALSE,
+            cell = function() htmltools::tags$button("View exclusion covariates")
+          ),
           "isAtc2" = reactable::colDef(
             name = "Type",
             cell = function(value) { ifelse(value == 1, "ATC Class", "RxNorm Ingredient") },
@@ -601,9 +558,9 @@ shinyServer(function(input, output, session) {
             vAlign = "center",
             headerVAlign = "bottom",
             minWidth = 125),
-          "avg" =  reactable::colDef(
+          "avg" = reactable::colDef(
             name = stringr::str_to_title(input$avgOn),
-            cell = function(value) { if(input$avgOn == "Average similarity score") {sprintf(fmtSim, value)} else {format(round(value, 1), nsmall = 1, big.mark = ",")} },
+            cell = function(value) { if (input$avgOn == "Average similarity score") { sprintf(fmtSim, value) } else { format(round(value, 1), nsmall = 1, big.mark = ",") } },
             align = "center",
             vAlign = "center",
             headerVAlign = "bottom",
@@ -635,7 +592,8 @@ shinyServer(function(input, output, session) {
             align = "center",
             vAlign = "center",
             headerVAlign = "bottom",
-            filterable = TRUE)),
+            filterable = TRUE)
+        ),
         searchable = TRUE,
         columnGroups = list(
           reactable::colGroup(
@@ -657,22 +615,86 @@ shinyServer(function(input, output, session) {
           highlightColor = "#eab676",
           cellPadding = "8px 12px",
           searchInputStyle = list(width = "100%")),
+        onClick = reactable::JS(outerOnClick),
         showSortIcon = TRUE)
     }, message = "Rendering results", value = 0.7)
-
-    rt
-
-  })
-
-  selectedComparator <- shiny::reactive({
-    selection <- reactable::getReactableState("cosineSimilarityTbl", name = "selected")
-    row <- getSimilarity()[selection,]
-    row$cohortDefinitionId2
+    return(rt)
   })
 
   output$selectedComparator <- shiny::reactive({
     selection <- reactable::getReactableState("cosineSimilarityTbl", name = "selected")
     return(!is.null(selection))
+  })
+
+  shiny::observeEvent(input$show_details, {
+
+    tagBox <- div(
+      selectedCohortInfo(),
+      shinycssloaders::withSpinner(reactable::reactableOutput("cosineSimilarityTbl"))
+    )
+
+    showModal(
+      modalDialog(
+        title = "Covariate data",
+        shiny::tagList(
+          tagBox,
+          modalUi()
+        ),
+        size = "l",
+        easyClose = FALSE,
+        footer = shiny::tagList(
+          shiny::actionButton("closeModal", "Close")
+        )
+      ))
+  })
+
+
+  shiny::observeEvent(input$show_exclusion, {
+    shiny::showModal(
+      modalDialog(
+        title = "Covariate exclusion",
+        shiny::tagList(
+          h4(strong("Find exclusion covariates")),
+          p("Covariates that occur on the same day as the exposure start day.",
+            "Those with high prevalance are found on the same day as an exposure will likely introduce bias in propensity score matching"),
+          p("Adjust sliders to select prevalance of allowed covariates (i.e. display those outside of these ranges)"),
+          shiny::fluidRow(
+            shiny::column(width = 6,
+                          shiny::sliderInput("targetPrevalanceEx",
+                                             label = "target prevalance range",
+                                             min = 0,
+                                             max = 1.0,
+                                             step = 0.01,
+                                             value = c(0.05, 0.95))
+            ),
+            shiny::column(width = 6,
+                          shiny::sliderInput("comparatorPrevalanceEx",
+                                             label = "comparator prevalance range",
+                                             min = 0,
+                                             max = 1.0,
+                                             step = 0.01,
+                                             value = c(0.2, 0.8))
+            )
+          ),
+          shinycssloaders::withSpinner(reactable::reactableOutput("covTableCoOccurrence")),
+          shiny::div(
+            style = "text-align:right;",
+            withTooltip(shiny::tags$button("Download",
+                                           onclick = paste0("Reactable.downloadDataCSV('covTableCoOccurrence')")),
+                        tooltip = "Note, will not download live values filtered in table, groupings, or any graphical/stylstic elements")
+          )
+        ),
+        size = "l",
+        easyClose = FALSE,
+        footer = shiny::tagList(
+          shiny::actionButton("closeModal", "Close")
+        )
+      )
+    )
+  })
+
+  shiny::observeEvent(input$closeModal, {
+    shiny::removeModal()
   })
 
   shiny::outputOptions(output,
@@ -682,7 +704,7 @@ shinyServer(function(input, output, session) {
   #### ---- step-function plot of cosine similarity by rank ---- ####
   output$stepPlot <- plotly::renderPlotly({
 
-    resWide <- getSimilarity() %>%
+    resWide <- getDbSimilarity() %>%
       dplyr::mutate(var = NA) %>%
       dplyr::mutate(
         var = ifelse(covariateType == "average", "cohortSimScore", var),
@@ -694,13 +716,13 @@ shinyServer(function(input, output, session) {
       dplyr::mutate(
         var = factor(var, levels = c("cohortSimScore", "csDemo", "csPres", "csMhis", "csPmed", "csVisc"))) %>%
       tidyr::pivot_wider(
-        id_cols = c("cohortDefinitionId2", "isAtc2", "shortName", "numPersons", "atc3Related", "atc4Related"),
+        id_cols = c("cohortDefinitionId2", "isAtc2", "shortName", "numPersons"),
         names_from = var,
         values_fill = NA,
         values_from = cosineSimilarity) %>%
       ungroup()
 
-    if(!"csVisc" %in% colnames(resWide)) resWide$csVisc <- NA
+    if (!"csVisc" %in% colnames(resWide)) resWide$csVisc <- NA
 
     resWide <- resWide %>%
       dplyr::arrange(desc(cohortSimScore)) %>%
@@ -728,7 +750,7 @@ shinyServer(function(input, output, session) {
       mode = "lines",
       text = ~tooltip,
       hovertemplate = "%{text}") %>%
-    plotly::layout(
+      plotly::layout(
         hovermode = "x unified",
         xaxis = list(title = "Rank"),
         yaxis = list(title = "Cohort Similarity Score"),
@@ -742,8 +764,7 @@ shinyServer(function(input, output, session) {
              need(selectedComparator(), "must select comparator"))
 
     shiny::withProgress({
-      covData <- renderTranslateQuerySql(
-        connection = conn,
+      covData <- qns$queryDb(
         sql = "with means as (
               	select
               		@cohortDefinitionId1 as cohort_definition_id_1,
@@ -772,14 +793,14 @@ shinyServer(function(input, output, session) {
               			else c2.covariate_mean
               		end as mean_2
               	from (
-              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@table_prefix@table t
-              	  inner join @schema.@table_prefixcovariate_definition covd on covd.covariate_id = t.covariate_id
+              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@covariate_mean t
+              	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
               	  where t.cohort_definition_id = @cohortDefinitionId1
               	  and t.database_id = @database_id
             	  ) as c1
               	full join (
-              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@table_prefix@table t
-              	  inner join @schema.@table_prefixcovariate_definition covd on covd.covariate_id = t.covariate_id
+              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@covariate_mean t
+              	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
               	   where t.cohort_definition_id = @cohortDefinitionId2
               	   and t.database_id = @database_id
               	 ) as c2
@@ -795,17 +816,12 @@ shinyServer(function(input, output, session) {
               c1.num_persons as n_1,
               c2.num_persons as n_2
               from means as m
-              join @schema.@table_prefixcohort_count as c1
+              join @schema.@cohort_count as c1
               	on m.cohort_definition_id_1 = c1.cohort_definition_id and c1.database_id = @database_id
-              join @schema.@table_prefixcohort_count as c2
+              join @schema.@cohort_count as c2
               	on m.cohort_definition_id_2 = c2.cohort_definition_id and c2.database_id = @database_id
               ;",
-        dbms = connectionDetails$dbms,
-        snakeCaseToCamelCase = TRUE,
-        schema = resultsSchema,
-        table = "covariate_mean",
-        table_prefix = tablePrefix,
-        database_id = databaseSelection(),
+        database_id = selectedDatabase(),
         cohortDefinitionId1 = input$selectedExposure,
         cohortDefinitionId2 = selectedComparator())
     }, message = "Loading covariate data")
@@ -868,7 +884,7 @@ shinyServer(function(input, output, session) {
           yref = "y",
           line = list(color = "black", dash = "dot")
         ))
-        )
+      )
   })
 
   #### ---- plot of std. diffs. ---- ####
@@ -953,13 +969,13 @@ shinyServer(function(input, output, session) {
     covData <- getCovData()
 
     # create column names with cohort sample sizes
-    colNameTarget <- paste0(
+    targetName <- paste0(
       cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
       " (n = ",
       prettyNum(first(covData$n1), big.mark = ","),
       ")")
 
-    colNameComparator <- paste0(
+    comparatorName <- paste0(
       cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
       " (n = ",
       prettyNum(first(covData$n2), big.mark = ","),
@@ -977,20 +993,20 @@ shinyServer(function(input, output, session) {
       data = tableData,
       columns = list(
         "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
         "stdDiff" = reactable::colDef(
           name = "Std. Diff.",
 
           cell = function(value, index) {
 
-            if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+            if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
 
               sprintf(fmtSmd, value)
 
             } else {
 
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value)))}},
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
           align = "center",
           vAlign = "bottom")),
       bordered = TRUE,
@@ -1021,13 +1037,13 @@ shinyServer(function(input, output, session) {
     covData <- getCovData()
 
     # create column names with cohort sample sizes
-    colNameTarget <- paste0(
+    targetName <- paste0(
       cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
       " (n = ",
       prettyNum(first(covData$n1), big.mark = ","),
       ")")
 
-    colNameComparator <- paste0(
+    comparatorName <- paste0(
       cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
       " (n = ",
       prettyNum(first(covData$n2), big.mark = ","),
@@ -1045,20 +1061,20 @@ shinyServer(function(input, output, session) {
       data = tableData,
       columns = list(
         "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
         "stdDiff" = reactable::colDef(
           name = "Std. Diff.",
 
           cell = function(value, index) {
 
-            if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+            if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
 
               sprintf(fmtSmd, value)
 
             } else {
 
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value)))}},
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
           align = "center",
           vAlign = "bottom")),
       bordered = TRUE,
@@ -1090,13 +1106,13 @@ shinyServer(function(input, output, session) {
     covData <- getCovData()
 
     # create column names with cohort sample sizes
-    colNameTarget <- paste0(
+    targetName <- paste0(
       cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
       " (n = ",
       prettyNum(first(covData$n1), big.mark = ","),
       ")")
 
-    colNameComparator <- paste0(
+    comparatorName <- paste0(
       cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
       " (n = ",
       prettyNum(first(covData$n2), big.mark = ","),
@@ -1114,20 +1130,20 @@ shinyServer(function(input, output, session) {
       data = tableData,
       columns = list(
         "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
         "stdDiff" = reactable::colDef(
           name = "Std. Diff.",
 
           cell = function(value, index) {
 
-            if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+            if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
 
               sprintf(fmtSmd, value)
 
             } else {
 
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value)))}},
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
           align = "center",
           vAlign = "bottom")),
       bordered = TRUE,
@@ -1159,13 +1175,13 @@ shinyServer(function(input, output, session) {
     covData <- getCovData()
 
     # create column names with cohort sample sizes
-    colNameTarget <- paste0(
+    targetName <- paste0(
       cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
       " (n = ",
       prettyNum(first(covData$n1), big.mark = ","),
       ")")
 
-    colNameComparator <- paste0(
+    comparatorName <- paste0(
       cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
       " (n = ",
       prettyNum(first(covData$n2), big.mark = ","),
@@ -1183,20 +1199,20 @@ shinyServer(function(input, output, session) {
       data = tableData,
       columns = list(
         "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
         "stdDiff" = reactable::colDef(
           name = "Std. Diff.",
 
           cell = function(value, index) {
 
-            if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+            if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
 
               sprintf(fmtSmd, value)
 
             } else {
 
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value)))}},
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
           align = "center",
           vAlign = "bottom")),
       bordered = TRUE,
@@ -1221,6 +1237,156 @@ shinyServer(function(input, output, session) {
     inBalanceString(covData)
   })
 
+
+  getCoOccurrenceData <- shiny::reactive({
+    validate(need(input$selectedExposure, "must select exposure"),
+             need(input$show_exclusion$index, "must select comparator"))
+
+    covData <- qns$queryDb(
+      sql = "
+            with means as (
+              	select
+              	    c1.database_id,
+              		@cohortDefinitionId1 as cohort_definition_id_1,
+              		@cohortDefinitionId2 as cohort_definition_id_2,
+              		case
+              			when c1.covariate_type is null then c2.covariate_type
+              			when c2.covariate_type is null then c1.covariate_type
+              			else c1.covariate_type
+              		end as covariate_type,
+              		case
+              			when c1.covariate_id is null then c2.covariate_id
+              			when c2.covariate_id is null then c1.covariate_id
+              			else c1.covariate_id
+              		end as covariate_id,
+              		case
+              			when c1.covariate_name is null then c2.covariate_name
+              			when c2.covariate_name is null then c1.covariate_name
+              			else c1.covariate_name
+              		end as covariate_short_name,
+              		case
+              			when c1.covariate_mean is null then 0.0
+              			else c1.covariate_mean
+              		end as mean_1,
+              		case
+              			when c2.covariate_mean is null then 0.0
+              			else c2.covariate_mean
+              		end as mean_2
+              	from (
+              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@covariate_mean t
+              	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
+              	  where t.cohort_definition_id = @cohortDefinitionId1
+              	  and t.database_id IN (@database_ids)
+            	  ) as c1
+              	full join (
+              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@covariate_mean t
+              	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
+              	   where t.cohort_definition_id = @cohortDefinitionId2
+              	   and t.database_id IN (@database_ids)
+              	 ) as c2
+              on c1.covariate_id = c2.covariate_id AND c1.database_id = c2.database_id
+              WHERE c1.covariate_type IN (NULL, 'Co-occurrence') AND c2.covariate_type IN (NULL, 'Co-occurrence')
+            )
+
+            select
+              m.*,
+              d.cdm_source_abbreviation,
+              case
+                  when m.mean_1 = m.mean_2 then 0.0
+                  when m.mean_1 = 0.0 and m.mean_2 = 1.0 then null
+                  when m.mean_1 = 1.0 and m.mean_2 = 0.0 then null
+                  else (mean_1 - mean_2) / (sqrt((mean_1 * (1 - mean_1) + mean_2 * (1 - mean_2)) / 2))
+              end as std_diff,
+            c1.num_persons as n_1,
+            c2.num_persons as n_2
+            from means as m
+            join @schema.@cohort_count as c1
+            on m.cohort_definition_id_1 = c1.cohort_definition_id and c1.database_id = m.database_id
+            join @schema.@cohort_count as c2
+              on m.cohort_definition_id_2 = c2.cohort_definition_id and c2.database_id = m.database_id
+            inner join @schema.@cdm_source_info as d on d.database_id = m.database_id
+
+            WHERE m.mean_1 > @targetPrevMin
+            AND m.mean_1 < @targetPrevMax
+            AND m.mean_2 > @comparatorPrevMin
+            AND m.mean_2 < @comparatorPrevMax
+              ;",
+      database_ids = input$selectedDatabases,
+      comparatorPrevMin = input$comparatorPrevalanceEx[1],
+      comparatorPrevMax = input$comparatorPrevalanceEx[2],
+      targetPrevMin = input$targetPrevalanceEx[1],
+      targetPrevMax = input$targetPrevalanceEx[2],
+      cohortDefinitionId1 = input$selectedExposure,
+      cohortDefinitionId2 = input$show_exclusion$index)
+    # return data
+    covData
+  })
+
+  output$covTableCoOccurrence <- reactable::renderReactable({
+    cohortDefinitions <- getCohortDefinitionsWithCounts()
+    # get data
+    covData <- getCoOccurrenceData()
+    # create column names with cohort sample sizes
+    targetName <- paste0(
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$show_exclusion$index],
+      " (n = ",
+      prettyNum(first(covData$n1), big.mark = ","),
+      ")")
+
+    comparatorName <- paste0(
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selected],
+      " (n = ",
+      prettyNum(first(covData$n2), big.mark = ","),
+      ")")
+
+    # subset data and select relevant columns
+    tableData <- covData %>%
+      filter() %>%
+      arrange(desc(abs(stdDiff))) %>%
+      select(covariateId, cdmSourceAbbreviation, covariateShortName, mean1, mean2, stdDiff) %>%
+      mutate(covariateShortName = gsub("concept co-occurrence:", "", covariateShortName)) %>%
+      mutate(conceptId = abs(covariateId)) %>%
+      select(-covariateId)
+
+    # table code
+    reactable::reactable(
+      data = tableData,
+      columns = list(
+        "cdmSourceAbbreviation" = reactable::colDef(name = "Data Source", align = "right", vAlign = "bottom"),
+        "conceptId" = reactable::colDef(name = "Concept Id", align = "right", vAlign = "bottom"),
+        "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
+        "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+        "stdDiff" = reactable::colDef(
+          name = "Std. Diff.",
+
+          cell = function(value, index) {
+
+            if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+
+              sprintf(fmtSmd, value)
+
+            } else {
+
+              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
+          align = "center",
+          vAlign = "bottom")),
+      bordered = TRUE,
+      searchable = TRUE,
+      showPageSizeOptions = TRUE,
+      pageSizeOptions = c(5, 10, 20, 50, 100, 1000),
+      striped = TRUE,
+      highlight = TRUE,
+      compact = TRUE,
+      theme = reactable::reactableTheme(
+        borderColor = "#dfe2e5",
+        stripedColor = "#f6f8fa",
+        highlightColor = "#eab676",
+        cellPadding = "8px 12px",
+        searchInputStyle = list(width = "100%")),
+      showSortIcon = TRUE)
+
+  })
   #### ---- "table 1": visit context (default to unsorted) ---- ####
   output$covTableVisit <- reactable::renderReactable({
     cohortDefinitions <- getCohortDefinitionsWithCounts()
@@ -1229,13 +1395,13 @@ shinyServer(function(input, output, session) {
 
     shiny::withProgress({
       # create column names with cohort sample sizes
-      colNameTarget <- paste0(
+      targetName <- paste0(
         cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
         " (n = ",
         prettyNum(first(covData$n1), big.mark = ","),
         ")")
 
-      colNameComparator <- paste0(
+      comparatorName <- paste0(
         cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
         " (n = ",
         prettyNum(first(covData$n2), big.mark = ","),
@@ -1245,7 +1411,7 @@ shinyServer(function(input, output, session) {
       tableData <- covData %>%
         filter(covariateType == "visit context") %>%
         arrange(covariateShortName) %>%
-        select(covariateShortName, mean1, mean2, stdDiff)%>%
+        select(covariateShortName, mean1, mean2, stdDiff) %>%
         mutate(covariateShortName = stringr::str_to_sentence(gsub("<=30d prior|Visit:", "", covariateShortName)))
 
       # table code
@@ -1253,20 +1419,20 @@ shinyServer(function(input, output, session) {
         data = tableData,
         columns = list(
           "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-          "mean1" = reactable::colDef(name = colNameTarget, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-          "mean2" = reactable::colDef(name = colNameComparator, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+          "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+          "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
           "stdDiff" = reactable::colDef(
             name = "Std. Diff.",
 
             cell = function(value, index) {
 
-              if(tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
+              if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
 
                 sprintf(fmtSmd, value)
 
               } else {
 
-                ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value)))}},
+                ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
             align = "center",
             vAlign = "bottom")),
         bordered = TRUE,
@@ -1291,8 +1457,7 @@ shinyServer(function(input, output, session) {
   })
 
   output$dataSources <- reactable::renderReactable({
-    dataSourceData <- renderTranslateQuerySql(
-      connection = conn,
+    dataSourceData <- qns$queryDb(
       sql = "select
               cdm_source_abbreviation,
               cdm_holder,
@@ -1300,12 +1465,7 @@ shinyServer(function(input, output, session) {
               cdm_version,
               vocabulary_version,
               source_release_date
-      from @schema.@table_prefix@table t",
-      dbms = connectionDetails$dbms,
-      table_prefix = tablePrefix,
-      schema = resultsSchema,
-      table = "cdm_source_info",
-      snakeCaseToCamelCase = TRUE)
+      from @schema.@cdm_source_info t")
 
     colnames(dataSourceData) <- SqlRender::camelCaseToTitleCase(colnames(dataSourceData))
     reactable::reactable(

@@ -19,7 +19,7 @@ Depends:
   R (>= 4.0.0)
 Imports:
   DatabaseConnector (>= 6.0.0),
-  ResultModelManager (>= 0.3.0),
+  ResultModelManager (>= 0.4.0),
   CohortGenerator,
   checkmate,
   SqlRender (>= 1.9.0),
@@ -33,7 +33,7 @@ Suggests:
   Eunomia,
   testthat (>= 3.0.0),
 Remotes:
-  ohdsi/ResultModelManager,
+  ohdsi/ResultModelManager@develop,
   ohdsi/CohortGenerator,
   ohdsi/Eunomia
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
