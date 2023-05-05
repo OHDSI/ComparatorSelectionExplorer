@@ -45,7 +45,12 @@ shinyUI(fluidPage(
             inputId = "avgOn",
             label = "Rank comparators on:",
             choices = c("Average similarity score", "Average source-specific rank"),
-            selected = "Average similarity score")),
+            selected = "Average similarity score"),
+          conditionalPanel(
+            "input.selectedExposure != ''",
+            shiny::actionButton(inputId = "showRankings", "Show rank plot")
+          )
+        ),
         mainPanel(
           h3("Comparator listing"),
           shinycssloaders::withSpinner(reactable::reactableOutput("multiDatabaseSimTable"))

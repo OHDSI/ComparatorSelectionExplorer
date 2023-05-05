@@ -235,6 +235,7 @@ shinyServer(function(input, output, session) {
       resultsData <- qns$queryDb(
         sql = "
             select distinct
+               d.cdm_source_abbreviation,
                CASE
                   WHEN t.cohort_definition_id_1 = @targetCohortId THEN t.cohort_definition_id_2
                   ELSE t.cohort_definition_id_1
@@ -260,11 +261,12 @@ shinyServer(function(input, output, session) {
              inner join @schema.@cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1 and ec2.database_id = t.database_id
              inner join @schema.@cohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
              inner join @schema.@cohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
+             inner join @schema.@cdm_source_info d ON t.database_id = d.database_id
              where (t.cohort_definition_id_1 = @targetCohortId or t.cohort_definition_id_2 = @targetCohortId)
-             and t.database_id = @database_id
+             and t.database_id IN (@database_ids)
            ",
         targetCohortId = targetCohortId,
-        database_id = selectedDatabase())
+        database_ids = input$selectedDatabases)
     }, message = "Loading similarity scores", value = 0.5)
 
     resultsData %>%
@@ -716,7 +718,7 @@ shinyServer(function(input, output, session) {
       dplyr::mutate(
         var = factor(var, levels = c("cohortSimScore", "csDemo", "csPres", "csMhis", "csPmed", "csVisc"))) %>%
       tidyr::pivot_wider(
-        id_cols = c("cohortDefinitionId2", "isAtc2", "shortName", "numPersons"),
+        id_cols = c("cohortDefinitionId2", "isAtc2", "shortName", "numPersons", "cdmSourceAbbreviation"),
         names_from = var,
         values_fill = NA,
         values_from = cosineSimilarity) %>%
@@ -746,6 +748,7 @@ shinyServer(function(input, output, session) {
       data = resWide,
       x = ~rank,
       y = ~cohortSimScore,
+      color = ~cdmSourceAbbreviation,
       type = "scatter",
       mode = "lines",
       text = ~tooltip,
@@ -1306,10 +1309,8 @@ shinyServer(function(input, output, session) {
               on m.cohort_definition_id_2 = c2.cohort_definition_id and c2.database_id = m.database_id
             inner join @schema.@cdm_source_info as d on d.database_id = m.database_id
 
-            WHERE m.mean_1 > @targetPrevMin
-            AND m.mean_1 < @targetPrevMax
-            AND m.mean_2 > @comparatorPrevMin
-            AND m.mean_2 < @comparatorPrevMax
+            WHERE (m.mean_1 > @targetPrevMin AND m.mean_2 > @comparatorPrevMin)
+            OR (m.mean_1 < @targetPrevMax AND m.mean_2 < @comparatorPrevMax)
               ;",
       database_ids = input$selectedDatabases,
       comparatorPrevMin = input$comparatorPrevalanceEx[1],
@@ -1474,5 +1475,12 @@ shinyServer(function(input, output, session) {
         "Source Description" = reactable::colDef(
           minWidth = 300)),
       defaultPageSize = 5)
+  })
+
+
+  observeEvent(input$showRankings, {
+    shiny::showModal(shiny::modalDialog(title = "Comparator Ranks",
+                                        p(""),
+                                        shinycssloaders::withSpinner(plotly::plotlyOutput("stepPlot"))))
   })
 })
