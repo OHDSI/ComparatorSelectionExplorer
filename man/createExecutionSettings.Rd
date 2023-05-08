@@ -17,6 +17,7 @@ createExecutionSettings(
   cohortTable = "cse_cohort",
   tempEmulationSchema = getOption("tempEmulationSchema"),
   cohortDefinitionSet = NULL,
+  indicationCohortSubsetDefintions = list(),
   cohortCountTable = "cse_cohort_count",
   cohortDefinitionTable = "cse_cohort_definition",
   covariateDefTable = "cse_covariate_ref",
@@ -56,7 +57,12 @@ reference}
 
 \item{tempEmulationSchema}{String DatabaseSchema - temp emulation schema for oracle, bigquery}
 
-\item{cohortDefinitionSet}{CohortGenerator::cohortDefinitionSet}
+\item{cohortDefinitionSet}{CohortGenerator::cohortDefinitionSet - intended to be custom exposures or
+indication cohorts}
+
+\item{indicationCohortSubsetDefintions}{List of CohortGenerator::cohortSubsetDefinitions these subsets will be applied
+to all cohorts used in this study. See cohortGenerator package documentation for
+detailed instructions on creating cohort subsets}
 
 \item{cohortCountTable}{(optional) count tabls}
 

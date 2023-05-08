@@ -10,10 +10,11 @@ if (!dir.exists(JDBC_PATH)) {
 
 connectionDetails <- DatabaseConnector::createConnectionDetails(
   dbms = "postgresql",
-  user = Sys.getenv("phenotypeLibrarydbUser"),
-  password = Sys.getenv("phenotypeLibrarydbPw"),
-  server = paste0(Sys.getenv("phenotypeLibraryServer"), "/", Sys.getenv("phenotypeLibrarydb")),
-  port = 5432
+  user = Sys.getenv("REWARD_DB_USER"),
+  password = Sys.getenv("REWARD_DB_PASSWORD"),
+  server = "reward.cterqq54xyuu.us-east-1.rds.amazonaws.com/rewardb_dev",
+  port = 5432,
+  pathToDriver = JDBC_PATH
 )
 
 

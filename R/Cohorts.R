@@ -15,6 +15,27 @@
 # limitations under the License.
 
 
+getExposureCohortDefinitionSet <- function(executionSettings = NULL, ...) {
+  if (is.null(executionSettings) || missing(executionSettings)) {
+    executionSettings <- createExecutionSettings(..., .callbackFun = on.exit)
+  }
+  # Get cohort references in a manner that can be used for subsetting operations
+  sql <- "SELECT
+    COHORT_DEFINITION_ID as cohort_id,
+    SHORT_NAME as cohort_name,
+    'SELECT NULL' as SQL,
+    '{}' as JSON
+    FROM @results_database_schema.@cohort_definition"
+
+  DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
+                                             sql,
+                                             results_database_schema = executionSettings$resultsDatabaseSchema,
+                                             tempEmulationSchema = executionSettings$tempEmulationSchema,
+                                             cohort_definition = executionSettings$cohortDefinitionTable,
+                                             snakeCaseToCamelCase = TRUE)
+}
+
+
 #' @title create cohorts
 #' @description Create cohorts
 #' @inheritParams execute
@@ -56,39 +77,58 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                            cohort_database_schema = executionSettings$cohortDatabaseSchema)
   DatabaseConnector::executeSql(executionSettings$connection, sql)
 
-  if (!is.null(executionSettings$cohortDefinitionSet)) {
-    # Generate custom cohorts
-    ParallelLogger::logInfo("Creating custom cohorts with Cohort Generator")
-    if (executionSettings$generateCohortDefinitionSet) {
-      CohortGenerator::generateCohortSet(connection = executionSettings$connection,
-                                         cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
-                                         tempEmulationSchema = executionSettings$tempEmulationSchema,
-                                         cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-                                         cohortTableNames = executionSettings$cohortTableNames,
-                                         cohortDefinitionSet = executionSettings$cohortDefinitionSet,
-                                         stopOnError = TRUE,
-                                         incremental = TRUE,
-                                         incrementalFolder = executionSettings$incrementalFolder)
-    }
+  baseCohortSet <- getExposureCohortDefinitionSet(executionSettings)
+  # Write cohorts complete to prevent cohort generator creating them
+  recordKeepingFile <- file.path(executionSettings$incrementalFolder, "GeneratedCohorts.csv")
+  checksum <- CohortGenerator::computeChecksum(baseCohortSet$sql[1])
 
-    cohortRef <- executionSettings$cohortDefinitionSet %>%
-      dplyr::select("cohortId", "cohortName") %>%
-      dplyr::mutate(atcFlag = -1,
-                    conceptId = -1,
-                    shortName = cohortName) %>%
-      dplyr::rename("cohortDefinitionName" = "cohortName",
-                    "cohortDefinitionId" = "cohortId")
-
-    colnames(cohortRef) <- toupper(SqlRender::camelCaseToSnakeCase(colnames(cohortRef)))
-    DatabaseConnector::insertTable(connection = executionSettings$connection,
-                                   data = cohortRef,
-                                   tableName = executionSettings$cohortDefinitionTable,
-                                   databaseSchema = executionSettings$resultsDatabaseSchema,
-                                   camelCaseToSnakeCase = FALSE,
-                                   dropTableIfExists = FALSE,
-                                   createTable = FALSE,
-                                   tempTable = FALSE)
+  for (cohortId in baseCohortSet$cohortId) {
+    CohortGenerator::recordTasksDone(cohortId = cohortId,
+                                     checksum = checksum,
+                                     recordKeepingFile = recordKeepingFile)
   }
+
+  mergedCohortDefinitionSet <- dplyr::bind_rows(executionSettings$cohortDefinitionSet,
+                                                baseCohortSet)
+
+  # Add subeset to cohort definition set
+  for (subsetDef in executionSettings$indicationCohortSubsetDefintions) {
+    mergedCohortDefinitionSet <- mergedCohortDefinitionSet %>%
+      CohortGenerator::addCohortSubsetDefinition(subsetDef)
+  }
+
+  # Generate custom cohorts
+  ParallelLogger::logInfo("Creating custom cohorts with Cohort Generator")
+  CohortGenerator::generateCohortSet(connection = executionSettings$connection,
+                                     cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                     tempEmulationSchema = executionSettings$tempEmulationSchema,
+                                     cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                     cohortTableNames = executionSettings$cohortTableNames,
+                                     cohortDefinitionSet = mergedCohortDefinitionSet,
+                                     stopOnError = TRUE,
+                                     incremental = TRUE,
+                                     incrementalFolder = executionSettings$incrementalFolder)
+
+  # Run subsets on
+  cohortRef <- mergedCohortDefinitionSet %>%
+    dplyr::filter(!(.data$cohortId %in% baseCohortSet$cohortId)) %>%
+    dplyr::select("cohortId", "cohortName") %>%
+    dplyr::mutate(atcFlag = -1,
+                  conceptId = -1,
+                  shortName = .data$cohortName) %>%
+    dplyr::rename("cohortDefinitionName" = "cohortName",
+                  "cohortDefinitionId" = "cohortId")
+
+  colnames(cohortRef) <- toupper(SqlRender::camelCaseToSnakeCase(colnames(cohortRef)))
+  DatabaseConnector::insertTable(connection = executionSettings$connection,
+                                 data = cohortRef,
+                                 tableName = executionSettings$cohortDefinitionTable,
+                                 databaseSchema = executionSettings$resultsDatabaseSchema,
+                                 camelCaseToSnakeCase = FALSE,
+                                 dropTableIfExists = FALSE,
+                                 createTable = FALSE,
+                                 tempTable = FALSE)
+
 
   invisible(executionSettings)
 }

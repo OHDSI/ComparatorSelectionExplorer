@@ -128,6 +128,5 @@ uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tableP
                                     resultsFolder = importFilpath,
                                     tablePrefix = tablePrefix,
                                     specifications = getResultsDataModelSpec(),
-                                    cdmSourceFile = "cdm_source_info.csv",
                                     ...)
 }

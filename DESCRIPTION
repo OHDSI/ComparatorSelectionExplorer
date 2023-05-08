@@ -33,10 +33,10 @@ Suggests:
   Eunomia,
   testthat (>= 3.0.0),
 Remotes:
-  ohdsi/ResultModelManager@develop,
+  ohdsi/ResultModelManager,
   ohdsi/CohortGenerator,
   ohdsi/Eunomia
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
 Copyright: See file COPYRIGHTS
 Config/testthat/edition: 3
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.3
