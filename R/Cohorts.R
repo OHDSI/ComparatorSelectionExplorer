@@ -112,7 +112,7 @@ createCohorts <- function(executionSettings = NULL, ...) {
   # Run subsets on
   cohortRef <- mergedCohortDefinitionSet %>%
     dplyr::filter(!(.data$cohortId %in% baseCohortSet$cohortId)) %>%
-    dplyr::select("cohortId", "cohortName") %>%
+    dplyr::select("cohortId", "cohortName", "subsetParent") %>%
     dplyr::mutate(atcFlag = -1,
                   conceptId = -1,
                   shortName = .data$cohortName) %>%
