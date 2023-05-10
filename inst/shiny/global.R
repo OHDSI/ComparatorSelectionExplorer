@@ -26,4 +26,6 @@ if (connectionDetails$dbms != "sqlite" &&
 resultsSchema <- "cse_042023"
 tablePrefix <- "cse_"
 
-
+# decimal formatters
+fmtSim <- "%.3f"
+fmtSmd <- "%.2f"
