@@ -23,7 +23,11 @@
 #' @param cdmDatabaseSchema             String Database schema - where data lives
 #' @param cohortDatabaseSchema          String Database schema - where cohort table is created
 #' @param resultsDatabaseSchema         String Database schema - where similarity scores are stored
-#' @param cohortDefinitionSet           CohortGenerator::cohortDefinitionSet
+#' @param cohortDefinitionSet           CohortGenerator::cohortDefinitionSet - intended to be custom exposures or
+#'                                      indication cohorts
+#' @param indicationCohortSubsetDefintions  List of CohortGenerator::cohortSubsetDefinitions these subsets will be applied
+#'                                      to all cohorts used in this study. See cohortGenerator package documentation for
+#'                                      detailed instructions on creating cohort subsets
 #' @param tempEmulationSchema           String DatabaseSchema - temp emulation schema for oracle, bigquery
 #' @param exportZipFile                 Path to zip file output of project
 #' @param databaseName                  Database identifier (string)
@@ -58,6 +62,7 @@ createExecutionSettings <- function(connectionDetails,
                                     cohortTable = "cse_cohort",
                                     tempEmulationSchema = getOption("tempEmulationSchema"),
                                     cohortDefinitionSet = NULL,
+                                    indicationCohortSubsetDefintions = list(),
                                     cohortCountTable = "cse_cohort_count",
                                     cohortDefinitionTable = "cse_cohort_definition",
                                     covariateDefTable = "cse_covariate_ref",
@@ -72,6 +77,12 @@ createExecutionSettings <- function(connectionDetails,
                                     .callbackFun = NULL) {
 
   checkmate::assertClass(connectionDetails, "ConnectionDetails")
+
+  if (inherits(indicationCohortSubsetDefintions, "CohortSubsetDefinition")) {
+    indicationCohortSubsetDefintions <- list(indicationCohortSubsetDefintions)
+  }
+
+  checkmate::assertList(indicationCohortSubsetDefintions, "CohortSubsetDefinition")
   checkmate::assertTRUE(is.null(cohortDefinitionSet) || CohortGenerator::isCohortDefinitionSet(cohortDefinitionSet))
   checkmate::assertIntegerish(databaseId, null.ok = TRUE)
   checkmate::assertString(databaseId, null.ok = TRUE)
@@ -97,6 +108,7 @@ createExecutionSettings <- function(connectionDetails,
     exportDir = exportDir,
     removeExportDir = removeExportDir,
     cohortDefinitionSet = cohortDefinitionSet,
+    indicationCohortSubsetDefintions = indicationCohortSubsetDefintions,
     generateCohortDefinitionSet = generateCohortDefinitionSet,
     connection = connection
   )

@@ -5,14 +5,32 @@ test_that("Execution", {
                                                                  jsonFolder = "cohorts",
                                                                  sqlFolder = "sql/sql_server")
 
+
+  subsetDef <- CohortGenerator::createCohortSubsetDefinition("Test subset",
+                                                             definitionId = 1,
+                                                             identifierExpression = "targetId * 100 + definitionId",
+                                                             subsetOperators = list(
+                                                               CohortGenerator::createDemographicSubset(
+                                                               ageMin = 18,
+                                                               ageMax = 64
+                                                              )
+                                                             ))
+
   executionSettings <- createExecutionSettings(connectionDetails = connectionDetails,
                                                cohortDefinitionSet = cohortDefinitionSet,
+                                               indicationCohortSubsetDefintions = list(subsetDef),
                                                generateCohortDefinitionSet = TRUE,
                                                cdmDatabaseSchema = "main",
                                                resultsDatabaseSchema = "main",
                                                cohortTable = "cse_cohort")
   unlink(executionSettings$exportZipFile)
-  on.exit(unlink(executionSettings$exportZipFile))
+  unlink(executionSettings$incrementalFolder, recursive = TRUE)
+  dir.create(executionSettings$incrementalFolder)
+
+  on.exit({
+    unlink(executionSettings$exportZipFile)
+    unlink(executionSettings$incrementalFolder, recursive = TRUE)
+  })
 
   checkmate::expect_class(executionSettings, "executionSettings")
   execute(executionSettings)
