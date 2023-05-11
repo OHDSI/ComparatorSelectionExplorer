@@ -15,8 +15,14 @@ qns <- ResultModelManager::createQueryNamespace(connectionDetails = connectionDe
 # Define server logic required to draw a histogram
 shiny::shinyServer(function(input, output, session) {
 
+  # When user triggers on click event from main reactable
   selectedDatabase <- shiny::reactive({
     input$show_details$index[2]
+  })
+
+  # Checkbox input panel on main view
+  selectedDatabases <- shiny::reactive({
+    input$selectedDatabases
   })
 
   cohortTable <- shiny::reactive({
@@ -26,6 +32,8 @@ shiny::shinyServer(function(input, output, session) {
   selectedComparator <- shiny::reactive({
     input$show_details$index[1]
   })
+
+  selectedExposure <- shiny::reactive(input$selectedExposure)
 
   # initial query to get list of cohort definitions
   getCohortDefinitionsWithDbCounts <- shiny::reactive({
@@ -173,6 +181,7 @@ shiny::shinyServer(function(input, output, session) {
     targetId <- input$selectedExposure
     if (targetId == "")
       return("")
+
     dbName <- databaseSources() %>%
       filter(databaseId == selectedDatabase()) %>%
       select(cdmSourceAbbreviation) %>%
@@ -180,7 +189,7 @@ shiny::shinyServer(function(input, output, session) {
 
     cohortDefinitions <- getCohortDefinitionsWithDbCounts()
 
-    target <- cohortDefinitions[cohortDefinitions$cohortDefinitionId == targetId,]
+    target <- cohortDefinitions[cohortDefinitions$cohortDefinitionId == selectedExposure(),]
     comparator <- cohortDefinitions[cohortDefinitions$cohortDefinitionId == selectedComparator(),]
 
     numPersons <- format(round(target$numPersons), big.mark = ",")
@@ -343,7 +352,7 @@ shiny::shinyServer(function(input, output, session) {
                   name = "",
                   sortable = FALSE,
                   filterable = FALSE,
-                  cell = function() htmltools::tags$button("View Covariates")
+                  cell = function() htmltools::tags$button("Explore Comparison")
                 )
               ),
               onClick = reactable::JS(selectionJs),
@@ -355,7 +364,7 @@ shiny::shinyServer(function(input, output, session) {
             name = "",
             sortable = FALSE,
             filterable = FALSE,
-            cell = function() htmltools::tags$button("View exclusion covariates")
+            cell = function() htmltools::tags$button("Recommend Covariates for Exclusion")
           ),
           "isAtc2" = reactable::colDef(
             name = "Type",
@@ -467,38 +476,38 @@ shiny::shinyServer(function(input, output, session) {
   shiny::observeEvent(input$show_exclusion, {
     shiny::showModal(
       shiny::modalDialog(
-        title = "Covariate exclusion",
+        title = "Recommend Covariates for Exclusion",
         shiny::basicPage(
           tags$head(tags$style(".modal-dialog{ width:95%}")),
           h4(strong("Find exclusion covariates")),
-          p("Covariates that occur on the same day as the exposure start day.",
-            "Those with high prevalance in one exposure and low prevalance are found on the same day as an exposure will likely introduce bias in propensity score matching"),
-
+          p("Adjunctive procedures, drugs, conditions, or visits that frequently co-occur with the target or comparator
+          exposure may lead to propensity score model fitting issues.
+          To identify a list candidate covariates for exclusion, select prevalence thresholds below"),
           shiny::numericInput("prevInputHighMax",
                               label = "Show covariates with prevalance higher than in one cohort",
-                              value = 0.95,
-                              step = 0.01,
+                              value = 95,
+                              step = 1,
                               min = 0.0,
-                              max = 1.0),
+                              max = 100.0),
           shiny::numericInput("prevInputHighMin",
                               label = "and less than than in target/comparator",
-                              value = 0.80,
-                              step = 0.01,
+                              value = 80,
+                              step = 1,
                               min = 0.0,
-                              max = 1.0),
+                              max = 100.0),
 
           shiny::numericInput("prevInputLowMax",
                               label = "Show covariates with prevalance higher than",
-                              value = 0.20,
-                              step = 0.01,
+                              value = 20,
+                              step = 1,
                               min = 0.0,
-                              max = 1.0),
+                              max = 100.0),
           shiny::numericInput("prevInputLowMin",
                               label = "and less than than",
-                              value = 0.05,
-                              step = 0.01,
+                              value = 5,
+                              step = 1,
                               min = 0.0,
-                              max = 1.0),
+                              max = 100.0),
           shinycssloaders::withSpinner(reactable::reactableOutput("covTableCoOccurrence")),
           shiny::div(
             style = "text-align:right;",
@@ -520,55 +529,50 @@ shiny::shinyServer(function(input, output, session) {
     validate(need(input$selectedExposure, "must select exposure"),
              need(input$show_exclusion$index, "must select comparator"))
 
-    validate(need(input$prevInputHighMax > 0, "must select exposure"),
-             need(input$prevInputHighMax < 1.0, "must select comparator"))
+    validate(need(input$prevInputHighMax > 0, "Threshold Inputs must be between 0 and 100"),
+             need(input$prevInputHighMax <= 100.0, "Threshold Inputs must be between 0 and 100"))
 
-    validate(need(input$prevInputHighMin > 0, "must select exposure"),
-             need(input$prevInputHighMin < 1.0, "must select comparator"))
+    validate(need(input$prevInputHighMin > 0, "Threshold Inputs must be between 0 and 100"),
+             need(input$prevInputHighMin <= 100.0, "Threshold Inputs must be between 0 and 100"))
 
-    validate(need(input$prevInputLowMax > 0, "must select exposure"),
-             need(input$prevInputLowMax < 1.0, "must select comparator"))
+    validate(need(input$prevInputLowMax > 0, "Threshold Inputs must be between 0 and 100"),
+             need(input$prevInputLowMax <= 100.0, "Threshold Inputs must be between 0 and 100"))
 
-    validate(need(input$prevInputLowMin > 0, "must select exposure"),
-             need(input$prevInputLowMin < 1.0, "must select comparator"))
+    validate(need(input$prevInputLowMin > 0, "Threshold Inputs must be between 0 and 100"),
+             need(input$prevInputLowMin <= 100.0, "Threshold Inputs must be between 0 and 100"))
 
     covData <- getCoOccurenceTableData(qns,
                                        databaseIds = input$selectedDatabases,
-                                       prevInputHighMax = input$prevInputHighMax,
-                                       prevInputHighMin = input$prevInputHighMin,
-                                       prevInputLowMax = input$prevInputLowMax,
-                                       prevInputLowMin = input$prevInputLowMin,
-                                       cohortDefinitionId1 = input$selectedExposure,
+                                       prevInputHighMax = input$prevInputHighMax/100,
+                                       prevInputHighMin = input$prevInputHighMin/100,
+                                       prevInputLowMax = input$prevInputLowMax/100,
+                                       prevInputLowMin = input$prevInputLowMin/100,
+                                       cohortDefinitionId1 = selectedExposure(),
                                        cohortDefinitionId2 = input$show_exclusion$index)
     # return data
     covData
   })
 
+  allCohortDefinitions <- shiny::reactive(getCohortDefinitionsTable(qns, databaseId = selectedDatabases()))
+
   output$covTableCoOccurrence <- reactable::renderReactable({
-    cohortDefinitions <- getCohortDefinitionsWithDbCounts()
+    cohortDefinitions <- allCohortDefinitions()
     # get data
     covData <- getCoOccurrenceData()
-    # create column names with cohort sample sizes
-    targetName <- paste0(
-      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$show_exclusion$index],
-      " (n = ",
-      prettyNum(first(covData$n1), big.mark = ","),
-      ")")
 
-    comparatorName <- paste0(
-      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selected],
-      " (n = ",
-      prettyNum(first(covData$n2), big.mark = ","),
-      ")")
+    # create column names with cohort sample sizes
+    targetName <-
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedExposure()][1]
+    comparatorName <-
+      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$show_exclusion$index][1]
 
     # subset data and select relevant columns
     tableData <- covData %>%
       filter() %>%
-      arrange(desc(abs(stdDiff))) %>%
-      select(covariateId, cdmSourceAbbreviation, covariateShortName, mean1, mean2, stdDiff) %>%
+      arrange(desc(abs(stdDiff)))  %>%
       mutate(covariateShortName = gsub("concept co-occurrence:", "", covariateShortName)) %>%
       mutate(conceptId = abs(covariateId)) %>%
-      select(-covariateId)
+      select(conceptId, cdmSourceAbbreviation, covariateShortName, mean1, mean2, stdDiff)
 
     # table code
     reactable::reactable(
@@ -826,65 +830,14 @@ shiny::shinyServer(function(input, output, session) {
 
   #### ---- "table 1": demographics (default to unsorted) ---- ####
   output$covTableDemo <- reactable::renderReactable({
-    cohortDefinitions <- getCohortDefinitionsWithDbCounts()
-    # get data
-    covData <- getCovData()
-
-    # create column names with cohort sample sizes
-    targetName <- paste0(
-      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
-      " (n = ",
-      prettyNum(first(covData$n1), big.mark = ","),
-      ")")
-
-    comparatorName <- paste0(
-      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
-      " (n = ",
-      prettyNum(first(covData$n2), big.mark = ","),
-      ")")
-
-    # subset data and select relevant columns
-    tableData <- covData %>%
-      filter(covariateType == "Demographics") %>%
-      arrange(desc(covariateShortName)) %>%
-      select(covariateShortName, mean1, mean2, stdDiff) %>%
-      mutate(covariateShortName = stringr::str_to_sentence(covariateShortName))
-
-    # table code
-    reactable::reactable(
-      data = tableData,
-      columns = list(
-        "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "stdDiff" = reactable::colDef(
-          name = "Std. Diff.",
-
-          cell = function(value, index) {
-
-            if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
-
-              sprintf(fmtSmd, value)
-
-            } else {
-
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
-          align = "center",
-          vAlign = "bottom")),
-      bordered = TRUE,
-      searchable = TRUE,
-      showPageSizeOptions = TRUE,
-      pageSizeOptions = c(5, 10, 20, 50, 100, 1000),
-      striped = TRUE,
-      highlight = TRUE,
-      compact = TRUE,
-      theme = reactable::reactableTheme(
-        borderColor = "#dfe2e5",
-        stripedColor = "#f6f8fa",
-        highlightColor = "#eab676",
-        cellPadding = "8px 12px",
-        searchInputStyle = list(width = "100%")),
-      showSortIcon = TRUE)
+    renderCovariateReactable(covariateType = "Demographics",
+                             cohortDefinitionReactive = getCohortDefinitionsWithDbCounts,
+                             covariateDataReactive = getCovData,
+                             selectedExposure = selectedExposure,
+                             selectedComparator = selectedComparator,
+                             fmtSmd = fmtSmd,
+                             covariateReplaceString = "",
+                             stringToSentence = TRUE)
   })
 
   output$covTablePresBalance <- shiny::renderText({
@@ -894,65 +847,14 @@ shiny::shinyServer(function(input, output, session) {
 
   #### ---- "table 1": presentation (default to sort by abs. std. diff.) ---- ####
   output$covTablePres <- reactable::renderReactable({
-    cohortDefinitions <- getCohortDefinitionsWithDbCounts()
-    # get data
-    covData <- getCovData()
-
-    # create column names with cohort sample sizes
-    targetName <- paste0(
-      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
-      " (n = ",
-      prettyNum(first(covData$n1), big.mark = ","),
-      ")")
-
-    comparatorName <- paste0(
-      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
-      " (n = ",
-      prettyNum(first(covData$n2), big.mark = ","),
-      ")")
-
-    # subset data and select relevant columns
-    tableData <- covData %>%
-      filter(covariateType == "Presentation") %>%
-      arrange(desc(abs(stdDiff))) %>%
-      select(covariateShortName, mean1, mean2, stdDiff) %>%
-      mutate(covariateShortName = gsub("Condition in <=30d prior:", "", covariateShortName))
-
     # table code
-    reactable::reactable(
-      data = tableData,
-      columns = list(
-        "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "stdDiff" = reactable::colDef(
-          name = "Std. Diff.",
-
-          cell = function(value, index) {
-
-            if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
-
-              sprintf(fmtSmd, value)
-
-            } else {
-
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
-          align = "center",
-          vAlign = "bottom")),
-      bordered = TRUE,
-      searchable = TRUE,
-      showPageSizeOptions = TRUE,
-      pageSizeOptions = c(5, 10, 20, 50, 100, 1000),
-      striped = TRUE,
-      highlight = TRUE,
-      compact = TRUE,
-      theme = reactable::reactableTheme(
-        borderColor = "#dfe2e5",
-        stripedColor = "#f6f8fa",
-        highlightColor = "#eab676",
-        cellPadding = "8px 12px",
-        searchInputStyle = list(width = "100%")),
-      showSortIcon = TRUE)
+    renderCovariateReactable(covariateType = "Presentation",
+                             cohortDefinitionReactive = getCohortDefinitionsWithDbCounts,
+                             covariateDataReactive = getCovData,
+                             selectedExposure = selectedExposure,
+                             selectedComparator = selectedComparator,
+                             fmtSmd = fmtSmd,
+                             covariateReplaceString = "Condition in <=30d prior:")
 
   })
 
@@ -963,66 +865,14 @@ shiny::shinyServer(function(input, output, session) {
 
   #### ---- "table 1": medical history (default to sort by abs. std. diff.) ---- ####
   output$covTableMhist <- reactable::renderReactable({
-    cohortDefinitions <- getCohortDefinitionsWithDbCounts()
-    # get data
-    covData <- getCovData()
-
-    # create column names with cohort sample sizes
-    targetName <- paste0(
-      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
-      " (n = ",
-      prettyNum(first(covData$n1), big.mark = ","),
-      ")")
-
-    comparatorName <- paste0(
-      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
-      " (n = ",
-      prettyNum(first(covData$n2), big.mark = ","),
-      ")")
-
-    # subset data and select relevant columns
-    tableData <- covData %>%
-      filter(covariateType == "Medical history") %>%
-      arrange(desc(abs(stdDiff))) %>%
-      select(covariateShortName, mean1, mean2, stdDiff) %>%
-      mutate(covariateShortName = gsub("Condition in >30d prior:", "", covariateShortName))
-
     # table code
-    reactable::reactable(
-      data = tableData,
-      columns = list(
-        "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "stdDiff" = reactable::colDef(
-          name = "Std. Diff.",
-
-          cell = function(value, index) {
-
-            if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
-
-              sprintf(fmtSmd, value)
-
-            } else {
-
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
-          align = "center",
-          vAlign = "bottom")),
-      bordered = TRUE,
-      searchable = TRUE,
-      showPageSizeOptions = TRUE,
-      pageSizeOptions = c(5, 10, 20, 50, 100, 1000),
-      striped = TRUE,
-      highlight = TRUE,
-      compact = TRUE,
-      theme = reactable::reactableTheme(
-        borderColor = "#dfe2e5",
-        stripedColor = "#f6f8fa",
-        highlightColor = "#eab676",
-        cellPadding = "8px 12px",
-        searchInputStyle = list(width = "100%")),
-      showSortIcon = TRUE)
-
+    renderCovariateReactable(covariateType = "Medical history",
+                             cohortDefinitionReactive = getCohortDefinitionsWithDbCounts,
+                             covariateDataReactive = getCovData,
+                             selectedExposure = selectedExposure,
+                             selectedComparator = selectedComparator,
+                             fmtSmd = fmtSmd,
+                             covariateReplaceString = "Condition in >30d prior:")
   })
 
   output$covTablePmedsBalance <- shiny::renderText({
@@ -1032,66 +882,13 @@ shiny::shinyServer(function(input, output, session) {
 
   #### ---- "table 1": prior meds (default to sort by abs. std. diff.) ---- ####
   output$covTablePmeds <- reactable::renderReactable({
-    cohortDefinitions <- getCohortDefinitionsWithDbCounts()
-    # get data
-    covData <- getCovData()
-
-    # create column names with cohort sample sizes
-    targetName <- paste0(
-      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
-      " (n = ",
-      prettyNum(first(covData$n1), big.mark = ","),
-      ")")
-
-    comparatorName <- paste0(
-      cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
-      " (n = ",
-      prettyNum(first(covData$n2), big.mark = ","),
-      ")")
-
-    # subset data and select relevant columns
-    tableData <- covData %>%
-      filter(covariateType == "prior meds") %>%
-      arrange(desc(abs(stdDiff))) %>%
-      select(covariateShortName, mean1, mean2, stdDiff) %>%
-      mutate(covariateShortName = gsub("Drug with start >30d prior:", "", covariateShortName))
-
-    # table code
-    reactable::reactable(
-      data = tableData,
-      columns = list(
-        "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-        "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-        "stdDiff" = reactable::colDef(
-          name = "Std. Diff.",
-
-          cell = function(value, index) {
-
-            if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
-
-              sprintf(fmtSmd, value)
-
-            } else {
-
-              ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
-          align = "center",
-          vAlign = "bottom")),
-      bordered = TRUE,
-      searchable = TRUE,
-      showPageSizeOptions = TRUE,
-      pageSizeOptions = c(5, 10, 20, 50, 100, 1000),
-      striped = TRUE,
-      highlight = TRUE,
-      compact = TRUE,
-      theme = reactable::reactableTheme(
-        borderColor = "#dfe2e5",
-        stripedColor = "#f6f8fa",
-        highlightColor = "#eab676",
-        cellPadding = "8px 12px",
-        searchInputStyle = list(width = "100%")),
-      showSortIcon = TRUE)
-
+    renderCovariateReactable(covariateType = "prior meds",
+                             cohortDefinitionReactive = getCohortDefinitionsWithDbCounts,
+                             covariateDataReactive = getCovData,
+                             selectedExposure = selectedExposure,
+                             selectedComparator = selectedComparator,
+                             fmtSmd = fmtSmd,
+                             covariateReplaceString = "Drug with start >30d prior:")
   })
 
   output$covTableVisitBalance <- shiny::renderText({
@@ -1102,77 +899,31 @@ shiny::shinyServer(function(input, output, session) {
 
   #### ---- "table 1": visit context (default to unsorted) ---- ####
   output$covTableVisit <- reactable::renderReactable({
-    cohortDefinitions <- getCohortDefinitionsWithDbCounts()
-    # get data
-    covData <- getCovData()
+    # table code
+    renderCovariateReactable(covariateType = "visit context",
+                             cohortDefinitionReactive = getCohortDefinitionsWithDbCounts,
+                             covariateDataReactive = getCovData,
+                             selectedExposure = selectedExposure,
+                             selectedComparator = selectedComparator,
+                             fmtSmd = fmtSmd,
+                             covariateReplaceString = "<=30d prior|Visit:")
 
-    shiny::withProgress({
-      # create column names with cohort sample sizes
-      targetName <- paste0(
-        cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == input$selectedExposure],
-        " (n = ",
-        prettyNum(first(covData$n1), big.mark = ","),
-        ")")
-
-      comparatorName <- paste0(
-        cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
-        " (n = ",
-        prettyNum(first(covData$n2), big.mark = ","),
-        ")")
-
-      # subset data and select relevant columns
-      tableData <- covData %>%
-        dplyr::filter(covariateType == "visit context") %>%
-        dplyr::arrange(covariateShortName) %>%
-        dplyr::select(covariateShortName, mean1, mean2, stdDiff) %>%
-        dplyr::mutate(covariateShortName = stringr::str_to_sentence(gsub("<=30d prior|Visit:", "", covariateShortName)))
-
-      # table code
-      rt <- reactable::reactable(
-        data = tableData,
-        columns = list(
-          "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-          "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-          "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-          "stdDiff" = reactable::colDef(
-            name = "Std. Diff.",
-
-            cell = function(value, index) {
-
-              if (tableData$mean1[index] >= 0.01 & tableData$mean2[index] >= 0.01) {
-
-                sprintf(fmtSmd, value)
-
-              } else {
-
-                ifelse(tableData$mean1[index] < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, value)), paste0("(\u2264) ", sprintf(fmtSmd, value))) } },
-            align = "center",
-            vAlign = "bottom")),
-        bordered = TRUE,
-        searchable = TRUE,
-        showPageSizeOptions = TRUE,
-        pageSizeOptions = c(5, 10, 20, 50, 100, 1000),
-        striped = TRUE,
-        highlight = TRUE,
-        compact = TRUE,
-        theme = reactable::reactableTheme(
-          borderColor = "#dfe2e5",
-          stripedColor = "#f6f8fa",
-          highlightColor = "#eab676",
-          cellPadding = "8px 12px",
-          searchInputStyle = list(width = "100%")),
-        showSortIcon = TRUE)
-
-    },
-      message = "Rendering tables",
-      value = 0.7)
-    rt
   })
 
   output$dataSources <- reactable::renderReactable({
     getDbDataSourcesTable(qns)
   })
 
+
+  output$covTableIndex <- reactable::renderReactable({
+    renderCovariateReactable(covariateType = "Co-occurrence",
+                             cohortDefinitionReactive = getCohortDefinitionsWithDbCounts,
+                             covariateDataReactive = getCovData,
+                             selectedExposure = selectedExposure,
+                             selectedComparator = selectedComparator,
+                             fmtSmd = fmtSmd,
+                             covariateReplaceString = "concept co-occurrence:")
+  })
 
   observeEvent(input$showRankings, {
     shiny::showModal(shiny::modalDialog(title = "Comparator Ranks",

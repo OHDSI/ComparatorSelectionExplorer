@@ -89,7 +89,7 @@ getCoOccurenceTableData <- function(qns,
               	  where t.cohort_definition_id = @cohortDefinitionId1
               	  and t.database_id IN (@database_ids)
             	  ) as c1
-              	full join (
+              	left join (
               	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@covariate_mean t
               	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
               	   where t.cohort_definition_id = @cohortDefinitionId2
@@ -111,9 +111,9 @@ getCoOccurenceTableData <- function(qns,
             c1.num_persons as n_1,
             c2.num_persons as n_2
             from means as m
-            join @schema.@cohort_count as c1
+            inner join @schema.@cohort_count as c1
             on m.cohort_definition_id_1 = c1.cohort_definition_id and c1.database_id = m.database_id
-            join @schema.@cohort_count as c2
+            inner join @schema.@cohort_count as c2
               on m.cohort_definition_id_2 = c2.cohort_definition_id and c2.database_id = m.database_id
             inner join @schema.@cdm_source_info as d on d.database_id = m.database_id
 
@@ -146,7 +146,7 @@ getCohortDefinitionsTable <- function(qns, databaseId, counts = TRUE) {
              inner join @schema.@cohort_count c ON c.cohort_definition_id = t.cohort_definition_id
              where t.cohort_definition_id is not null
              and   atc_flag in (0, 1)
-             and c.database_id = @database_id
+             and c.database_id IN (@database_id)
              order by short_name",
     database_id = databaseId,
     counts = counts
