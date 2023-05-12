@@ -355,7 +355,7 @@ from @cohort_database_schema.@cohort sc1
 inner join @cdm_database_schema.condition_occurrence co1 on (sc1.subject_id = co1.person_id and sc1.cohort_start_date = co1.condition_start_date)
 group by sc1.cohort_definition_id, co1.condition_concept_id
 
-union all
+union
 
 select
 	sc1.cohort_definition_id,
@@ -366,7 +366,7 @@ inner join @cdm_database_schema.drug_era de1
 on (sc1.subject_id = de1.person_id and sc1.cohort_start_date = de1.drug_era_start_date)
 group by sc1.cohort_definition_id, de1.drug_concept_id
 
-union all
+union
 
 select
 	sc1.cohort_definition_id,
@@ -377,7 +377,7 @@ inner join @cdm_database_schema.drug_exposure de1
 on (sc1.subject_id = de1.person_id and sc1.cohort_start_date = de1.drug_exposure_start_date)
 group by sc1.cohort_definition_id, de1.drug_concept_id
 
-union all
+union
 
 select
 	sc1.cohort_definition_id,
@@ -388,7 +388,7 @@ inner join @cdm_database_schema.procedure_occurrence po1
     on (sc1.subject_id = po1.person_id and sc1.cohort_start_date = po1.procedure_date)
 group by sc1.cohort_definition_id, po1.procedure_concept_id
 
-union all
+union
 
 select
 	sc1.cohort_definition_id,
@@ -398,7 +398,7 @@ from @cohort_database_schema.@cohort sc1
 inner join @cdm_database_schema.observation o1 on (sc1.subject_id = o1.person_id and sc1.cohort_start_date = o1.observation_date)
 group by sc1.cohort_definition_id, o1.observation_concept_id
 
-union all
+union
 
 select
 	sc1.cohort_definition_id,

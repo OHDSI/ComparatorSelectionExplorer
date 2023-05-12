@@ -23,8 +23,8 @@ getExposureCohortDefinitionSet <- function(executionSettings = NULL, ...) {
   sql <- "SELECT
     COHORT_DEFINITION_ID as cohort_id,
     SHORT_NAME as cohort_name,
-    'SELECT NULL' as SQL,
-    '{}' as JSON
+    CONCAT('SELECT ', COHORT_DEFINITION_ID) as SQL,
+    CONCAT('[', COHORT_DEFINITION_ID, ']') as JSON
     FROM @results_database_schema.@cohort_definition"
 
   DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
@@ -80,11 +80,9 @@ createCohorts <- function(executionSettings = NULL, ...) {
   baseCohortSet <- getExposureCohortDefinitionSet(executionSettings)
   # Write cohorts complete to prevent cohort generator creating them
   recordKeepingFile <- file.path(executionSettings$incrementalFolder, "GeneratedCohorts.csv")
-  checksum <- CohortGenerator::computeChecksum(baseCohortSet$sql[1])
-
-  for (cohortId in baseCohortSet$cohortId) {
-    CohortGenerator::recordTasksDone(cohortId = cohortId,
-                                     checksum = checksum,
+  for (i in seq_along(baseCohortSet$cohortId)) {
+    CohortGenerator::recordTasksDone(cohortId = baseCohortSet$cohortId[i],
+                                     checksum = CohortGenerator::computeChecksum(baseCohortSet$sql[i]),
                                      recordKeepingFile = recordKeepingFile)
   }
 
@@ -128,7 +126,6 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                  dropTableIfExists = FALSE,
                                  createTable = FALSE,
                                  tempTable = FALSE)
-
 
   invisible(executionSettings)
 }
