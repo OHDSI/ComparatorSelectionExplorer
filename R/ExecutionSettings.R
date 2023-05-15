@@ -32,6 +32,10 @@
 #' @param exportZipFile                 Path to zip file output of project
 #' @param databaseName                  Database identifier (string)
 #' @param databaseId                    Database identifier integer (optional)
+#' @param targetCohortIds               (optional) Integer ids for cohorts to limit cosine similarity calculation to
+#'                                      Must be a valid RxNorm ingredient, ATC class or included in the
+#'                                      cohortDefinitionSet
+#'
 #' @param incrementalFolder             folder for storage of incremental results for cohort generation
 #' @param vocabularyDatabaseSchema      standard vocabulary database schema
 #' @param cohortTable                   (optional) cohort table
@@ -63,6 +67,7 @@ createExecutionSettings <- function(connectionDetails,
                                     tempEmulationSchema = getOption("tempEmulationSchema"),
                                     cohortDefinitionSet = NULL,
                                     indicationCohortSubsetDefintions = list(),
+                                    targetCohortIds = NULL,
                                     cohortCountTable = "cse_cohort_count",
                                     cohortDefinitionTable = "cse_cohort_definition",
                                     covariateDefTable = "cse_covariate_ref",
@@ -86,6 +91,7 @@ createExecutionSettings <- function(connectionDetails,
   checkmate::assertTRUE(is.null(cohortDefinitionSet) || CohortGenerator::isCohortDefinitionSet(cohortDefinitionSet))
   checkmate::assertIntegerish(databaseId, null.ok = TRUE)
   checkmate::assertString(databaseId, null.ok = TRUE)
+  checkmate::assertIntegerish(targetCohortIds, null.ok = TRUE)
 
   executionSettings <- list(
     connectionDetails = connectionDetails,
@@ -108,6 +114,7 @@ createExecutionSettings <- function(connectionDetails,
     exportDir = exportDir,
     removeExportDir = removeExportDir,
     cohortDefinitionSet = cohortDefinitionSet,
+    targetCohortIds = targetCohortIds,
     indicationCohortSubsetDefintions = indicationCohortSubsetDefintions,
     generateCohortDefinitionSet = generateCohortDefinitionSet,
     connection = connection
@@ -159,6 +166,8 @@ createExecutionSettings <- function(connectionDetails,
                                                          snakeCaseToCamelCase = TRUE)
     executionSettings$databaseName <- fields$cdmSourceName
   }
+
+  dir.create(executionSettings$incrementalFolder, showWarnings = FALSE)
 
   return(executionSettings)
 }
