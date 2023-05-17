@@ -23,7 +23,7 @@ getExposureCohortDefinitionSet <- function(executionSettings = NULL, ...) {
   sql <- "SELECT
     COHORT_DEFINITION_ID as cohort_id,
     SHORT_NAME as cohort_name,
-    CONCAT('SELECT ', COHORT_DEFINITION_ID) as SQL,
+    'SELECT NULL;' as SQL,
     CONCAT('[', COHORT_DEFINITION_ID, ']') as JSON
     FROM @results_database_schema.@cohort_definition"
 
@@ -80,12 +80,25 @@ createCohorts <- function(executionSettings = NULL, ...) {
   baseCohortSet <- getExposureCohortDefinitionSet(executionSettings)
   # Write cohorts complete to prevent cohort generator creating them
   recordKeepingFile <- file.path(executionSettings$incrementalFolder, "GeneratedCohorts.csv")
-  for (i in seq_along(baseCohortSet$cohortId)) {
-    CohortGenerator::recordTasksDone(cohortId = baseCohortSet$cohortId[i],
-                                     checksum = CohortGenerator::computeChecksum(baseCohortSet$sql[i]),
-                                     recordKeepingFile = recordKeepingFile)
-  }
 
+  # Store checksum of bulk cohorts
+  bulkCohorts <- data.frame(cohortId = baseCohortSet$cohortId,
+                            checksum = digest::digest("SELECT NULL", algo = "md5", serialize = FALSE),
+                            timeStamp = Sys.time())
+
+  if (file.exists(recordKeepingFile)) {
+    recordKeeping <- readr::read_csv(
+      file = recordKeepingFile,
+      col_types = readr::cols(),
+      lazy = FALSE
+    ) %>%
+      dplyr::filter(!.data$cohortId %in% bulkCohorts$cohortId)
+
+    bulkCohorts <- dplyr::bind_rows(recordKeeping, bulkCohorts)
+  }
+  readr::write_csv(x = bulkCohorts, file = recordKeepingFile, append = FALSE)
+
+  # All cohort definitions
   mergedCohortDefinitionSet <- dplyr::bind_rows(executionSettings$cohortDefinitionSet,
                                                 baseCohortSet)
 
