@@ -29,6 +29,7 @@
 #' @inheritParams execute
 #' @export
 exportResults <- function(executionSettings = NULL, ...) {
+
   if (is.null(executionSettings) || missing(executionSettings)) {
     executionSettings <- createExecutionSettings(...)
   }
@@ -50,7 +51,7 @@ exportResults <- function(executionSettings = NULL, ...) {
       if (nrow(data)) {
         data$database_id <- executionSettings$databaseId
       } else {
-        colnames(data) <- c(colnames(data), "database_id")
+        data <- data %>% dplyr::mutate(database_id = "")
       }
     }
 
@@ -173,5 +174,6 @@ exportResults <- function(executionSettings = NULL, ...) {
     unlink(executionSettings$exportDir, recursive = TRUE, force = TRUE)
   }
 
+  executionSettings$resultsExported <- TRUE
   invisible(executionSettings)
 }

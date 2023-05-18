@@ -29,11 +29,10 @@ execute <- function(executionSettings = NULL, ...) {
     executionSettings <- createExecutionSettings(..., .callbackFun = on.exit)
   }
 
-  executionSettings <- executionSettings  |>
-                          createCohorts() |>
-                          generateSimilarityScores() |>
-                          exportResults()
+  executionSettings <- createCohorts(executionSettings)
+  executionSettings <- generateSimilarityScores(executionSettings)
+  executionSettings <- exportResults(executionSettings)
 
- # 3. export results and zip
- invisible(executionSettings)
+  # 3. export results and zip
+  invisible(executionSettings)
 }

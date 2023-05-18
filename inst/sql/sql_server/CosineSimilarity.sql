@@ -1,5 +1,6 @@
 {DEFAULT @dotproduct_concept = ''}
 {DEFAULT @vector_length = ''}
+{DEFAULT @target_cohort_ids = ''}
 {DEFAULT @exclude_co_occurrence_average = TRUE}
 /***
 compute cosine similarity for all relavant cohort-cohort comparisons
@@ -37,19 +38,18 @@ group by scs1.cohort_definition_id, scd1.covariate_type
 --combinations to compare:  1) same database, same year, different concepts; 2) same database, same concept, different years,  3) (for when pooling across databases) different database, same concept, same year
 drop table if exists #dotproduct_concept;
 create table #dotproduct_concept as
-select scs1.cohort_definition_id as cohort_definition_id_1, scs2.cohort_definition_id as cohort_definition_id_2,
-scovd1.covariate_type, sum(scs1.covariate_mean*scs2.covariate_mean) as dotproduct
-from
-@results_database_schema.@covariate_means_table scs1
-inner join @results_database_schema.@covariate_def_table scovd1
-  on scs1.covariate_id = scovd1.covariate_id
-inner join @results_database_schema.@cohort_definition scd1
-on scs1.cohort_definition_id = scd1.cohort_definition_id
-inner join @results_database_schema.@covariate_means_table scs2
-on scs1.covariate_id = scs2.covariate_id
-inner join @results_database_schema.@cohort_definition scd2
-on scs2.cohort_definition_id = scd2.cohort_definition_id
-where (scd1.concept_id  < scd2.concept_id and scd2.atc_flag in (0,1))
+select
+    scs1.cohort_definition_id as cohort_definition_id_1,
+    scs2.cohort_definition_id as cohort_definition_id_2,
+    scovd1.covariate_type, sum(scs1.covariate_mean*scs2.covariate_mean) as dotproduct
+from @results_database_schema.@covariate_means_table scs1
+inner join @results_database_schema.@covariate_def_table scovd1 on scs1.covariate_id = scovd1.covariate_id
+inner join @results_database_schema.@cohort_definition scd1 on scs1.cohort_definition_id = scd1.cohort_definition_id
+inner join @results_database_schema.@covariate_means_table scs2 on scs1.covariate_id = scs2.covariate_id
+inner join @results_database_schema.@cohort_definition scd2 on scs2.cohort_definition_id = scd2.cohort_definition_id
+
+-- Either compute half pairs or only pairs for specified target cohort ids
+where {@target_cohort_ids == ''} ? { scd1.concept_id  < scd2.concept_id} : {scd1.cohort_definition_id IN (@target_cohort_ids)}
 group by scs1.cohort_definition_id, scs2.cohort_definition_id, scovd1.covariate_type
 ;
 
