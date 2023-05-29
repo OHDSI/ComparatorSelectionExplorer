@@ -370,17 +370,6 @@ union
 
 select
 	sc1.cohort_definition_id,
-	de1.drug_concept_id as concept_id,
-	count(distinct sc1.subject_id) as num_persons
-from @cohort_database_schema.@cohort sc1
-inner join @cdm_database_schema.drug_exposure de1
-on (sc1.subject_id = de1.person_id and sc1.cohort_start_date = de1.drug_exposure_start_date)
-group by sc1.cohort_definition_id, de1.drug_concept_id
-
-union
-
-select
-	sc1.cohort_definition_id,
 	po1.procedure_concept_id as concept_id,
 	count(distinct sc1.subject_id) as num_persons
 from @cohort_database_schema.@cohort sc1
