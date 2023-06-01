@@ -49,7 +49,7 @@ inner join @results_database_schema.@covariate_means_table scs2 on scs1.covariat
 inner join @results_database_schema.@cohort_definition scd2 on scs2.cohort_definition_id = scd2.cohort_definition_id
 
 -- Either compute half pairs or only pairs for specified target cohort ids
-where {@target_cohort_ids == ''} ? { scd1.concept_id  < scd2.concept_id} : {scd1.cohort_definition_id IN (@target_cohort_ids)}
+where {@target_cohort_ids == ''} ? { scd1.cohort_definition_id  < scd2.cohort_definition_id} : {scd1.cohort_definition_id IN (@target_cohort_ids)}
 group by scs1.cohort_definition_id, scs2.cohort_definition_id, scovd1.covariate_type
 ;
 
