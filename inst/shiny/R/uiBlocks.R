@@ -163,3 +163,46 @@ renderCovariateReactable <- function(covariateType,
   createCovariateReactable(tableData, targetName, comparatorName, fmtSmd)
 
 }
+
+exclusionCovariateUi <- function() {
+  shiny::basicPage(
+    tags$head(tags$style(".modal-dialog{ width:95%}")),
+    h4(strong("Find exclusion covariates")),
+    p("Adjunctive procedures, drugs, conditions, or visits that frequently co-occur with the target or comparator
+          exposure may lead to propensity score model fitting issues.
+          To identify a list candidate covariates for exclusion, select prevalence thresholds below"),
+    shiny::numericInput("prevInputHighMax",
+                        label = "Show covariates with prevalance higher than in one cohort",
+                        value = 95,
+                        step = 1,
+                        min = 0.0,
+                        max = 100.0),
+    shiny::numericInput("prevInputHighMin",
+                        label = "and less than than in target/comparator",
+                        value = 80,
+                        step = 1,
+                        min = 0.0,
+                        max = 100.0),
+
+    shiny::numericInput("prevInputLowMax",
+                        label = "Show covariates with prevalance higher than",
+                        value = 20,
+                        step = 1,
+                        min = 0.0,
+                        max = 100.0),
+    shiny::numericInput("prevInputLowMin",
+                        label = "and less than than",
+                        value = 5,
+                        step = 1,
+                        min = 0.0,
+                        max = 100.0),
+    shinycssloaders::withSpinner(reactable::reactableOutput("covTableCoOccurrence")),
+    shiny::div(
+      style = "text-align:right;",
+      withTooltip(shiny::tags$button("Download",
+                                     onclick = paste0("Reactable.downloadDataCSV('covTableCoOccurrence')")),
+                  tooltip = "Note, will not download live values filtered in table, groupings, or any graphical/stylstic elements")
+    )
+  )
+
+}

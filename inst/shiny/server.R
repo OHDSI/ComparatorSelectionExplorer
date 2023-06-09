@@ -7,7 +7,7 @@ library(dplyr, warn.conflicts = FALSE)
 
 dataModelSpec <- ResultModelManager::loadResultsDataModelSpecifications("resultsDataModel.csv")
 qns <- ResultModelManager::createQueryNamespace(connectionDetails = connectionDetails,
-                                                usePooledConnection = TRUE,
+                                                usePooledConnection = FALSE,
                                                 schema = resultsSchema,
                                                 tablePrefix = tablePrefix,
                                                 tableSpecification = dataModelSpec)
@@ -116,16 +116,25 @@ shiny::shinyServer(function(input, output, session) {
 
   shiny::observe({
     shiny::withProgress({
-      cohortDefinitions <- cohortTable()
-      if (nrow(cohortDefinitions)) {
 
+
+      if (length(input$selectedComparatorTypes) == 0) {
+        atcSelection <- c(0, 1)
+      } else if (input$selectedComparatorTypes == "RxNorm Ingredients") {
+        atcSelection <- c(0)
+      } else if (input$selectedComparatorTypes == "ATC Classes") {
+        atcSelection <- c(1)
+      }
+
+      cohortDefinitions <- cohortTable() %>% dplyr::filter(isAtc %in% atcSelection)
+
+      if (nrow(cohortDefinitions)) {
         exposureSelection <- cohortDefinitions$cohortDefinitionId
         names(exposureSelection) <- cohortDefinitions$shortName
         updateSelectizeInput(
           session,
           "selectedExposure",
           choices = exposureSelection,
-          selected = 8826,
           server = TRUE)
       }
     }, message = "Loading cohort definitions")
@@ -162,7 +171,7 @@ shiny::shinyServer(function(input, output, session) {
 
     shiny::withProgress({
       # identify selected comparator types
-      if (length(input$selectedComparatorTypes) == 2L) { atcSelection <- c(0, 1) }
+      if (length(input$selectedComparatorTypes) == 0) { atcSelection <- c(0, 1) }
       else if (input$selectedComparatorTypes == "RxNorm Ingredients") { atcSelection <- c(0) }
       else if (input$selectedComparatorTypes == "ATC Classes") { atcSelection <- c(1) }
 
@@ -171,7 +180,7 @@ shiny::shinyServer(function(input, output, session) {
     }, message = "Loading similarity scores", value = 0.5)
 
     resultsData %>%
-      dplyr::filter(.data$isAtc2 %in% atcSelection)
+    dplyr::filter(.data$isAtc2 %in% atcSelection)
 
   })
 
@@ -477,46 +486,8 @@ shiny::shinyServer(function(input, output, session) {
     shiny::showModal(
       shiny::modalDialog(
         title = "Recommend Covariates for Exclusion",
-        shiny::basicPage(
-          tags$head(tags$style(".modal-dialog{ width:95%}")),
-          h4(strong("Find exclusion covariates")),
-          p("Adjunctive procedures, drugs, conditions, or visits that frequently co-occur with the target or comparator
-          exposure may lead to propensity score model fitting issues.
-          To identify a list candidate covariates for exclusion, select prevalence thresholds below"),
-          shiny::numericInput("prevInputHighMax",
-                              label = "Show covariates with prevalance higher than in one cohort",
-                              value = 95,
-                              step = 1,
-                              min = 0.0,
-                              max = 100.0),
-          shiny::numericInput("prevInputHighMin",
-                              label = "and less than than in target/comparator",
-                              value = 80,
-                              step = 1,
-                              min = 0.0,
-                              max = 100.0),
-
-          shiny::numericInput("prevInputLowMax",
-                              label = "Show covariates with prevalance higher than",
-                              value = 20,
-                              step = 1,
-                              min = 0.0,
-                              max = 100.0),
-          shiny::numericInput("prevInputLowMin",
-                              label = "and less than than",
-                              value = 5,
-                              step = 1,
-                              min = 0.0,
-                              max = 100.0),
-          shinycssloaders::withSpinner(reactable::reactableOutput("covTableCoOccurrence")),
-          shiny::div(
-            style = "text-align:right;",
-            withTooltip(shiny::tags$button("Download",
-                                           onclick = paste0("Reactable.downloadDataCSV('covTableCoOccurrence')")),
-                        tooltip = "Note, will not download live values filtered in table, groupings, or any graphical/stylstic elements")
-          )
-        ),
-        size = "l",
+        exclusionCovariateUi(),
+        ize = "l",
         easyClose = FALSE,
         footer = shiny::tagList(
           shiny::actionButton("closeModal", "Close")

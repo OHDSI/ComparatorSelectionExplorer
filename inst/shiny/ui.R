@@ -11,50 +11,77 @@ shinyUI(fluidPage(
     type = "pills",
     tabPanel( # tab 1: multi-source explorer
       title = "Recommend Comparators",
-      sidebarLayout(
-        sidebarPanel(
-          h4(strong("Settings")),
-          selectizeInput(
-            inputId = "selectedExposure",
-            choices = NULL,
-            label = "Select target exposure:"),
-          selectInput(
-            inputId = "selectedComparatorTypes",
-            label = "Select comparator types:",
-            choices = c("RxNorm Ingredients", "ATC Classes"),
-            selected = "RxNorm Ingredients",
-            multiple = TRUE),
-          checkboxGroupInput(
-            inputId = "selectedDatabases",
-            label = "Select data sources:",
-            choices = NULL,
-            selected = NULL,
-            inline = FALSE,
-            width = NULL,
-            choiceNames = NULL,
-            choiceValues = NULL),
-          sliderInput(
-            inputId = "minNumDatabases",
-            label = "Minimum data sources with comparator presence:",
-            min = 1,
-            max = 10,
-            value = 2,
-            step = 1,
-            ticks = FALSE),
-          radioButtons(
-            inputId = "avgOn",
-            label = "Rank comparators on:",
-            choices = c("Average similarity score", "Average source-specific rank"),
-            selected = "Average similarity score"),
-          conditionalPanel(
-            "input.selectedExposure != ''",
-            shiny::actionButton(inputId = "showRankings", "Show rank plot")
-          )
+      shinydashboard::box(
+        title = "Settings",
+        width = 12,
+        fluidRow(
+          column(
+            width = 6,
+            selectizeInput(
+              inputId = "selectedExposure",
+              choices = NULL,
+              width = "100%",
+              label = "Select target exposure:"),
+            selectInput(
+              inputId = "selectedComparatorTypes",
+              label = "Select comparator types:",
+              width = "100%",
+              choices = c("RxNorm Ingredients", "ATC Classes"),
+              selected = "RxNorm Ingredients",
+              multiple = TRUE
+            )
+          ),
+          column(
+            width = 3,
+            checkboxGroupInput(
+              inputId = "selectedDatabases",
+              label = "Select data sources:",
+              choices = NULL,
+              selected = NULL,
+              inline = FALSE,
+              width = NULL,
+              choiceNames = NULL,
+              choiceValues = NULL
+            )
+          ),
+          column(
+            width = 3,
+            sliderInput(
+              inputId = "minNumDatabases",
+              label = "Minimum data sources with comparator presence:",
+              min = 1,
+              max = 10,
+              value = 2,
+              step = 1,
+              ticks = FALSE),
+            radioButtons(
+              inputId = "avgOn",
+              label = "Rank comparators on:",
+              choices = c("Average similarity score", "Average source-specific rank"),
+              selected = "Average similarity score"),
+
+          ),
+          fluidRow(
+            column(
+              width = 12,
+              shiny::actionButton(inputId = "getResults", "Suggest Comparators")
+            )
+          ),
         ),
-        mainPanel(
-          h3("Comparator listing"),
-          shinycssloaders::withSpinner(reactable::reactableOutput("multiDatabaseSimTable"))
-        )),
+        shiny::conditionalPanel(
+          condition = "input.getResults > 0",
+          shinydashboard::box(
+            width = 12,
+            title = "Comparator listing",
+            conditionalPanel(
+              "input.selectedExposure != ''",
+              shiny::actionButton(inputId = "showRankings", "Show rank plot"),
+              br()
+            ),
+            shinycssloaders::withSpinner(reactable::reactableOutput("multiDatabaseSimTable"))
+          )
+        )
+      ),
     ),
     tabPanel( # tab 3: about
       title = "About",

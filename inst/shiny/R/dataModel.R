@@ -9,7 +9,7 @@ getCohortDefinitions <- function(qns) {
                atc_flag as is_atc
              from @schema.@cohort_definition t
              where t.cohort_definition_id is not null
-             and   atc_flag in (0, 1)
+             --and   atc_flag in (0, 1)
              order by short_name")
 }
 
@@ -55,7 +55,7 @@ getCoOccurenceTableData <- function(qns,
   checkmate::assertClass(qns, "QueryNamespace")
   qns$queryDb(
     sql = "
-            with means as (
+            with means_cte as (
               	select
               	    c1.database_id,
               		@cohortDefinitionId1 as cohort_definition_id_1,
@@ -84,19 +84,22 @@ getCoOccurenceTableData <- function(qns,
               			else c2.covariate_mean
               		end as mean_2
               	from (
-              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@covariate_mean t
+              	  select t.*, covd.covariate_name, covd.covariate_type
+              	  from @schema.@covariate_mean t
               	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
               	  where t.cohort_definition_id = @cohortDefinitionId1
               	  and t.database_id IN (@database_ids)
             	  ) as c1
               	left join (
-              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@covariate_mean t
+              	  select t.*, covd.covariate_name, covd.covariate_type
+              	  from @schema.@covariate_mean t
               	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
-              	   where t.cohort_definition_id = @cohortDefinitionId2
-              	   and t.database_id IN (@database_ids)
+              	  where t.cohort_definition_id = @cohortDefinitionId2
+              	  and t.database_id IN (@database_ids)
               	 ) as c2
               on c1.covariate_id = c2.covariate_id AND c1.database_id = c2.database_id
-              WHERE c1.covariate_type IN (NULL, 'Co-occurrence') AND c2.covariate_type IN (NULL, 'Co-occurrence')
+              WHERE (c1.covariate_type IS NULL OR c1.covariate_type = 'Co-occurrence')
+              AND   (c2.covariate_type IS NULL OR c2.covariate_type = 'Co-occurrence')
             )
 
             select
@@ -110,7 +113,7 @@ getCoOccurenceTableData <- function(qns,
               end as std_diff,
             c1.num_persons as n_1,
             c2.num_persons as n_2
-            from means as m
+            from means_cte as m
             inner join @schema.@cohort_count as c1
             on m.cohort_definition_id_1 = c1.cohort_definition_id and c1.database_id = m.database_id
             inner join @schema.@cohort_count as c2
@@ -145,7 +148,7 @@ getCohortDefinitionsTable <- function(qns, databaseId, counts = TRUE) {
              from @schema.@cohort_definition t
              inner join @schema.@cohort_count c ON c.cohort_definition_id = t.cohort_definition_id
              where t.cohort_definition_id is not null
-             and   atc_flag in (0, 1)
+             -- and   atc_flag in (0, 1)
              and c.database_id IN (@database_id)
              order by short_name",
     database_id = databaseId,
