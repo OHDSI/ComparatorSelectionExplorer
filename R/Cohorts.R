@@ -151,6 +151,10 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                      incremental = TRUE,
                                      incrementalFolder = executionSettings$incrementalFolder)
 
+  if (length(executionSettings$indicationCohortSubsetDefintions) == 0) {
+    mergedCohortDefinitionSet$subsetParent <- mergedCohortDefinitionSet$cohortId
+  }
+
   # Run subsets on
   cohortRef <- mergedCohortDefinitionSet %>%
     dplyr::filter(!(.data$cohortId %in% baseCohortSet$cohortId)) %>%
