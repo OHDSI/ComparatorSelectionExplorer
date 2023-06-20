@@ -138,7 +138,12 @@ createCohorts <- function(executionSettings = NULL, ...) {
       mergedCohortDefinitionSet <- mergedCohortDefinitionSet %>%
         CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = subsetTargets)
     }
-    # Generate custom cohorts
+  } else {
+    mergedCohortDefinitionSet$subsetParent <- mergedCohortDefinitionSet$cohortId
+  }
+
+  if (length(executionSettings$indicationCohortSubsetDefintions) || length(executionSettings$cohortDefinitionSet)) {
+      # Generate custom cohorts
     ParallelLogger::logInfo("Creating custom cohorts with Cohort Generator")
     CohortGenerator::generateCohortSet(connection = executionSettings$connection,
                                        cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
@@ -149,8 +154,6 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                        stopOnError = TRUE,
                                        incremental = TRUE,
                                        incrementalFolder = executionSettings$incrementalFolder)
-  } else {
-    mergedCohortDefinitionSet$subsetParent <- mergedCohortDefinitionSet$cohortId
   }
 
   # Run subsets on
