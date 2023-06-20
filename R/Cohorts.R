@@ -138,20 +138,18 @@ createCohorts <- function(executionSettings = NULL, ...) {
       mergedCohortDefinitionSet <- mergedCohortDefinitionSet %>%
         CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = subsetTargets)
     }
-  }
-  # Generate custom cohorts
-  ParallelLogger::logInfo("Creating custom cohorts with Cohort Generator")
-  CohortGenerator::generateCohortSet(connection = executionSettings$connection,
-                                     cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
-                                     tempEmulationSchema = executionSettings$tempEmulationSchema,
-                                     cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-                                     cohortTableNames = executionSettings$cohortTableNames,
-                                     cohortDefinitionSet = mergedCohortDefinitionSet,
-                                     stopOnError = TRUE,
-                                     incremental = TRUE,
-                                     incrementalFolder = executionSettings$incrementalFolder)
-
-  if (length(executionSettings$indicationCohortSubsetDefintions) == 0) {
+    # Generate custom cohorts
+    ParallelLogger::logInfo("Creating custom cohorts with Cohort Generator")
+    CohortGenerator::generateCohortSet(connection = executionSettings$connection,
+                                       cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                       tempEmulationSchema = executionSettings$tempEmulationSchema,
+                                       cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                       cohortTableNames = executionSettings$cohortTableNames,
+                                       cohortDefinitionSet = mergedCohortDefinitionSet,
+                                       stopOnError = TRUE,
+                                       incremental = TRUE,
+                                       incrementalFolder = executionSettings$incrementalFolder)
+  } else {
     mergedCohortDefinitionSet$subsetParent <- mergedCohortDefinitionSet$cohortId
   }
 
