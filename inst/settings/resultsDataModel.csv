@@ -30,10 +30,10 @@ covariate_definition,concept_id,bigint,no,no,covariate id,Yes
 covariate_definition,time_at_risk_start,int,no,no,time at risk start,Yes
 covariate_definition,time_at_risk_end,int,no,no,time at risk end,Yes
 covariate_definition,covariate_type,varchar,no,no,database definition id,Yes
-covariate_mean,database_id,bigint,No,no,database definition id,Yes
+covariate_mean,database_id,bigint,Yes,no,database definition id,Yes
 covariate_mean,cohort_definition_id,bigint,Yes,no,database definition id,Yes
 covariate_mean,covariate_id,bigint,Yes,no,d,Yes
-covariate_mean,covariate_mean,float,Yes,no,database definition id,Yes
+covariate_mean,covariate_mean,float,No,no,database definition id,Yes
 atc_level,cohort_definition_id_1,bigint,Yes,no,cohort definition id,Yes
 atc_level,cohort_definition_id_2,bigint,Yes,no,cohort definition id,Yes
 atc_level,level_closest_atc_relation,bigint,no,no,atc info,Yes
