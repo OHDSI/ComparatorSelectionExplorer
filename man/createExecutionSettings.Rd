@@ -17,6 +17,8 @@ createExecutionSettings(
   cohortTable = "cse_cohort",
   tempEmulationSchema = getOption("tempEmulationSchema"),
   cohortDefinitionSet = NULL,
+  indicationCohortSubsetDefintions = list(),
+  targetCohortIds = NULL,
   cohortCountTable = "cse_cohort_count",
   cohortDefinitionTable = "cse_cohort_definition",
   covariateDefTable = "cse_covariate_ref",
@@ -56,7 +58,16 @@ reference}
 
 \item{tempEmulationSchema}{String DatabaseSchema - temp emulation schema for oracle, bigquery}
 
-\item{cohortDefinitionSet}{CohortGenerator::cohortDefinitionSet}
+\item{cohortDefinitionSet}{CohortGenerator::cohortDefinitionSet - intended to be custom exposures or
+indication cohorts}
+
+\item{indicationCohortSubsetDefintions}{List of CohortGenerator::cohortSubsetDefinitions these subsets will be applied
+to all cohorts used in this study. See cohortGenerator package documentation for
+detailed instructions on creating cohort subsets}
+
+\item{targetCohortIds}{(optional) Integer ids for cohorts to limit cosine similarity calculation to
+Must be a valid RxNorm ingredient, ATC class or included in the
+cohortDefinitionSet}
 
 \item{cohortCountTable}{(optional) count tabls}
 
@@ -76,6 +87,8 @@ analysis (defaults to 1000).}
 \item{exportDir}{(optional) Folder to store results files in before export (default is tempdir)}
 
 \item{removeExportDir}{(optional) remove the export dir after creating zip files?}
+
+\item{generateCohortDefinitionSet}{Boolean - generate the user specified cohortDefinitionSet}
 
 \item{exportZipFile}{Path to zip file output of project}
 

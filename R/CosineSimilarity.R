@@ -46,9 +46,10 @@ generateSimilarityScores <- function(executionSettings = NULL, ...) {
                                            cohort_counts = executionSettings$cohortCountsTable,
                                            covariate_def_table = executionSettings$covariateDefTable,
                                            covariate_means_table = executionSettings$covariateMeansTable,
-                                           cosine_sim_table_2 = executionSettings$cosineSimStratifiedTable)
+                                           cosine_sim_table_2 = executionSettings$cosineSimStratifiedTable,
+                                           target_cohort_ids = executionSettings$targetCohortIds)
 
   DatabaseConnector::executeSql(executionSettings$connection, sql)
-
+  executionSettings$cosineSimilarityExecuted <- TRUE
   invisible(executionSettings)
 }

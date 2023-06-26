@@ -29,6 +29,7 @@
 #' @inheritParams execute
 #' @export
 exportResults <- function(executionSettings = NULL, ...) {
+
   if (is.null(executionSettings) || missing(executionSettings)) {
     executionSettings <- createExecutionSettings(...)
   }
@@ -50,7 +51,7 @@ exportResults <- function(executionSettings = NULL, ...) {
       if (nrow(data)) {
         data$database_id <- executionSettings$databaseId
       } else {
-        colnames(data) <- c(colnames(data), "database_id")
+        data <- data %>% dplyr::mutate(database_id = "")
       }
     }
 
@@ -91,7 +92,8 @@ exportResults <- function(executionSettings = NULL, ...) {
     t.COHORT_DEFINITION_NAME,
     t.SHORT_NAME,
     t.CONCEPT_ID,
-    t.ATC_FLAG
+    t.ATC_FLAG,
+    t.subset_parent
     FROM  @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id = ct.cohort_definition_id
   WHERE ct.num_persons >= @min_exposure_size"
@@ -173,5 +175,6 @@ exportResults <- function(executionSettings = NULL, ...) {
     unlink(executionSettings$exportDir, recursive = TRUE, force = TRUE)
   }
 
+  executionSettings$resultsExported <- TRUE
   invisible(executionSettings)
 }

@@ -23,11 +23,19 @@
 #' @param cdmDatabaseSchema             String Database schema - where data lives
 #' @param cohortDatabaseSchema          String Database schema - where cohort table is created
 #' @param resultsDatabaseSchema         String Database schema - where similarity scores are stored
-#' @param cohortDefinitionSet           CohortGenerator::cohortDefinitionSet
+#' @param cohortDefinitionSet           CohortGenerator::cohortDefinitionSet - intended to be custom exposures or
+#'                                      indication cohorts
+#' @param indicationCohortSubsetDefintions  List of CohortGenerator::cohortSubsetDefinitions these subsets will be applied
+#'                                      to all cohorts used in this study. See cohortGenerator package documentation for
+#'                                      detailed instructions on creating cohort subsets
 #' @param tempEmulationSchema           String DatabaseSchema - temp emulation schema for oracle, bigquery
 #' @param exportZipFile                 Path to zip file output of project
 #' @param databaseName                  Database identifier (string)
 #' @param databaseId                    Database identifier integer (optional)
+#' @param targetCohortIds               (optional) Integer ids for cohorts to limit cosine similarity calculation to
+#'                                      Must be a valid RxNorm ingredient, ATC class or included in the
+#'                                      cohortDefinitionSet
+#'
 #' @param incrementalFolder             folder for storage of incremental results for cohort generation
 #' @param vocabularyDatabaseSchema      standard vocabulary database schema
 #' @param cohortTable                   (optional) cohort table
@@ -41,9 +49,11 @@
 #' @param logFileLocation               (optional) Log file location
 #' @param exportDir                     (optional) Folder to store results files in before export (default is tempdir)
 #' @param removeExportDir               (optional) remove the export dir after creating zip files?
-#' @param .callbackFun                   Used internally - an on.exit call for disconnection from db
+#' @param .callbackFun                  Used internally - an on.exit call for disconnection from db
+#' @param generateCohortDefinitionSet   Boolean - generate the user specified cohortDefinitionSet
 #' @returns executionSettings object
 #' @export
+#' @importFrom digest digest2int
 createExecutionSettings <- function(connectionDetails,
                                     connection = NULL,
                                     databaseName = NULL,
@@ -56,6 +66,8 @@ createExecutionSettings <- function(connectionDetails,
                                     cohortTable = "cse_cohort",
                                     tempEmulationSchema = getOption("tempEmulationSchema"),
                                     cohortDefinitionSet = NULL,
+                                    indicationCohortSubsetDefintions = list(),
+                                    targetCohortIds = NULL,
                                     cohortCountTable = "cse_cohort_count",
                                     cohortDefinitionTable = "cse_cohort_definition",
                                     covariateDefTable = "cse_covariate_ref",
@@ -70,9 +82,16 @@ createExecutionSettings <- function(connectionDetails,
                                     .callbackFun = NULL) {
 
   checkmate::assertClass(connectionDetails, "ConnectionDetails")
+
+  if (inherits(indicationCohortSubsetDefintions, "CohortSubsetDefinition")) {
+    indicationCohortSubsetDefintions <- list(indicationCohortSubsetDefintions)
+  }
+
+  checkmate::assertList(indicationCohortSubsetDefintions, "CohortSubsetDefinition")
   checkmate::assertTRUE(is.null(cohortDefinitionSet) || CohortGenerator::isCohortDefinitionSet(cohortDefinitionSet))
   checkmate::assertIntegerish(databaseId, null.ok = TRUE)
   checkmate::assertString(databaseId, null.ok = TRUE)
+  checkmate::assertIntegerish(targetCohortIds, null.ok = TRUE)
 
   executionSettings <- list(
     connectionDetails = connectionDetails,
@@ -95,6 +114,8 @@ createExecutionSettings <- function(connectionDetails,
     exportDir = exportDir,
     removeExportDir = removeExportDir,
     cohortDefinitionSet = cohortDefinitionSet,
+    targetCohortIds = targetCohortIds,
+    indicationCohortSubsetDefintions = indicationCohortSubsetDefintions,
     generateCohortDefinitionSet = generateCohortDefinitionSet,
     connection = connection
   )
@@ -145,6 +166,8 @@ createExecutionSettings <- function(connectionDetails,
                                                          snakeCaseToCamelCase = TRUE)
     executionSettings$databaseName <- fields$cdmSourceName
   }
+
+  dir.create(executionSettings$incrementalFolder, showWarnings = FALSE)
 
   return(executionSettings)
 }

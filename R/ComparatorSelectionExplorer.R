@@ -17,6 +17,6 @@
 #' @keywords internal
 "_PACKAGE"
 
-#' @import DatabaseConnector
+#' @import DatabaseConnector ParallelLogger
 #' @importFrom dplyr %>%
 NULL
