@@ -18,6 +18,7 @@ createExecutionSettings(
   tempEmulationSchema = getOption("tempEmulationSchema"),
   cohortDefinitionSet = NULL,
   indicationCohortSubsetDefintions = list(),
+  targetCohortIds = NULL,
   cohortCountTable = "cse_cohort_count",
   cohortDefinitionTable = "cse_cohort_definition",
   covariateDefTable = "cse_covariate_ref",
@@ -63,6 +64,10 @@ indication cohorts}
 \item{indicationCohortSubsetDefintions}{List of CohortGenerator::cohortSubsetDefinitions these subsets will be applied
 to all cohorts used in this study. See cohortGenerator package documentation for
 detailed instructions on creating cohort subsets}
+
+\item{targetCohortIds}{(optional) Integer ids for cohorts to limit cosine similarity calculation to
+Must be a valid RxNorm ingredient, ATC class or included in the
+cohortDefinitionSet}
 
 \item{cohortCountTable}{(optional) count tabls}
 
