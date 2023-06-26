@@ -23,7 +23,7 @@ if (connectionDetails$dbms != "sqlite" &&
   DatabaseConnector::downloadJdbcDrivers(connectionDetails$dbms)
 }
 
-resultsSchema <- "cse_042023"
+resultsSchema <- "cse_062023"
 tablePrefix <- "cse_"
 
 # decimal formatters

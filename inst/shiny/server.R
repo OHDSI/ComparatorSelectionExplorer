@@ -73,12 +73,12 @@ shiny::shinyServer(function(input, output, session) {
       names(dbChoices) <- dbSources$cdmSourceAbbreviation
       dbChoices <- dbChoices[order(names(dbChoices))]
 
-      updateCheckboxGroupInput(
+      updateSelectInput(
         session,
         "selectedDatabases",
         choices = dbChoices,
-        # default choice: everything except optum DoD, since it's duplicative with SES
-        selected = dbChoices[which(names(dbChoices) != "OPTUM Extended DOD")])
+        selected = dbChoices
+      )
     }, message = "Loading database sources")
   })
 
@@ -575,6 +575,7 @@ shiny::shinyServer(function(input, output, session) {
       striped = TRUE,
       highlight = TRUE,
       compact = TRUE,
+      filterable = TRUE,
       theme = reactable::reactableTheme(
         borderColor = "#dfe2e5",
         stripedColor = "#f6f8fa",

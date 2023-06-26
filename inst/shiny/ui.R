@@ -1,18 +1,42 @@
 library(shiny)
 
-shinyUI(fluidPage(
+menu <- shinydashboard::sidebarMenu(
+  shinydashboard::menuItem(text = "Recommend Comparators",
+                           tabName = "comparators",
+                           icon = shiny::icon("table")
+  ),
+  shinydashboard::menuItem(text = "About",
+                           tabName = "about",
+                           icon = shiny::icon("table")
+  )
+)
 
-  # Application title
-  titlePanel(
-    title = "Comparator Selection Explorer",
-    windowTitle = "Comparator Selection Explorer"),
-  p("Janssen Research & Development"),
-  tabsetPanel( # tabs panel
-    type = "pills",
-    tabPanel( # tab 1: multi-source explorer
-      title = "Recommend Comparators",
+bodyTabs <- shinydashboard::tabItems(
+  shinydashboard::tabItem(
+    tabName = "about",
+    shiny::fluidPage(
       shinydashboard::box(
-        title = "Settings",
+        width = 12,
+        h3("Description"),
+        htmlTemplate("about.html"),
+        h3("Currently Available Data Sources"),
+        shinycssloaders::withSpinner(
+          reactable::reactableOutput("dataSources")
+        ),
+        h3("License"),
+        htmlTemplate("license.html"),
+      )
+    )
+  ),
+  shinydashboard::tabItem(
+    tabName = "exposureInfo",
+    shiny::div()
+  ),
+  shinydashboard::tabItem(
+    tabName = "comparators",
+    shiny::fluidPage(
+      shinydashboard::box(
+        title = "Target Selection Settings",
         width = 12,
         fluidRow(
           column(
@@ -29,23 +53,17 @@ shinyUI(fluidPage(
               choices = c("RxNorm Ingredients", "ATC Classes"),
               selected = "RxNorm Ingredients",
               multiple = TRUE
-            )
-          ),
-          column(
-            width = 3,
-            checkboxGroupInput(
+            ),
+            selectInput(
               inputId = "selectedDatabases",
               label = "Select data sources:",
               choices = NULL,
               selected = NULL,
-              inline = FALSE,
-              width = NULL,
-              choiceNames = NULL,
-              choiceValues = NULL
+              multiple = TRUE
             )
           ),
           column(
-            width = 3,
+            width = 6,
             sliderInput(
               inputId = "minNumDatabases",
               label = "Minimum data sources with comparator presence:",
@@ -53,51 +71,50 @@ shinyUI(fluidPage(
               max = 10,
               value = 2,
               step = 1,
-              ticks = FALSE),
+              ticks = FALSE
+            ),
             radioButtons(
               inputId = "avgOn",
               label = "Rank comparators on:",
               choices = c("Average similarity score", "Average source-specific rank"),
-              selected = "Average similarity score"),
-
-          ),
-          fluidRow(
-            column(
-              width = 12,
-              shiny::actionButton(inputId = "getResults", "Suggest Comparators")
-            )
-          ),
+              selected = "Average similarity score"
+            ),
+          )
         ),
-        shiny::conditionalPanel(
-          condition = "input.getResults > 0",
-          shinydashboard::box(
-            width = 12,
-            title = "Comparator listing",
+
+        fluidRow(
+          column(
+            width = 3,
+            shiny::actionButton(inputId = "getResults", "Suggest Comparators")
+          ),
+          column(
+            width = 9,
             conditionalPanel(
               "input.selectedExposure != ''",
               shiny::actionButton(inputId = "showRankings", "Show rank plot"),
-              br()
-            ),
-            shinycssloaders::withSpinner(reactable::reactableOutput("multiDatabaseSimTable"))
+            )
           )
         )
       ),
-    ),
-    tabPanel( # tab 3: about
-      title = "About",
-      fluidRow(
-        column(
+      shiny::conditionalPanel(
+        condition = "input.getResults > 0",
+        shinydashboard::box(
           width = 12,
-          h3("Description"),
-          htmlTemplate("about.html"),
-          h3("Currently Available Data Sources"),
-          shinycssloaders::withSpinner(
-            reactable::reactableOutput("dataSources")
-          ),
-          h3("License"),
-          htmlTemplate("license.html"),
+          title = "Comparator listing",
+          shinycssloaders::withSpinner(reactable::reactableOutput("multiDatabaseSimTable"))
         )
       )
     )
   )
-))
+)
+
+shinydashboard::dashboardPage(
+  shinydashboard::dashboardHeader(title = "Comparator Selection Explorer"),
+  shinydashboard::dashboardSidebar(menu, collapsed = TRUE),
+  shinydashboard::dashboardBody(
+    bodyTabs
+  ),
+  title = "Comparator Selection Explorer",
+  skin = "black"
+)
+
