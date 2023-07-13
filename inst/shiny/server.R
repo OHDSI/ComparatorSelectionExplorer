@@ -599,27 +599,9 @@ shiny::shinyServer(function(input, output, session) {
   output$stepPlot <- plotly::renderPlotly({
 
     resWide <- getDbSimilarity() %>%
-      dplyr::mutate(var = NA) %>%
-      dplyr::mutate(
-        var = ifelse(covariateType == "average", "cohortSimScore", var),
-        var = ifelse(covariateType == "Demographics", "csDemo", var),
-        var = ifelse(covariateType == "Presentation", "csPres", var),
-        var = ifelse(covariateType == "Medical history", "csMhis", var),
-        var = ifelse(covariateType == "prior meds", "csPmed", var),
-        var = ifelse(covariateType == "visit context", "csVisc", var)) %>%
-      dplyr::mutate(
-        var = factor(var, levels = c("cohortSimScore", "csDemo", "csPres", "csMhis", "csPmed", "csVisc"))) %>%
-      tidyr::pivot_wider(
-        id_cols = c("cohortDefinitionId2", "isAtc2", "shortName", "numPersons", "cdmSourceAbbreviation"),
-        names_from = var,
-        values_fill = NA,
-        values_from = cosineSimilarity) %>%
-      dplyr::ungroup()
-
-    if (!"csVisc" %in% colnames(resWide)) resWide$csVisc <- NA
-
-    resWide <- resWide %>%
-      dplyr::arrange(desc(cohortSimScore)) %>%
+      dplyr::filter(.data$covariateType == "average") %>%
+      dplyr::group_by(.data$cdmSourceAbbreviation) %>%
+      dplyr::arrange(desc(cosineSimilarity)) %>%
       dplyr::mutate(
         rank = row_number(),
         tooltip = paste0(
@@ -627,19 +609,14 @@ shiny::shinyServer(function(input, output, session) {
           "<b>",
           stringr::str_wrap(string = shortName, width = 20, indent = 1, exdent = 1),
           "</b>\n",
-          "Cohort similarity score: ", sprintf(fmtSim, cohortSimScore), "\n",
-          "Rank:", prettyNum(row_number(), big.mark = ","), " of ", prettyNum(nrow(.), big.mark = ","), "\n",
-          "Domain-specific cosine similarity:\n",
-          "\t<i> Demographics: </i>", sprintf(fmtSim, csDemo), "\n",
-          "\t<i> Presentation: </i>", sprintf(fmtSim, csPres), "\n",
-          "\t<i> Medical history: </i>", sprintf(fmtSim, csMhis), "\n",
-          "\t<i> Prior medications: </i>", sprintf(fmtSim, csPmed), "\n",
-          "\t<i> Visit context: </i>", ifelse(is.na(csVisc), "n/a", sprintf(fmtSim, csVisc))))
+          "Cohort similarity score: ", sprintf(fmtSim, cosineSimilarity), "\n",
+          "Rank:", prettyNum(row_number(), big.mark = ","), " of ", prettyNum(nrow(.), big.mark = ","), "\n")
+      )
 
     plotly::plot_ly(
       data = resWide,
       x = ~rank,
-      y = ~cohortSimScore,
+      y = ~cosineSimilarity,
       color = ~cdmSourceAbbreviation,
       type = "scatter",
       mode = "lines",
