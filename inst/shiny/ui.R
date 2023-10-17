@@ -86,14 +86,14 @@ bodyTabs <- shinydashboard::tabItems(
           column(
             width = 3,
             shiny::actionButton(inputId = "getResults", "Suggest Comparators")
-          )#,
-          # column(
-          #   width = 9,
-          #   conditionalPanel(
-          #     "input.selectedExposure != ''",
-          #     shiny::actionButton(inputId = "showRankings", "Show rank plot"),
-          #   )
-          # )
+          ),
+          column(
+            width = 9,
+            conditionalPanel(
+              "input.selectedExposure != ''",
+              shiny::actionButton(inputId = "showRankings", "Show rank plot"),
+            )
+          )
         )
       ),
       shiny::conditionalPanel(
