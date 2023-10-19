@@ -597,25 +597,23 @@ shiny::shinyServer(function(input, output, session) {
 
   #### ---- step-function plot of cosine similarity by rank ---- ####
   output$stepPlot <- plotly::renderPlotly({
-
-    resWide <- getDbSimilarity() %>%
-      dplyr::filter(.data$covariateType == "average") %>%
-      dplyr::group_by(.data$cdmSourceAbbreviation) %>%
-      dplyr::arrange(desc(cosineSimilarity)) %>%
+    res <- getAllDbSimFiltered()  %>%
       dplyr::mutate(
         rank = row_number(),
-        tooltip = paste0(
-          "<extra></extra>",
-          "<b>",
-          stringr::str_wrap(string = shortName, width = 20, indent = 1, exdent = 1),
-          "</b>\n",
-          "Cohort similarity score: ", sprintf(fmtSim, cosineSimilarity), "\n",
-          "Rank:", prettyNum(row_number(), big.mark = ","), " of ", prettyNum(nrow(.), big.mark = ","), "\n")
-      )
+        tooltip = stringr::str_wrap(
+          string = paste0(
+            shortName,
+            " (",
+            sprintf(fmtSim, cosineSimilarity),
+            ") #",
+            prettyNum(cdmSpecificRank, big.mark = ","),
+            " of ",
+            prettyNum(comparatorsInCdm, big.mark = ",")),
+          width = 20, indent = 1, exdent = 1))
 
     plotly::plot_ly(
-      data = resWide,
-      x = ~rank,
+      data = res,
+      x = ~cdmSpecificRank,
       y = ~cosineSimilarity,
       color = ~cdmSourceAbbreviation,
       type = "scatter",
