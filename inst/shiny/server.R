@@ -597,7 +597,6 @@ shiny::shinyServer(function(input, output, session) {
 
   #### ---- step-function plot of cosine similarity by rank ---- ####
   output$stepPlot <- plotly::renderPlotly({
-
     res <- getAllDbSimFiltered()  %>%
       dplyr::mutate(
         rank = row_number(),
