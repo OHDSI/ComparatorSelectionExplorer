@@ -252,9 +252,6 @@ where 1.0*t1.num_persons/scd1.num_persons >= 0.01
 and t1.drug_concept_id > 0
 ;
 
-select * from #cov_summary;
-
-
 insert into @results_database_schema.@covariate_means_table (cohort_definition_id, covariate_id, covariate_mean)
 select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
 
