@@ -221,46 +221,98 @@ getPairwiseCovariateData <- function(qns, databaseId, cohortDefinitionId1, cohor
     cohortDefinitionId2 = cohortDefinitionId2)
 }
 
-
-getCohortSimilarityScores <- function(qns, targetCohortId) {
+getCohortSimilarityScores <- function(qns, targetCohortId, weights){
   checkmate::assertClass(qns, "QueryNamespace")
+  #checkmate::assertNumber(targetCohortId)
+
+  demographicsWeight <- weights["Demographics"]
+  historyWeight <- weights["Medical history"]
+  presentationWeight <- weights["Presentation"]
+  medsWeight <- weights["prior meds"]
+  visitWeight <- weights["visit context"]
+
+  if (any(is.na(c(demographicsWeight, historyWeight, presentationWeight,
+                medsWeight,visitWeight)))){
+    demographicsWeight <- .2
+    historyWeight <- .2
+    presentationWeight <- .2
+    medsWeight <- .2
+    visitWeight <- .2
+  }
   qns$queryDb(
     sql = "
-            select distinct
-               csi.database_id,
-               csi.cdm_source_abbreviation,
-               CASE
-                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN t.cohort_definition_id_2
-                  ELSE t.cohort_definition_id_1
-               END as cohort_definition_id_2,
+            select
+              database_id,
+              cdm_source_abbreviation,
+              cohort_definition_id_2,
+              is_atc_2,
+              short_name,
+              sum(cosine_similarity * weight) as cosine_similarity,
+              atc_4_related,
+              atc_3_related,
+              num_persons
+            from (
+              select distinct
+                csi.database_id,
+                csi.cdm_source_abbreviation,
+                t.covariate_type,
+              case
+                        when t.covariate_type = 'Demographics' then @demographicsWeight
+                        when t.covariate_type = 'Medical history' then @historyWeight
+                        when t.covariate_type = 'Presentation' then @presentationWeight
+                        when t.covariate_type = 'prior meds' then @medsWeight
+                        when t.covariate_type = 'visit context' then @visitWeight
+                    else 0.0
+              end as weight,
 
-               CASE
-                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN cd2.atc_flag
-                  ELSE cd.atc_flag
-               END as is_atc_2,
+              case
+                    when t.cohort_definition_id_1 = @targetCohortId then t.cohort_definition_id_2
+                    else t.cohort_definition_id_1
+              end as cohort_definition_id_2,
 
-               CASE
-                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN cd2.short_name
-                  ELSE cd.short_name
-               END as short_name,
-               cosine_similarity,
-               atc.atc_4_related,
-               atc.atc_3_related,
-               CASE
-                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN ec.num_persons
-                  ELSE ec2.num_persons
-               END as num_persons
-             from @schema.@cosine_similarity_score  t
-             inner join @schema.@cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
-             inner join @schema.@cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1 and ec2.database_id = t.database_id
-             inner join @schema.@cdm_source_info csi ON csi.database_id = t.database_id
-             inner join @schema.@cohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
-             inner join @schema.@cohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
-             left join @schema.@atc_level atc on (t.cohort_definition_id_1 = atc.cohort_definition_id_1 and t.cohort_definition_id_2 = atc.cohort_definition_id_2) or (t.cohort_definition_id_2 = atc.cohort_definition_id_1 and t.cohort_definition_id_1 = atc.cohort_definition_id_2)
-             where (t.cohort_definition_id_1 = @targetCohortId or t.cohort_definition_id_2 = @targetCohortId)
-             and t.covariate_type = 'average'
-           ",
-    targetCohortId = targetCohortId)
+              case
+                    when t.cohort_definition_id_1 = @targetCohortId then cd2.atc_flag
+                    else cd.atc_flag
+              end as is_atc_2,
+
+              case  when t.cohort_definition_id_1 = @targetCohortId then cd2.short_name
+                    else cd.short_name
+              end as short_name,
+              cosine_similarity,
+              atc.atc_4_related,
+              atc.atc_3_related,
+
+              case
+                    when t.cohort_definition_id_1 = @targetCohortId then ec.num_persons
+                    else ec2.num_persons
+              end as num_persons
+
+              from @schema.@cosine_similarity_score  t
+	              inner join @schema.@cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2
+	                  and ec.database_id = t.database_id
+	              inner join @schema.@cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1
+	                  and ec2.database_id = t.database_id
+	              inner join @schema.@cdm_source_info csi ON csi.database_id = t.database_id
+	              inner join @schema.@cohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
+	              inner join @schema.@cohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
+	              left join @schema.@atc_level atc on (t.cohort_definition_id_1 = atc.cohort_definition_id_1
+	                  and t.cohort_definition_id_2 = atc.cohort_definition_id_2)
+	                  or (t.cohort_definition_id_2 = atc.cohort_definition_id_1
+	                  and t.cohort_definition_id_1 = atc.cohort_definition_id_2)
+	              where (t.cohort_definition_id_1 = @targetCohortId or t.cohort_definition_id_2 = @targetCohortId)
+	              and t.covariate_type not in  ('average', 'Co-occurrence')
+	          ) domains
+	        group by database_id, cdm_source_abbreviation, cohort_definition_id_2, is_atc_2, short_name,
+	             atc_4_related, atc_3_related, num_persons
+	        order by database_id, cdm_source_abbreviation, cosine_similarity desc
+          ",  targetCohortId = targetCohortId,
+              demographicsWeight = demographicsWeight,
+              historyWeight = historyWeight,
+              presentationWeight = presentationWeight,
+              medsWeight = medsWeight,
+              visitWeight = visitWeight
+
+  )
 }
 
 
@@ -304,47 +356,111 @@ getDatabaseSimilarityScores <- function(qns, targetCohortId, databaseIds) {
 }
 
 
-getDbCosineSimilarityTable <- function(qns, targetCohortId, comparatorCohortId, databaseId, returnReactable = FALSE) {
+
+
+
+
+getDbCosineSimilarityTable <- function(qns, targetCohortId, comparatorCohortId, databaseId, weights = NULL, returnReactable = FALSE){
   checkmate::assertClass(qns, "QueryNamespace")
+
   sql <- "SELECT covariate_type, cosine_similarity FROM @schema.@cosine_similarity_score
     WHERE database_id = @database_id
     AND cohort_definition_id_1 in (@target, @comparator)
     AND cohort_definition_id_2 in (@target, @comparator)
-    "
-    detailData <- qns$queryDb(sql,
-                              database_id = databaseId,
-                              target = targetCohortId,
-                              comparator = comparatorCohortId)
+  "
 
+  detailData <- qns$queryDb(sql,
+                            database_id = databaseId,
+                            target = targetCohortId,
+                            comparator = comparatorCohortId) %>%
+    dplyr::filter(!covariateType %in% c('Co-occurrence')) %>%
+    dplyr::mutate(
+      covariateType = factor(
+        covariateType,
+        levels = c("Demographics", "Presentation", "Medical history", "prior meds", "visit context", "average"))
+    )
 
+  showWeights <- !is.null(weights)
+
+  if (showWeights) {
+    # Apply weights to matching domain names
     detailData <- detailData %>%
-      dplyr::filter(!covariateType %in% c('Co-occurrence')) %>%
+      dplyr::filter(covariateType != "average") %>%
       dplyr::mutate(
-        covariateType = factor(
-          covariateType,
-          levels = c("Demographics",
-                     "Presentation",
-                     "Medical history",
-                     "prior meds",
-                     "visit context",
-                     "average"))) %>%
-      dplyr::arrange(covariateType)
-
-  if (returnReactable) {
-    rt <- reactable::reactable(
-      data = detailData,
-      columns = list(
-        "covariateType" = reactable::colDef(
-          name = "Covariate Domain"),
-        "cosineSimilarity" = reactable::colDef(
-          name = "Cosine Similarity",
-          cell = function(value) { sprintf(fmtSim, value) }
+        weight = dplyr::case_when(
+          covariateType == "Demographics" ~ weights["Demographics"],
+          covariateType == "Presentation" ~ weights["Presentation"],
+          covariateType == "Medical history" ~ weights["Medical history"],
+          covariateType == "prior meds" ~ weights["prior meds"],
+          covariateType == "visit context" ~ weights["visit context"],
+          TRUE ~ 0
         )
       )
+
+    # Final row with total weighted similarity
+    weightedTotal <- sum(detailData$cosineSimilarity * detailData$weight, na.rm = TRUE)
+
+    detailData <- dplyr::bind_rows(
+      detailData,
+      data.frame(
+        covariateType = "Weighted Similarity Score",
+        cosineSimilarity = weightedTotal,
+        weight = NA
+      )
     )
-    return(rt)
+  } else {
+    detailData <- detailData %>%
+      dplyr::filter(covariateType != "average")
   }
+
+  if (returnReactable) {
+    if (showWeights) {
+      columnsList <- list(
+        covariateType = reactable::colDef(name = "Covariate Domain"),
+        cosineSimilarity = reactable::colDef(
+          name = "Raw Similarity Score",
+          cell = function(value, index){
+            if (detailData$covariateType[index] == "Weighted Similarity Score") {
+              htmltools::strong(sprintf(fmtSim, value))
+            } else {
+              sprintf(fmtSim, value)
+            }
+          }
+        ),
+        weight = reactable::colDef(
+          name = "User Weight",
+          cell = function(value){
+            if (is.na(value)) "" else paste0(round(value * 100), "%")
+          }
+        )
+      )
+    } else {
+      columnsList <- list(
+        covariateType = reactable::colDef(name = "Covariate Domain"),
+        cosineSimilarity = reactable::colDef(
+          name = "Similarity Score",
+          cell = function(value, index){
+            if (detailData$covariateType[index] == "Weighted Similarity Score") {
+              htmltools::strong(sprintf(fmtSim, value))
+            } else {
+              sprintf(fmtSim, value)
+            }
+          }
+        )
+      )
+    }
+
+    return(
+      reactable::reactable(
+        data = detailData,
+        columns = columnsList
+      )
+    )
+  }
+
+  return(detailData)
 }
+
 
 
 getDatabaseSources <- function(qns) {

@@ -1,5 +1,6 @@
 # packages
 library(shiny)
+library(shinyjs)
 library(ggplot2)
 library(scales)
 library(tidyr)
@@ -34,6 +35,35 @@ shiny::shinyServer(function(input, output, session) {
   })
 
   selectedExposure <- shiny::reactive(input$selectedExposure)
+
+  #Block to read user weight inputs
+  domainWeights <- reactive({
+    weights <- c(
+      Demographics = round((input$userWeightDemo/100), 2),
+      Presentation = round((input$userWeightPres/100), 2),
+      `Medical history` = round((input$userWeightHist/100), 2),
+      `prior meds` = round((input$userWeightMeds/100), 2),
+      `visit context` = round((input$userWeightVisit/100), 2)
+    )
+    if (isTRUE(input$useWeights && sum(weights) > 0)){
+      round (weights / sum(weights), 2)
+    }else{
+      rep(1/5, 5)
+    }
+  })
+
+  output$weightSummary <- renderTable({
+    if(!input$useWeights) return(NULL)
+
+    weights <- domainWeights()
+    data.frame(
+      Domain = names(weights),
+      `Scaled Weight (%)` = round(weights * 100, 2),
+      check.names = FALSE
+    )
+  }, striped = TRUE, bordered = TRUE)
+
+
 
   # initial query to get list of cohort definitions
   getCohortDefinitionsWithDbCounts <- shiny::reactive({
@@ -80,6 +110,7 @@ shiny::shinyServer(function(input, output, session) {
         selected = dbChoices
       )
     }, message = "Loading database sources")
+
   })
 
   shiny::observe({
@@ -169,6 +200,8 @@ shiny::shinyServer(function(input, output, session) {
     targetCohortId <- input$selectedExposure
     validate(need(input$selectedExposure, "must select exposure"))
 
+    weights <- domainWeights() #added line
+
     shiny::withProgress({
       # identify selected comparator types
       if (length(input$selectedComparatorTypes) == 0) { atcSelection <- c(0, 1) }
@@ -176,7 +209,8 @@ shiny::shinyServer(function(input, output, session) {
       else if (input$selectedComparatorTypes == "ATC Classes") { atcSelection <- c(1) }
 
       # send query to get results data
-      resultsData <- getCohortSimilarityScores(qns, targetCohortId)
+
+      resultsData <- getCohortSimilarityScores(qns, targetCohortId, weights) #added weights argument
     }, message = "Loading similarity scores", value = 0.5)
 
     resultsData %>%
@@ -226,11 +260,17 @@ shiny::shinyServer(function(input, output, session) {
 
   #### ---- single-database cosine similarity reactable ---- ####
   output$cosineSimilarityTbl <- reactable::renderReactable({
+    #Test
+    weights <- if (isTRUE(input$useWeights)) domainWeights() else NULL
+    #Test
     getDbCosineSimilarityTable(qns,
                                databaseId = selectedDatabase(),
                                targetCohortId = input$selectedExposure,
                                comparatorCohortId = selectedComparator(),
+                               weights = weights, #Test
                                returnReactable = TRUE)
+
+
   })
 
 

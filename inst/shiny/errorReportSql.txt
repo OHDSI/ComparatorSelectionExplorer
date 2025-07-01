@@ -1,0 +1,91 @@
+DBMS:
+postgresql
+
+Error:
+org.postgresql.util.PSQLException: ERROR: column "na" does not exist
+  Position: 562
+
+SQL:
+            select
+              database_id,
+              cdm_source_abbreviation,
+              cohort_definition_id_2,
+              is_atc_2,
+              short_name,
+              sum(cosine_similarity * weight) as cosine_similarity,
+              atc_4_related,
+              atc_3_related,
+              num_persons
+            from (
+              select distinct
+                csi.database_id,
+                csi.cdm_source_abbreviation,
+                t.covariate_type,
+              case
+                        when t.covariate_type = 'Demographics' then NA
+                        when t.covariate_type = 'Medical history' then NA
+                        when t.covariate_type = 'Presentation' then NA
+                        when t.covariate_type = 'prior meds' then NA
+                        when t.covariate_type = 'visit context' then NA
+                    else 0.0
+              end as weight,
+              case
+                    when t.cohort_definition_id_1 = 1119119 then t.cohort_definition_id_2
+                    else t.cohort_definition_id_1
+              end as cohort_definition_id_2,
+              case
+                    when t.cohort_definition_id_1 = 1119119 then cd2.atc_flag
+                    else cd.atc_flag
+              end as is_atc_2,
+              case  when t.cohort_definition_id_1 = 1119119 then cd2.short_name
+                    else cd.short_name
+              end as short_name,
+              cosine_similarity,
+              atc.atc_4_related,
+              atc.atc_3_related,
+              case
+                    when t.cohort_definition_id_1 = 1119119 then ec.num_persons
+                    else ec2.num_persons
+              end as num_persons
+              from cse_062023.cse_cosine_similarity_score  t
+	              inner join cse_062023.cse_cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2
+	                  and ec.database_id = t.database_id
+	              inner join cse_062023.cse_cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1
+	                  and ec2.database_id = t.database_id
+	              inner join cse_062023.cse_cdm_source_info csi ON csi.database_id = t.database_id
+	              inner join cse_062023.cse_cohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
+	              inner join cse_062023.cse_cohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
+	              left join cse_062023.cse_atc_level atc on (t.cohort_definition_id_1 = atc.cohort_definition_id_1
+	                  and t.cohort_definition_id_2 = atc.cohort_definition_id_2)
+	                  or (t.cohort_definition_id_2 = atc.cohort_definition_id_1
+	                  and t.cohort_definition_id_1 = atc.cohort_definition_id_2)
+	              where (t.cohort_definition_id_1 = 1119119 or t.cohort_definition_id_2 = 1119119)
+	              and t.covariate_type not in  ('average', 'Co-occurrence')
+	          ) domains
+	        group by database_id, cdm_source_abbreviation, cohort_definition_id_2, is_atc_2, short_name,
+	             atc_4_related, atc_3_related, num_persons
+	        order by database_id, cdm_source_abbreviation, cosine_similarity desc
+          
+
+R version:
+R version 4.5.0 (2025-04-11 ucrt)
+
+Platform:
+x86_64-w64-mingw32
+
+Attached base packages:
+- stats
+- graphics
+- grDevices
+- datasets
+- utils
+- methods
+- base
+
+Other attached packages:
+- dplyr (1.1.4)
+- tidyr (1.3.1)
+- scales (1.4.0)
+- ggplot2 (3.5.2)
+- shinyjs (2.1.0)
+- shiny (1.10.0)
