@@ -195,26 +195,23 @@ shiny::shinyServer(function(input, output, session) {
   })
 
   #### ---- function to get cosine similarity data for target in all databases ---- ####
-  getSimilarityAllDatabases <- shiny::reactive({
-    # identify target cohort
+  getSimilarityAllDatabases <- shiny::eventReactive(input$getResults,{
     targetCohortId <- input$selectedExposure
-    validate(need(input$selectedExposure, "must select exposure"))
+    validate(need(targetCohortId, "must select exposure"))
 
-    weights <- domainWeights() #added line
+    weights <- isolate(domainWeights())
 
-    shiny::withProgress({
+    withProgress({
       # identify selected comparator types
-      if (length(input$selectedComparatorTypes) == 0) { atcSelection <- c(0, 1) }
-      else if (input$selectedComparatorTypes == "RxNorm Ingredients") { atcSelection <- c(0) }
-      else if (input$selectedComparatorTypes == "ATC Classes") { atcSelection <- c(1) }
-
-      # send query to get results data
+          if (length(input$selectedComparatorTypes) == 0) { atcSelection <- c(0, 1) }
+           else if (input$selectedComparatorTypes == "RxNorm Ingredients") { atcSelection <- c(0) }
+            else if (input$selectedComparatorTypes == "ATC Classes") { atcSelection <- c(1) }
 
       resultsData <- getCohortSimilarityScores(qns, targetCohortId, weights) #added weights argument
-    }, message = "Loading similarity scores", value = 0.5)
+          }, message = "Loading similarity scores", value = 0.5)
 
-    resultsData %>%
-    dplyr::filter(.data$isAtc2 %in% atcSelection)
+        resultsData %>%
+        dplyr::filter(.data$isAtc2 %in% atcSelection)
 
   })
 
