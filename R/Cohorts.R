@@ -71,7 +71,7 @@ createCohorts <- function(executionSettings = NULL, ...) {
 
   if (is.null(executionSettings$cohortDefinitionSet) & !executionSettings$useBulkCohorts) {
     # Use just the RxNorm and atc cohort template definitions
-    abort("Must use either custom cohorts or bulk cohorts")
+    stop("Must use either custom cohorts or bulk cohorts")
   }
 
   if (is.null(executionSettings$cohortDefinitionSet)) {
