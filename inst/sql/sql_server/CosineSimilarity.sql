@@ -20,7 +20,7 @@ compute cosine similarity for all relavant cohort-cohort comparisons
 
 --vector length for all cohorts, used in denominator of cos similarity calculation
 drop table if exists #vector_length;
-create table #vector_length as
+INSERT into #vector_length
 select scs1.cohort_definition_id, scd1.covariate_type, sqrt(sum(scs1.covariate_mean * scs1.covariate_mean)) as vector_length
 from @results_database_schema.@covariate_means_table scs1
   inner join @results_database_schema.@covariate_def_table scd1
@@ -37,7 +37,7 @@ group by scs1.cohort_definition_id, scd1.covariate_type
 --dotproduct for all cohort-cohort combinations, used in numerator of cos similarity calculation
 --combinations to compare:  1) same database, same year, different concepts; 2) same database, same concept, different years,  3) (for when pooling across databases) different database, same concept, same year
 drop table if exists #dotproduct_concept;
-create table #dotproduct_concept as
+INSERT into #dotproduct_concept
 select
     scs1.cohort_definition_id as cohort_definition_id_1,
     scs2.cohort_definition_id as cohort_definition_id_2,
@@ -60,7 +60,7 @@ group by scs1.cohort_definition_id, scs2.cohort_definition_id, scovd1.covariate_
 }
 
 drop table if exists @results_database_schema.@cosine_sim_table_2;
-create table @results_database_schema.@cosine_sim_table_2 as
+INSERT into  @results_database_schema.@cosine_sim_table_2
 select t1.cohort_definition_id_1, t1.cohort_definition_id_2, t1.covariate_type,
 t1.dotproduct / (vl1.vector_length * vl2.vector_length) as cosine_similarity
 from #dotproduct_concept t1

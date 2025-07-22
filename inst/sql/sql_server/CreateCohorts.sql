@@ -4,7 +4,7 @@ IF OBJECT_ID('tempdb..#computed_cohorts', 'U') IS NOT NULL
 	DROP TABLE #computed_cohorts;
 
 --HINT DISTRIBUTE_ON_KEY(cohort_definition_id)
-CREATE TABLE #computed_cohorts AS
+INSERT into  #computed_cohorts
 SELECT DISTINCT ct.cohort_definition_id
 FROM @cohort_database_schema.@cohort_table ct
 INNER JOIN @reference_schema.@cohort_definition et ON ct.cohort_definition_id = et.cohort_definition_id
@@ -12,7 +12,7 @@ INNER JOIN @reference_schema.@cohort_definition et ON ct.cohort_definition_id = 
 
 -- First, create ingredient level cohorts
 --HINT DISTRIBUTE_ON_KEY(person_id)
-create table #ingredient_eras as
+INSERT into #ingredient_eras
 select
   et.cohort_definition_id
   , de1.concept_name
@@ -67,7 +67,7 @@ from #ingredient_eras
 
 -- Second, create ATC 4th level cohorts
 --HINT DISTRIBUTE_ON_KEY(person_id)
-create table #ATC_eras as
+INSERT into  #ATC_eras
 select
   et.cohort_definition_id
   , de1.concept_name

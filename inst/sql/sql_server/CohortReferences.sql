@@ -1,8 +1,8 @@
 {DEFAULT @cohort_definition = cse_cohort_definition}
 DROP TABLE IF EXISTS @results_database_schema.@cohort_definition;
 
-CREATE TABLE @results_database_schema.@cohort_definition
-AS SELECT DISTINCT
+INSERT INTO @results_database_schema.@cohort_definition
+SELECT DISTINCT
     CONCEPT_ID AS COHORT_DEFINITION_ID,
     CONCEPT_ID AS SUBSET_PARENT,
     CONCEPT_NAME AS COHORT_DEFINITION_NAME,
