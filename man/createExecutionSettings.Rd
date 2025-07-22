@@ -25,6 +25,7 @@ createExecutionSettings(
   covariateMeansTable = "cse_covariate_means",
   cosineSimStratifiedTable = "cse_cosine_sim",
   minExposureSize = 1000,
+  useBulkCohorts = TRUE,
   logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
   exportDir = tempfile(),
   removeExportDir = TRUE,
@@ -81,6 +82,8 @@ cohortDefinitionSet}
 
 \item{minExposureSize}{(optional) Minimum number of exposures to be included in cosine similarity
 analysis (defaults to 1000).}
+
+\item{useBulkCohorts}{Use the cohort generator bulk rxnorm/atc standard cohort set}
 
 \item{logFileLocation}{(optional) Log file location}
 

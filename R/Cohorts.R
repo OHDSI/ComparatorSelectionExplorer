@@ -66,115 +66,50 @@ getExposureCohortDefinitionSet <- function(executionSettings = NULL, includeCoun
 #' @export
 createCohorts <- function(executionSettings = NULL, ...) {
   if (is.null(executionSettings) || missing(executionSettings)) {
-    executionSettings <- createExecutionSettings(..., .callbackFun = on.exit)
+    executionSettings <- createExecutionSettings(...)
   }
 
-  # Create tables if they don't exist already
-  ParallelLogger::logInfo("Creating cohort tables")
-  CohortGenerator::createCohortTables(connection = executionSettings$connection,
-                                      cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-                                      cohortTableNames = executionSettings$cohortTableNames,
-                                      incremental = TRUE)
-
-  # Create reference table
-  ParallelLogger::logInfo("Creating bulk cohort reference table")
-  sql <- SqlRender::loadRenderTranslateSql("CohortReferences.sql",
-                                           packageName = utils::packageName(),
-                                           dbms = DatabaseConnector::dbms(executionSettings$connection),
-                                           cohort_definition = executionSettings$cohortDefinitionTable,
-                                           results_database_schema = executionSettings$resultsDatabaseSchema,
-                                           tempEmulationSchema = executionSettings$tempEmulationSchema,
-                                           vocabulary_schema = executionSettings$vocabularyDatabaseSchema)
-  DatabaseConnector::executeSql(executionSettings$connection, sql)
-
-  # Generate cohorts
-  ParallelLogger::logInfo("Creating bulk cohorts")
-  sql <- SqlRender::loadRenderTranslateSql("CreateCohorts.sql",
-                                           packageName = utils::packageName(),
-                                           dbms = DatabaseConnector::dbms(executionSettings$connection),
-                                           reference_schema = executionSettings$resultsDatabaseSchema,
-                                           cohort_table = executionSettings$cohortTableNames$cohortTable,
-                                           cohort_definition = executionSettings$cohortDefinitionTable,
-                                           cdm_database_schema = executionSettings$cdmDatabaseSchema,
-                                           vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema,
-                                           tempEmulationSchema = executionSettings$tempEmulationSchema,
-                                           cohort_database_schema = executionSettings$cohortDatabaseSchema)
-  DatabaseConnector::executeSql(executionSettings$connection, sql)
-
-  baseCohortSet <- getExposureCohortDefinitionSet(executionSettings, includeCounts = TRUE)
-  # Write cohorts complete to prevent cohort generator creating them
-  recordKeepingFile <- file.path(executionSettings$incrementalFolder, "GeneratedCohorts.csv")
-
-  checksums <- unlist(sapply(baseCohortSet$sql, digest::digest, algo = "md5", serialize = FALSE), use.names = FALSE)
-  # Store checksum of bulk cohorts
-  bulkCohorts <- data.frame(cohortId = baseCohortSet$cohortId,
-                            checksum = checksums,
-                            timeStamp = Sys.time())
-
-  if (file.exists(recordKeepingFile)) {
-    recordKeeping <- readr::read_csv(
-      file = recordKeepingFile,
-      col_types = readr::cols(),
-      lazy = FALSE
-    ) %>%
-      dplyr::filter(!.data$cohortId %in% bulkCohorts$cohortId)
-
-    if (nrow(recordKeeping) > 0)
-      bulkCohorts <- dplyr::bind_rows(recordKeeping, bulkCohorts)
-  }
-  readr::write_csv(x = bulkCohorts, file = recordKeepingFile, append = FALSE)
-  # All cohort definitions
-  mergedCohortDefinitionSet <- dplyr::bind_rows(executionSettings$cohortDefinitionSet,
-                                                baseCohortSet)
-
-  if (length(executionSettings$indicationCohortSubsetDefintions)) {
-    subsetTargets <- baseCohortSet %>%
-      dplyr::filter(.data$numPersons > executionSettings$minExposureSize) %>%
-      dplyr::pull("cohortId")
-
-    message("Applying defined subset definitions to ", length(subsetTargets), " base exposure cohorts")
-    # Add subeset to cohort definition set
-    for (subsetDef in executionSettings$indicationCohortSubsetDefintions) {
-      mergedCohortDefinitionSet <- mergedCohortDefinitionSet %>%
-        CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = subsetTargets)
-    }
-  } else {
-    mergedCohortDefinitionSet$subsetParent <- mergedCohortDefinitionSet$cohortId
+  if (is.null(executionSettings$cohortDefinitionSet) & !executionSettings$useBulkCohorts) {
+    # Use just the RxNorm and atc cohort template definitions
+    stop("Must use either custom cohorts bulk cohorts or both")
   }
 
-  if (length(executionSettings$indicationCohortSubsetDefintions) || length(executionSettings$cohortDefinitionSet)) {
-      # Generate custom cohorts
-    ParallelLogger::logInfo("Creating custom cohorts with Cohort Generator")
-    CohortGenerator::generateCohortSet(connection = executionSettings$connection,
-                                       cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
-                                       tempEmulationSchema = executionSettings$tempEmulationSchema,
-                                       cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-                                       cohortTableNames = executionSettings$cohortTableNames,
-                                       cohortDefinitionSet = mergedCohortDefinitionSet,
-                                       stopOnError = TRUE,
-                                       incremental = TRUE,
-                                       incrementalFolder = executionSettings$incrementalFolder)
+  if (is.null(executionSettings$cohortDefinitionSet)) {
+    executionSettings$cohortDefinitionSet <-
+      CohortGenerator::createEmptyCohortDefinitionSet()
   }
 
-  # Run subsets on
-  cohortRef <- mergedCohortDefinitionSet %>%
-    dplyr::filter(!(.data$cohortId %in% baseCohortSet$cohortId)) %>%
-    dplyr::select("cohortId", "cohortName", "subsetParent") %>%
-    dplyr::mutate(atcFlag = -1,
-                  conceptId = -1,
-                  shortName = .data$cohortName) %>%
-    dplyr::rename("cohortDefinitionName" = "cohortName",
-                  "cohortDefinitionId" = "cohortId")
+  if (executionSettings$useBulkCohorts) {
+    rxNormTpl <- CohortGenerator::createRxNormCohortTemplateDefinition(connection = executionSettings$connection,
+                                                                       cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                                                       cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                                                       tempEmulationSchema = executionSettings$tempEmulationSchema)
+    executionSettings$cohortDefinitionSet <- executionSettings$cohortDefinitionSet |> CohortGenerator::addCohortTemplateDefintion(rxNormTpl)
 
-  colnames(cohortRef) <- toupper(SqlRender::camelCaseToSnakeCase(colnames(cohortRef)))
-  DatabaseConnector::insertTable(connection = executionSettings$connection,
-                                 data = cohortRef,
-                                 tableName = executionSettings$cohortDefinitionTable,
-                                 databaseSchema = executionSettings$resultsDatabaseSchema,
-                                 camelCaseToSnakeCase = FALSE,
-                                 dropTableIfExists = FALSE,
-                                 createTable = FALSE,
-                                 tempTable = FALSE)
+    atcTpl <- CohortGenerator::createAtcCohortTemplateDefinition(connection = executionSettings$connection,
+                                                                 cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                                                 cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                                                 tempEmulationSchema = executionSettings$tempEmulationSchema)
+
+    executionSettings$cohortDefinitionSet <- executionSettings$cohortDefinitionSet |> CohortGenerator::addCohortTemplateDefintion(atcTpl)
+  }
+
+
+  purrr::walk(executionSettings$indicationCohortSubsetDefintions, function(subsetDef) {
+    executionSettings$cohortDefinitionSet <<- executionSettings$cohortDefinitionSet |>
+      CohortGenerator::addCohortSubsetDefinition(subsetDef)
+  })
+
+  CohortGenerator::generateCohortSet(connection = executionSettings$connection,
+                                     cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                     tempEmulationSchema = executionSettings$tempEmulationSchema,
+                                     cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                     cohortTableNames = executionSettings$cohortTableNames,
+                                     cohortDefinitionSet = executionSettings$cohortDefinitionSet,
+                                     stopOnError = TRUE,
+                                     incremental = TRUE,
+                                     incrementalFolder = executionSettings$incrementalFolder)
+
   executionSettings$cohortsGenerated <- TRUE
   invisible(executionSettings)
 }

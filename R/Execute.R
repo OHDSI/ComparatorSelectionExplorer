@@ -26,7 +26,7 @@
 execute <- function(executionSettings = NULL, ...) {
 
   if (is.null(executionSettings) || missing(executionSettings)) {
-    executionSettings <- createExecutionSettings(..., .callbackFun = on.exit)
+    executionSettings <- createExecutionSettings(...)
   }
 
   executionSettings <- createCohorts(executionSettings)
