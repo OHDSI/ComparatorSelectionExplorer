@@ -103,7 +103,7 @@ WHERE cc.cohort_definition_id IS NULL
 ;
 
 
-(
+INSERT INTO @cohort_database_schema.@cohort_table(
   cohort_definition_id
   , subject_id
   , cohort_start_date
@@ -114,7 +114,7 @@ select
   , person_id
   , cohort_start_date
   , cohort_end_date
-into @cohort_database_schema.@cohort_table
+
 from #atc_eras
 ;
 
