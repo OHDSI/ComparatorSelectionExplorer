@@ -50,7 +50,6 @@
 #' @param logFileLocation               (optional) Log file location
 #' @param exportDir                     (optional) Folder to store results files in before export (default is tempdir)
 #' @param removeExportDir               (optional) remove the export dir after creating zip files?
-#' @param .callbackFun                  Used internally - an on.exit call for disconnection from db
 #' @param generateCohortDefinitionSet   Boolean - generate the user specified cohortDefinitionSet
 #' @returns executionSettings object
 #' @export
@@ -80,8 +79,7 @@ createExecutionSettings <- function(connectionDetails,
                                     exportDir = tempfile(),
                                     removeExportDir = TRUE,
                                     generateCohortDefinitionSet = FALSE,
-                                    exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip")),
-                                    .callbackFun = NULL) {
+                                    exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip"))) {
 
   checkmate::assertClass(connectionDetails, "ConnectionDetails")
 
@@ -137,12 +135,6 @@ createExecutionSettings <- function(connectionDetails,
   # Get database ID from cdm_source table
   if (is.null(executionSettings$connection)) {
     executionSettings$connection <- DatabaseConnector::connect(executionSettings$connectionDetails)
-    if (is.function(.callbackFun)) {
-      .callbackFun({
-        DatabaseConnector::disconnect(executionSettings$connection)
-        executionSettings$connection <- NULL
-      })
-    }
   }
 
   executionSettings$databaseId <- databaseId

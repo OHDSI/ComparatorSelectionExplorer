@@ -66,12 +66,12 @@ getExposureCohortDefinitionSet <- function(executionSettings = NULL, includeCoun
 #' @export
 createCohorts <- function(executionSettings = NULL, ...) {
   if (is.null(executionSettings) || missing(executionSettings)) {
-    executionSettings <- createExecutionSettings(..., .callbackFun = on.exit)
+    executionSettings <- createExecutionSettings(...)
   }
 
   if (is.null(executionSettings$cohortDefinitionSet) & !executionSettings$useBulkCohorts) {
     # Use just the RxNorm and atc cohort template definitions
-    stop("Must use either custom cohorts or bulk cohorts")
+    stop("Must use either custom cohorts bulk cohorts or both")
   }
 
   if (is.null(executionSettings$cohortDefinitionSet)) {
@@ -80,21 +80,24 @@ createCohorts <- function(executionSettings = NULL, ...) {
   }
 
   if (executionSettings$useBulkCohorts) {
-    executionSettings$cohortDefinitionSet <- executionSettings$cohortDefinitionSet |>
-      CohortGenerator::createRxNormCohortTemplateDefinition(connection = executionSettings$connection,
-                                                            cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
-                                                            cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-                                                            tempEmulationSchema = executionSettings$tempEmulationSchema) |>
-      CohortGenerator::createAtcCohortTemplateDefinition(connection = executionSettings$connection,
-                                                         cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
-                                                         cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-                                                         tempEmulationSchema = executionSettings$tempEmulationSchema)
+    rxNormTpl <- CohortGenerator::createRxNormCohortTemplateDefinition(connection = executionSettings$connection,
+                                                                       cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                                                       cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                                                       tempEmulationSchema = executionSettings$tempEmulationSchema)
+    executionSettings$cohortDefinitionSet <- executionSettings$cohortDefinitionSet |> CohortGenerator::addCohortTemplateDefintion(rxNormTpl)
+
+    atcTpl <- CohortGenerator::createAtcCohortTemplateDefinition(connection = executionSettings$connection,
+                                                                 cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                                                 cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                                                 tempEmulationSchema = executionSettings$tempEmulationSchema)
+
+    executionSettings$cohortDefinitionSet <- executionSettings$cohortDefinitionSet |> CohortGenerator::addCohortTemplateDefintion(atcTpl)
   }
 
 
   purrr::walk(executionSettings$indicationCohortSubsetDefintions, function(subsetDef) {
-     executionSettings$cohortDefinitionSet <<- executionSettings$cohortDefinitionSet |>
-       CohortGenerator::addCohortSubsetDefinition(subsetDef)
+    executionSettings$cohortDefinitionSet <<- executionSettings$cohortDefinitionSet |>
+      CohortGenerator::addCohortSubsetDefinition(subsetDef)
   })
 
   CohortGenerator::generateCohortSet(connection = executionSettings$connection,
