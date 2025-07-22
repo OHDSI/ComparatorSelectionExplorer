@@ -39,6 +39,7 @@
 #' @param incrementalFolder             folder for storage of incremental results for cohort generation
 #' @param vocabularyDatabaseSchema      standard vocabulary database schema
 #' @param cohortTable                   (optional) cohort table
+#' @param useBulkCohorts                Use the cohort generator bulk rxnorm/atc standard cohort set
 #' @param cohortCountTable              (optional) count tabls
 #' @param cohortDefinitionTable         (optional) definitions table
 #' @param covariateDefTable             (optional) where covariate definitions are stored
@@ -74,6 +75,7 @@ createExecutionSettings <- function(connectionDetails,
                                     covariateMeansTable = "cse_covariate_means",
                                     cosineSimStratifiedTable = "cse_cosine_sim",
                                     minExposureSize = 1000,
+                                    useBulkCohorts = TRUE,
                                     logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
                                     exportDir = tempfile(),
                                     removeExportDir = TRUE,
@@ -117,7 +119,8 @@ createExecutionSettings <- function(connectionDetails,
     targetCohortIds = targetCohortIds,
     indicationCohortSubsetDefintions = indicationCohortSubsetDefintions,
     generateCohortDefinitionSet = generateCohortDefinitionSet,
-    connection = connection
+    connection = connection,
+    useBulkCohorts = useBulkCohorts
   )
   class(executionSettings) <- "executionSettings"
 
