@@ -195,42 +195,6 @@ inner join @cdm_database_schema.concept c1
 on cs1.covariate_id/1000 = c1.concept_id
 ;
 
-
---drug for conmed start<=0d, end>0d
--- skipped
---drop table if exists #cov_summary;
---create table #cov_summary as
---select scd1.cohort_definition_id,  t1.drug_concept_id as covariate_id, 1.0*t1.num_persons/scd1.num_persons as covariate_mean
---from @results_database_schema.@cohort_definition scd1
---inner join
---(
---select sc1.cohort_definition_id, de1.drug_concept_id, count(distinct sc1.subject_id) as num_persons
---from @cohort_database_schema.@cohort sc1
---inner join @cdm_database_schema.drug_era de1
---on sc1.subject_id = de1.person_id
---and sc1.cohort_start_date >= dateadd(day,0,de1.drug_era_start_date)
---and sc1.cohort_start_date < dateadd(day,0,de1.drug_era_end_date)
---group by sc1.cohort_definition_id, de1.drug_concept_id
---) t1
---on scd1.cohort_definition_id = t1.cohort_definition_id
---where 1.0*t1.num_persons/scd1.num_persons >= 0.01
---and t1.drug_concept_id > 0
---;
---
---
---insert into @results_database_schema.@covariate_means_table (cohort_definition_id, covariate_id, covariate_mean)
---select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
---
---
---insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, concept_id, time_at_risk_start, time_at_risk_end, covariate_type)
---select covariate_id, 'Drug with overlap: ' || c1.concept_name as covariate_name, covariate_id as concept_id, 0 as time_at_risk_start, 30 as time_at_risk_end, 'conmed' as covariate_type
---from
---(select distinct covariate_id from #cov_summary) cs1
---inner join @cdm_database_schema.concept c1
---on cs1.covariate_id = c1.concept_id
---;
-
-
 --drug for conmed start>=30d, end>0d
 -- comment was --drug for conmed start<=0d, end>0d
 drop table if exists #cov_summary;
@@ -251,9 +215,6 @@ on scd1.cohort_definition_id = t1.cohort_definition_id
 where 1.0*t1.num_persons/scd1.num_persons >= 0.01
 and t1.drug_concept_id > 0
 ;
-
-select * from #cov_summary;
-
 
 insert into @results_database_schema.@covariate_means_table (cohort_definition_id, covariate_id, covariate_mean)
 select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
