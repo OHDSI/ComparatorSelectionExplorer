@@ -14,52 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#' @title get exposure cohort definition set
-#' @description
-#' Returns set of base bulk cohorts with dummy json and sql.
-#' This is mainly useful for inspecting which cohorts to subset
-#' @inheritParams execute
-#' @param includeCounts include cohort counts with definitions  (will fail if they are yet to be instantiated)ß
-getExposureCohortDefinitionSet <- function(executionSettings = NULL, includeCounts = FALSE, ...) {
-  if (is.null(executionSettings) || missing(executionSettings)) {
-    executionSettings <- createExecutionSettings(..., .callbackFun = on.exit)
-  }
-
-  # Get cohort references in a manner that can be used for subsetting operations
-  sql <- "
-  SELECT
-    cd.COHORT_DEFINITION_ID as cohort_id,
-    cd.SHORT_NAME as cohort_name,
-    {@include_counts} ? {
-    CASE
-      WHEN cc.cohort_definition_id IS NULL THEN 0
-      ELSE cc.num_persons
-    END AS num_persons
-    ,}
-    CONCAT('SELECT ', cd.COHORT_DEFINITION_ID, ';') as SQL,
-    CONCAT('[', cd.COHORT_DEFINITION_ID, ']') as JSON
-    FROM @results_database_schema.@cohort_definition cd
-    {@include_counts} ? {
-    LEFT JOIN (
-        select count(distinct subject_id) as num_persons, sc1.cohort_definition_id
-	    from @cohort_database_schema.@cohort sc1
-	    group by sc1.cohort_definition_id
-    ) cc ON cd.cohort_definition_id = cc.cohort_definition_id
-    }
-    "
-
-  DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
-                                             sql,
-                                             results_database_schema = executionSettings$resultsDatabaseSchema,
-                                             cohort_database_schema = executionSettings$cohortDatabaseSchema,
-                                             tempEmulationSchema = executionSettings$tempEmulationSchema,
-                                             cohort_definition = executionSettings$cohortDefinitionTable,
-                                             cohort = executionSettings$cohortTableNames$cohortTable,
-                                             include_counts = includeCounts,
-                                             snakeCaseToCamelCase = TRUE)
-}
-
-
 #' @title create cohorts
 #' @description Create cohorts
 #' @inheritParams execute
@@ -79,19 +33,49 @@ createCohorts <- function(executionSettings = NULL, ...) {
       CohortGenerator::createEmptyCohortDefinitionSet()
   }
 
+  cohrtRef <- data.frame()
   if (executionSettings$useBulkCohorts) {
     rxNormTpl <- CohortGenerator::createRxNormCohortTemplateDefinition(connection = executionSettings$connection,
                                                                        cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
                                                                        cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
                                                                        tempEmulationSchema = executionSettings$tempEmulationSchema)
-    executionSettings$cohortDefinitionSet <- executionSettings$cohortDefinitionSet |> CohortGenerator::addCohortTemplateDefintion(rxNormTpl)
+
+    rxNormRefs <- rxNormTpl$references
+
+    cohrtRef <- cohrtRef |>
+      dplyr::bind_rows(
+        rxNormRefs |>
+          dplyr::select("cohortId", "cohortName") |>
+          dplyr::mutate(atcFlag = 0,
+                        conceptId = .data$cohortId / 1000,
+                        shortName = .data$cohortName) |>
+          dplyr::rename("cohortDefinitionName" = "cohortName",
+                        "cohortDefinitionId" = "cohortId")
+      )
+
+    executionSettings$cohortDefinitionSet <- executionSettings$cohortDefinitionSet |>
+      CohortGenerator::addCohortTemplateDefintion(rxNormTpl)
 
     atcTpl <- CohortGenerator::createAtcCohortTemplateDefinition(connection = executionSettings$connection,
                                                                  cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
                                                                  cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
                                                                  tempEmulationSchema = executionSettings$tempEmulationSchema)
 
-    executionSettings$cohortDefinitionSet <- executionSettings$cohortDefinitionSet |> CohortGenerator::addCohortTemplateDefintion(atcTpl)
+    atcRefs <- atcTpl$references
+
+    cohrtRef <- cohrtRef |>
+      dplyr::bind_rows(
+        atcRefs |>
+          dplyr::select("cohortId", "cohortName") |>
+          dplyr::mutate(atcFlag = 1,
+                        conceptId = .data$cohortId / 1000,
+                        shortName = .data$cohortName) |>
+          dplyr::rename("cohortDefinitionName" = "cohortName",
+                        "cohortDefinitionId" = "cohortId")
+      )
+
+    executionSettings$cohortDefinitionSet <- executionSettings$cohortDefinitionSet |>
+      CohortGenerator::addCohortTemplateDefintion(atcTpl)
   }
 
 
@@ -109,6 +93,29 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                      stopOnError = TRUE,
                                      incremental = TRUE,
                                      incrementalFolder = executionSettings$incrementalFolder)
+
+  # Insert cohort definition table
+  cohortRef <-
+    cohrtRef |> dplyr::bind_rows(
+      executionSettings$cohortDefinitionSet |>
+        dplyr::select("cohortId", "cohortName", "subsetParent") |>
+        dplyr::mutate(atcFlag = -1,
+                      conceptId = -1,
+                      shortName = .data$cohortName) |>
+        dplyr::rename("cohortDefinitionName" = "cohortName",
+                      "cohortDefinitionId" = "cohortId")
+    )
+
+  colnames(cohortRef) <- toupper(SqlRender::camelCaseToSnakeCase(colnames(cohortRef)))
+  DatabaseConnector::insertTable(connection = executionSettings$connection,
+                                 data = cohortRef,
+                                 tableName = executionSettings$cohortDefinitionTable,
+                                 databaseSchema = executionSettings$resultsDatabaseSchema,
+                                 camelCaseToSnakeCase = FALSE,
+                                 dropTableIfExists = TRUE,
+                                 createTable = TRUE,
+                                 tempTable = FALSE)
+
 
   executionSettings$cohortsGenerated <- TRUE
   invisible(executionSettings)
