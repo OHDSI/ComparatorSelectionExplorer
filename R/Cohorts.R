@@ -109,7 +109,7 @@ createCohorts <- function(executionSettings = NULL, ...) {
   cohortRef <-
     cohrtRef |> dplyr::bind_rows(
       executionSettings$cohortDefinitionSet |>
-        dplyr::filter(!.data$cohortId %in% cohrtRef$cohortId) |>
+        dplyr::filter(!.data$cohortId %in% cohrtRef$cohortDefinitionId) |>
         dplyr::select("cohortId", "cohortName", "subsetParent") |>
         dplyr::mutate(atcFlag = -1,
                       conceptId = -1,
