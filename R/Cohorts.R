@@ -85,8 +85,15 @@ createCohorts <- function(executionSettings = NULL, ...) {
   })
 
   if (!"subsetParent" %in% colnames(executionSettings$cohortDefinitionSet)) {
-    executionSettings$cohortDefinitionSet$subsetParent <- executionSettings$cohortDefinitionSet$cohortId
+    executionSettings$
+      cohortDefinitionSet$
+      subsetParent <- executionSettings$cohortDefinitionSet$cohortId
   }
+
+  CohortGenerator::createCohortTables(connection = executionSettings$connection,
+                                      cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                      cohortTableNames = executionSettings$cohortTableNames,
+                                      incremental = TRUE)
 
   CohortGenerator::generateCohortSet(connection = executionSettings$connection,
                                      cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
