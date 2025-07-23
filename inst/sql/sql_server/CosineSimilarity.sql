@@ -78,6 +78,8 @@ inner join #vector_length vl2 on (
 )
 ;
 
+
+INSERT INTO @results_database_schema.@cosine_sim_table_2
 select
     cohort_definition_id_1,
     cohort_definition_id_2,
