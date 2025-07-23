@@ -31,8 +31,9 @@ group by scs1.cohort_definition_id, scd1.covariate_type
 
 {@vector_length != ''} ? {
     DROP TABLE IF EXISTS @results_database_schema.@vector_length;
-    CREATE TABLE @results_database_schema.@vector_length
-    AS SELECT * FROM #vector_length;
+    SELECT *
+    INTO @results_database_schema.@vector_length
+    FROM #vector_length;
 }
 
 --dotproduct for all cohort-cohort combinations, used in numerator of cos similarity calculation
@@ -57,8 +58,9 @@ group by scs1.cohort_definition_id, scs2.cohort_definition_id, scovd1.covariate_
 
 {@dotproduct_concept != ''} ? {
     DROP TABLE IF EXISTS @results_database_schema.@dotproduct_concept;
-    CREATE TABLE @results_database_schema.@dotproduct_concept
-    AS SELECT * FROM #dotproduct_concept;
+    SELECT *
+    INTO @results_database_schema.@dotproduct_concept
+    FROM #dotproduct_concept;
 }
 
 drop table if exists @results_database_schema.@cosine_sim_table_2;
