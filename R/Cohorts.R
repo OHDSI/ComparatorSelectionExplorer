@@ -84,6 +84,10 @@ createCohorts <- function(executionSettings = NULL, ...) {
       CohortGenerator::addCohortSubsetDefinition(subsetDef)
   })
 
+  if (!"subsetParent" %in% colnames(executionSettings$cohortDefinitionSet)) {
+    executionSettings$cohortDefinitionSet$subsetParent <- executionSettings$cohortDefinitionSet$cohortId
+  }
+
   CohortGenerator::generateCohortSet(connection = executionSettings$connection,
                                      cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
                                      tempEmulationSchema = executionSettings$tempEmulationSchema,
@@ -98,6 +102,7 @@ createCohorts <- function(executionSettings = NULL, ...) {
   cohortRef <-
     cohrtRef |> dplyr::bind_rows(
       executionSettings$cohortDefinitionSet |>
+        dplyr::filter(!.data$cohortId %in% cohrtRef$cohortId) |>
         dplyr::select("cohortId", "cohortName", "subsetParent") |>
         dplyr::mutate(atcFlag = -1,
                       conceptId = -1,
@@ -106,12 +111,12 @@ createCohorts <- function(executionSettings = NULL, ...) {
                       "cohortDefinitionId" = "cohortId")
     )
 
-  colnames(cohortRef) <- toupper(SqlRender::camelCaseToSnakeCase(colnames(cohortRef)))
+  ParallelLogger::logInfo("Inserting cohort references")
   DatabaseConnector::insertTable(connection = executionSettings$connection,
                                  data = cohortRef,
                                  tableName = executionSettings$cohortDefinitionTable,
                                  databaseSchema = executionSettings$resultsDatabaseSchema,
-                                 camelCaseToSnakeCase = FALSE,
+                                 camelCaseToSnakeCase = TRUE,
                                  dropTableIfExists = TRUE,
                                  createTable = TRUE,
                                  tempTable = FALSE)
