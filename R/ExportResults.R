@@ -63,6 +63,8 @@ exportResults <- function(executionSettings = NULL, ...) {
     invisible(NULL)
   }
 
+  ParallelLogger::logInfo("Exporting results")
+
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       "SELECT * FROM  @results_database_schema.@covariate_def_table",
                                                       fun = exportResultsFun,

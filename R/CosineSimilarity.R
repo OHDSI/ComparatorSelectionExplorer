@@ -23,6 +23,7 @@ generateSimilarityScores <- function(executionSettings = NULL, ...) {
     executionSettings <- createExecutionSettings(...)
   }
 
+  ParallelLogger::logInfo("Generating similarity scores")
   sql <- SqlRender::loadRenderTranslateSql("SelectiveFeatureExtraction.sql",
                                            packageName = utils::packageName(),
                                            dbms = DatabaseConnector::dbms(executionSettings$connection),
@@ -36,6 +37,7 @@ generateSimilarityScores <- function(executionSettings = NULL, ...) {
                                            tempEmulationSchema = executionSettings$tempEmulationSchema)
   DatabaseConnector::executeSql(executionSettings$connection, sql)
 
+  ParallelLogger::logInfo("Computing cosine similarity")
   sql <- SqlRender::loadRenderTranslateSql("CosineSimilarity.sql",
                                            packageName = utils::packageName(),
                                            dbms = DatabaseConnector::dbms(executionSettings$connection),
