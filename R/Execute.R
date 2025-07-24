@@ -31,6 +31,7 @@ execute <- function(executionSettings = NULL, ...) {
 
   executionSettings <- createCohorts(executionSettings)
   executionSettings <- generateSimilarityScores(executionSettings)
+  executionSettings <- generateOverlapStatistics(executionSettings)
   executionSettings <- exportResults(executionSettings)
 
   # 3. export results and zip
