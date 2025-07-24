@@ -39,6 +39,7 @@
 #' @param incrementalFolder             folder for storage of incremental results for cohort generation
 #' @param vocabularyDatabaseSchema      standard vocabulary database schema
 #' @param cohortTable                   (optional) cohort table
+#' @param useBulkCohorts                Use the cohort generator bulk rxnorm/atc standard cohort set
 #' @param cohortCountTable              (optional) count tabls
 #' @param cohortDefinitionTable         (optional) definitions table
 #' @param covariateDefTable             (optional) where covariate definitions are stored
@@ -49,7 +50,6 @@
 #' @param logFileLocation               (optional) Log file location
 #' @param exportDir                     (optional) Folder to store results files in before export (default is tempdir)
 #' @param removeExportDir               (optional) remove the export dir after creating zip files?
-#' @param .callbackFun                  Used internally - an on.exit call for disconnection from db
 #' @param generateCohortDefinitionSet   Boolean - generate the user specified cohortDefinitionSet
 #' @returns executionSettings object
 #' @export
@@ -69,17 +69,18 @@ createExecutionSettings <- function(connectionDetails,
                                     indicationCohortSubsetDefintions = list(),
                                     targetCohortIds = NULL,
                                     cohortCountTable = "cse_cohort_count",
+                                    cohortOverlapTable = "cse_cohort_overlap",
                                     cohortDefinitionTable = "cse_cohort_definition",
                                     covariateDefTable = "cse_covariate_ref",
                                     covariateMeansTable = "cse_covariate_means",
                                     cosineSimStratifiedTable = "cse_cosine_sim",
                                     minExposureSize = 1000,
+                                    useBulkCohorts = TRUE,
                                     logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
                                     exportDir = tempfile(),
                                     removeExportDir = TRUE,
                                     generateCohortDefinitionSet = FALSE,
-                                    exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip")),
-                                    .callbackFun = NULL) {
+                                    exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip"))) {
 
   checkmate::assertClass(connectionDetails, "ConnectionDetails")
 
@@ -106,6 +107,7 @@ createExecutionSettings <- function(connectionDetails,
     logFileLocation = logFileLocation,
     cohortTableNames = CohortGenerator::getCohortTableNames(cohortTable),
     cohortCountTable = cohortCountTable,
+    cohortOverlapTable = cohortOverlapTable,
     cohortDefinitionTable = cohortDefinitionTable,
     covariateDefTable = covariateDefTable,
     covariateMeansTable = covariateMeansTable,
@@ -117,7 +119,8 @@ createExecutionSettings <- function(connectionDetails,
     targetCohortIds = targetCohortIds,
     indicationCohortSubsetDefintions = indicationCohortSubsetDefintions,
     generateCohortDefinitionSet = generateCohortDefinitionSet,
-    connection = connection
+    connection = connection,
+    useBulkCohorts = useBulkCohorts
   )
   class(executionSettings) <- "executionSettings"
 
@@ -134,12 +137,6 @@ createExecutionSettings <- function(connectionDetails,
   # Get database ID from cdm_source table
   if (is.null(executionSettings$connection)) {
     executionSettings$connection <- DatabaseConnector::connect(executionSettings$connectionDetails)
-    if (is.function(.callbackFun)) {
-      .callbackFun({
-        DatabaseConnector::disconnect(executionSettings$connection)
-        executionSettings$connection <- NULL
-      })
-    }
   }
 
   executionSettings$databaseId <- databaseId

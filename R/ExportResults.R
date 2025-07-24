@@ -63,6 +63,8 @@ exportResults <- function(executionSettings = NULL, ...) {
     invisible(NULL)
   }
 
+  ParallelLogger::logInfo("Exporting results")
+
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       "SELECT * FROM  @results_database_schema.@covariate_def_table",
                                                       fun = exportResultsFun,
@@ -158,6 +160,17 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       min_exposure_size = executionSettings$minExposureSize,
                                                       table = executionSettings$cosineSimStratifiedTable,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
+
+  sql <- "SELECT * FROM @results_database_schema.@table"
+  DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
+                                                      sql,
+                                                      fun = exportResultsFun,
+                                                      args = list(
+                                                        csvFilename = "cohort_overlap.csv",
+                                                        addDbId = TRUE
+                                                      ),
+                                                      results_database_schema = executionSettings$resultsDatabaseSchema,
+                                                      table = executionSettings$cohortOverlapTable)
 
   sql <- "SELECT * FROM @cdm_database_schema.cdm_source"
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
