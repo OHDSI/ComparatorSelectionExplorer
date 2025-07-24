@@ -106,7 +106,7 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                      incrementalFolder = executionSettings$incrementalFolder)
 
   # Insert cohort definition table
-  cohortRef <-
+  cohrtRef <-
     cohrtRef |> dplyr::bind_rows(
       executionSettings$cohortDefinitionSet |>
         dplyr::filter(!.data$cohortId %in% cohrtRef$cohortDefinitionId) |>
@@ -120,7 +120,7 @@ createCohorts <- function(executionSettings = NULL, ...) {
 
   ParallelLogger::logInfo("Inserting cohort references")
   DatabaseConnector::insertTable(connection = executionSettings$connection,
-                                 data = cohortRef,
+                                 data = cohrtRef,
                                  tableName = executionSettings$cohortDefinitionTable,
                                  databaseSchema = executionSettings$resultsDatabaseSchema,
                                  camelCaseToSnakeCase = TRUE,
