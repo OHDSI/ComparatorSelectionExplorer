@@ -1,6 +1,7 @@
 -- PARAMETERS
 --- @cohort_counts: name of table where cohort sample sizes are stored
 --- @cohort: name of cohort table to use for feature extraction
+--- @cohort_database_schema: schema where cohort table is stored
 --- @results_database_schema: schema where cohort table is stored
 --- @cohort_overlap_table: name of table where cohort overlap statistics are to be stored
 
@@ -24,8 +25,8 @@ from (
 		ch1.subject_id,
 		ch1.cohort_start_date as start_date_1,
 		ch2.cohort_start_date as start_date_2
-	from @results_database_schema.@cohort ch1
-	inner join @results_database_schema.@cohort ch2
+	from @cohort_database_schema.@cohort ch1
+	inner join @cohort_database_schema.@cohort ch2
 		on ch1.subject_id = ch2.subject_id and ch1.cohort_definition_id < ch2.cohort_definition_id
 	inner join @results_database_schema.@cohort_counts cc1
 		on ch1.cohort_definition_id = cc1.cohort_definition_id

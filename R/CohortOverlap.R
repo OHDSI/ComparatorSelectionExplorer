@@ -14,6 +14,7 @@ generateOverlapStatistics <- function(executionSettings = NULL, ...) {
     dbms = DatabaseConnector::dbms(executionSettings$connection),
     cohort_counts = executionSettings$cohortCountTable,
     cohort = executionSettings$cohortTableNames$cohortTable,
+    cohort_database_schema = executionSettings$cohortDatabaseSchema,
     results_database_schema = executionSettings$resultsDatabaseSchema,
     tempEmulationSchema = executionSettings$tempEmulationSchema)
 
