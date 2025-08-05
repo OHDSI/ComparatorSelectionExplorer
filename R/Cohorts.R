@@ -124,11 +124,11 @@ createCohorts <- function(executionSettings = NULL, ...) {
   DROP TABLE IF EXISTS @schema.@cohort_definition_table;
   CREATE TABLE @schema.@cohort_definition_table (
       cohort_definition_id bigint,
-      t.COHORT_DEFINITION_NAME varchar,
-      t.SHORT_NAME varchar,
-      t.CONCEPT_ID bigint,
-      t.ATC_FLAG int,
-      t.subset_parent bigint
+      COHORT_DEFINITION_NAME varchar,
+      SHORT_NAME varchar,
+      CONCEPT_ID bigint,
+      ATC_FLAG int,
+      subset_parent bigint
     );
    "
 
