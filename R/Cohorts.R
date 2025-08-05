@@ -119,13 +119,31 @@ createCohorts <- function(executionSettings = NULL, ...) {
     )
 
   ParallelLogger::logInfo("Inserting cohort references")
+  # Create refrences - force casting of value
+  tableSql <- "
+  DROP TABLE IF EXISTS @schema.@cohort_definition_table;
+  CREATE TABLE @schema.@cohort_definition_table (
+      cohort_definition_id bigint,
+      t.COHORT_DEFINITION_NAME varchar,
+      t.SHORT_NAME varchar,
+      t.CONCEPT_ID bigint,
+      t.ATC_FLAG int,
+      t.subset_parent bigint
+    );
+   "
+
+  DatabaseConnector::renderTranslateExecuteSql(connection,
+                                               sql = tableSql,
+                                               cohort_definition_table = executionSettings$cohortDefinitionTable,
+                                               schema = executionSettings$resultsDatabaseSchema)
+
   DatabaseConnector::insertTable(connection = executionSettings$connection,
                                  data = cohrtRef,
                                  tableName = executionSettings$cohortDefinitionTable,
                                  databaseSchema = executionSettings$resultsDatabaseSchema,
                                  camelCaseToSnakeCase = TRUE,
-                                 dropTableIfExists = TRUE,
-                                 createTable = TRUE,
+                                 dropTableIfExists = FALSE,
+                                 createTable = FALSE,
                                  tempTable = FALSE)
 
 
