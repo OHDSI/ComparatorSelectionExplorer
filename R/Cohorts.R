@@ -137,16 +137,17 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                                cohort_definition_table = executionSettings$cohortDefinitionTable,
                                                schema = executionSettings$resultsDatabaseSchema)
 
-  DatabaseConnector::insertTable(connection = executionSettings$connection,
-                                 data = cohrtRef,
-                                 tableName = executionSettings$cohortDefinitionTable,
-                                 databaseSchema = executionSettings$resultsDatabaseSchema,
-                                 camelCaseToSnakeCase = TRUE,
-                                 dropTableIfExists = FALSE,
-                                 createTable = FALSE,
-                                 tempTable = FALSE)
+  withr::with_options(list(scipen = 9999999), {
+    DatabaseConnector::insertTable(connection = executionSettings$connection,
+                                   data = cohrtRef,
+                                   tableName = executionSettings$cohortDefinitionTable,
+                                   databaseSchema = executionSettings$resultsDatabaseSchema,
+                                   camelCaseToSnakeCase = TRUE,
+                                   dropTableIfExists = FALSE,
+                                   createTable = FALSE,
+                                   tempTable = FALSE)
 
-
+  })
   executionSettings$cohortsGenerated <- TRUE
   invisible(executionSettings)
 }
