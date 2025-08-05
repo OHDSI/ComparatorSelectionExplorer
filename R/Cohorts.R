@@ -132,7 +132,7 @@ createCohorts <- function(executionSettings = NULL, ...) {
     );
    "
 
-  DatabaseConnector::renderTranslateExecuteSql(connection,
+  DatabaseConnector::renderTranslateExecuteSql(executionSettings$connection,
                                                sql = tableSql,
                                                cohort_definition_table = executionSettings$cohortDefinitionTable,
                                                schema = executionSettings$resultsDatabaseSchema)
