@@ -105,18 +105,18 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                      incremental = TRUE,
                                      incrementalFolder = executionSettings$incrementalFolder)
 
-  # Insert cohort definition table
-  cohrtRef <-
-    cohrtRef |> dplyr::bind_rows(
-      executionSettings$cohortDefinitionSet |>
-        dplyr::filter(!.data$cohortId %in% cohrtRef$cohortDefinitionId) |>
-        dplyr::select("cohortId", "cohortName", "subsetParent") |>
-        dplyr::mutate(atcFlag = -1,
-                      conceptId = -1,
-                      shortName = .data$cohortName) |>
-        dplyr::rename("cohortDefinitionName" = "cohortName",
-                      "cohortDefinitionId" = "cohortId")
-    )
+  # # Insert cohort definition table
+  # cohrtRef <-
+  #   cohrtRef |> dplyr::bind_rows(
+  #     executionSettings$cohortDefinitionSet |>
+  #       dplyr::filter(!.data$isTemplatedCohort) |>
+  #       dplyr::select("cohortId", "cohortName", "subsetParent") |>
+  #       dplyr::mutate(atcFlag = -1,
+  #                     conceptId = -1,
+  #                     shortName = .data$cohortName) |>
+  #       dplyr::rename("cohortDefinitionName" = "cohortName",
+  #                     "cohortDefinitionId" = "cohortId")
+  #   )
 
   ParallelLogger::logInfo("Inserting cohort references")
   # Create refrences - force casting of value
