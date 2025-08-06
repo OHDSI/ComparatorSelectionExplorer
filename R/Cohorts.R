@@ -106,17 +106,17 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                      incrementalFolder = executionSettings$incrementalFolder)
 
   # # Insert cohort definition table
-  # cohrtRef <-
-  #   cohrtRef |> dplyr::bind_rows(
-  #     executionSettings$cohortDefinitionSet |>
-  #       dplyr::filter(!.data$isTemplatedCohort) |>
-  #       dplyr::select("cohortId", "cohortName", "subsetParent") |>
-  #       dplyr::mutate(atcFlag = -1,
-  #                     conceptId = -1,
-  #                     shortName = .data$cohortName) |>
-  #       dplyr::rename("cohortDefinitionName" = "cohortName",
-  #                     "cohortDefinitionId" = "cohortId")
-  #   )
+  cohrtRef <-
+    cohrtRef |> dplyr::bind_rows(
+      executionSettings$cohortDefinitionSet |>
+        dplyr::filter(!.data$isTemplatedCohort & !.data$cohortId %in% cohrtRef$cohortId) |>
+        dplyr::select("cohortId", "cohortName", "subsetParent") |>
+        dplyr::mutate(atcFlag = -1,
+                      conceptId = -1,
+                      shortName = .data$cohortName) |>
+        dplyr::rename("cohortDefinitionName" = "cohortName",
+                      "cohortDefinitionId" = "cohortId")
+    )
 
   ParallelLogger::logInfo("Inserting cohort references")
   # Create refrences - force casting of value
@@ -124,10 +124,10 @@ createCohorts <- function(executionSettings = NULL, ...) {
   DROP TABLE IF EXISTS @schema.@cohort_definition_table;
   CREATE TABLE @schema.@cohort_definition_table (
       cohort_definition_id bigint,
-      COHORT_DEFINITION_NAME varchar,
-      SHORT_NAME varchar,
-      CONCEPT_ID bigint,
-      ATC_FLAG int,
+      cohort_definition_name varchar,
+      short_name varchar,
+      concept_id bigint,
+      atc_flag int,
       subset_parent bigint
     );
    "

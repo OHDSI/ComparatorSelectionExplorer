@@ -33,6 +33,7 @@ test_that("Execution", {
   })
 
   checkmate::expect_class(executionSettings, "executionSettings")
+  addFakeAtcVocab(executionSettings)
   execute(executionSettings)
   checkmate::expect_file_exists(executionSettings$exportZipFile)
 
@@ -85,7 +86,7 @@ test_that("Execution", {
     unlink(executionSettings$exportZipFile)
     unlink(executionSettings$incrementalFolder, recursive = TRUE)
   })
-
+  addFakeAtcVocab(executionSettings)
   execute(executionSettings)
   checkmate::expect_file_exists(executionSettings$exportZipFile)
 

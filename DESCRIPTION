@@ -26,7 +26,8 @@ Imports:
   SqlRender (>= 1.9.0),
   readr,
   dplyr,
-  digest
+  digest,
+  withr
 Suggests:
   shiny,
   reactable,
