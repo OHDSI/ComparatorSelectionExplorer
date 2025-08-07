@@ -11,7 +11,7 @@ Authors@R: c(
   person("David", "Kern", role = c("aut"))
   )
 Maintainer: Jamie Gilbert <gilbert@ohdsi.org>
-Description: Comparator Selection Explorer package, generate cosine similarity scores for pairs of exposure cohorts
+Description: Utility to select comparators for new user cohort population effect estimation.
 License: Apache License
 VignetteBuilder: knitr
 Encoding: UTF-8
@@ -27,7 +27,8 @@ Imports:
   readr,
   dplyr,
   digest,
-  withr
+  withr,
+  purrr
 Suggests:
   shiny,
   reactable,

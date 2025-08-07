@@ -31,8 +31,7 @@ createExecutionSettings(
   removeExportDir = TRUE,
   generateCohortDefinitionSet = FALSE,
   exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_",
-    cdmDatabaseSchema, ".zip")),
-  .callbackFun = NULL
+    cdmDatabaseSchema, ".zip"))
 )
 }
 \arguments{
@@ -94,8 +93,6 @@ analysis (defaults to 1000).}
 \item{generateCohortDefinitionSet}{Boolean - generate the user specified cohortDefinitionSet}
 
 \item{exportZipFile}{Path to zip file output of project}
-
-\item{.callbackFun}{Used internally - an on.exit call for disconnection from db}
 }
 \value{
 executionSettings object

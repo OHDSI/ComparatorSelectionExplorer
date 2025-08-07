@@ -1,0 +1,12 @@
+---
+title: "Using Comparator Selection Explorer"
+output: html_document
+---
+
+This intends to be a brief guide on usage or the comparator selection explorer
+
+## Creating CDM settings
+
+## Creating Results Database Schema
+
+## Using the shiny explorer

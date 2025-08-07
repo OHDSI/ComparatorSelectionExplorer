@@ -20,3 +20,5 @@
 #' @import DatabaseConnector ParallelLogger
 #' @importFrom dplyr %>%
 NULL
+
+utils::globalVariables(c(".data"))
