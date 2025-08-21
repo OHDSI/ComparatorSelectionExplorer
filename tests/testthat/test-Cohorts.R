@@ -11,6 +11,7 @@ test_that("No dupes in ref table", {
   on.exit({
     unlink(executionSettings$exportZipFile)
     unlink(executionSettings$incrementalFolder, recursive = TRUE)
+    DatabaseConnector::disconnect(executionSettings$connection)
   })
 
   checkmate::expect_class(executionSettings, "executionSettings")
