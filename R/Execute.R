@@ -1,4 +1,4 @@
-# Copyright 2022 Observational Health Data Sciences and Informatics
+# Copyright 2025 Observational Health Data Sciences and Informatics
 #
 # This file is part of CohortGenerator
 #
@@ -15,13 +15,14 @@
 # limitations under the License.
 
 
-#' @title Execute Package
-#' @description Execute data generation step on a given OMOP CDM - connect, create cohorts and generate data
-#'
+#' @title
+#' Execute Package
+#' @description
+#' Execute data generation step on a given OMOP CDM - connect, create cohorts and generate data
 #' Data can be transferred with the OhdsiSharing package
 #'
-#' @param executionSettings             settings greated with @seealso createExecutionSettings
-#' @param ...                           settings greated with @seealso createExecutionSettings
+#' @param executionSettings   settings greated with @seealso createExecutionSettings
+#' @param ...                 settings greated with @seealso createExecutionSettings
 #' @export
 execute <- function(executionSettings = NULL, ...) {
 

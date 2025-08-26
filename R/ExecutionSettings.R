@@ -1,4 +1,4 @@
-# Copyright 2022 Observational Health Data Sciences and Informatics
+# Copyright 2025 Observational Health Data Sciences and Informatics
 #
 # This file is part of CohortGenerator
 #
@@ -14,72 +14,73 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#' @title createExecutionSettings
-#' @description executions settings to be used throughout package for analysis
+#' @title
+#' createExecutionSettings
+#' @description
+#' executions settings to be used throughout package for analysis
 #'
-#' @param connectionDetails             DatabaseConnector::connectionDetails instance
-#' @param connection                    DatabaseConnector::connection (defaults to null). Use for persistent storage of
-#'                                      reference
-#' @param cdmDatabaseSchema             String Database schema - where data lives
-#' @param cohortDatabaseSchema          String Database schema - where cohort table is created
-#' @param resultsDatabaseSchema         String Database schema - where similarity scores are stored
-#' @param cohortDefinitionSet           CohortGenerator::cohortDefinitionSet - intended to be custom exposures or
-#'                                      indication cohorts
-#' @param indicationCohortSubsetDefintions  List of CohortGenerator::cohortSubsetDefinitions these subsets will be applied
-#'                                      to all cohorts used in this study. See cohortGenerator package documentation for
-#'                                      detailed instructions on creating cohort subsets
-#' @param tempEmulationSchema           String DatabaseSchema - temp emulation schema for oracle, bigquery
-#' @param exportZipFile                 Path to zip file output of project
-#' @param databaseName                  Database identifier (string)
-#' @param databaseId                    Database identifier integer (optional)
-#' @param targetCohortIds               (optional) Integer ids for cohorts to limit cosine similarity calculation to
-#'                                      Must be a valid RxNorm ingredient, ATC class or included in the
-#'                                      cohortDefinitionSet
+#' @param connectionDetails                  DatabaseConnector::connectionDetails instance
+#' @param connection                         DatabaseConnector::connection (defaults to null). Use for
+#'                                           persistent storage of reference
+#' @param cdmDatabaseSchema                  String Database schema - where data lives
+#' @param cohortDatabaseSchema               String Database schema - where cohort table is created
+#' @param resultsDatabaseSchema              String Database schema - where similarity scores are
+#'                                           stored
+#' @param cohortDefinitionSet                CohortGenerator::cohortDefinitionSet - intended to be
+#'                                           custom exposures or indication cohorts
+#' @param indicationCohortSubsetDefintions   List of CohortGenerator::cohortSubsetDefinitions these
+#'                                           subsets will be applied to all cohorts used in this study.
+#'                                           See cohortGenerator package documentation for detailed
+#'                                           instructions on creating cohort subsets
+#' @param tempEmulationSchema                String DatabaseSchema - temp emulation schema for oracle,
+#'                                           bigquery
+#' @param exportZipFile                      Path to zip file output of project
+#' @param databaseName                       Database identifier (string)
+#' @param databaseId                         Database identifier integer (optional)
+#' @param targetCohortIds                    (optional) Integer ids for cohorts to limit cosine
+#'                                           similarity calculation to Must be a valid RxNorm
+#'                                           ingredient, ATC class or included in the
+#'                                           cohortDefinitionSet
 #'
-#' @param incrementalFolder             folder for storage of incremental results for cohort generation
-#' @param vocabularyDatabaseSchema      standard vocabulary database schema
-#' @param cohortTable                   (optional) cohort table
-#' @param useBulkCohorts                Use the cohort generator bulk rxnorm/atc standard cohort set
-#' @param cohortCountTable              (optional) count tabls
-#' @param cohortDefinitionTable         (optional) definitions table
-#' @param covariateDefTable             (optional) where covariate definitions are stored
-#' @param covariateMeansTable           (optional) where covariate means are stored
-#' @param cosineSimStratifiedTable      (optional) where stratified cosine similarity scores are stored
-#' @param minExposureSize               (optional) Minimum number of exposures to be included in cosine similarity
-#'                                      analysis (defaults to 1000).
-#' @param logFileLocation               (optional) Log file location
-#' @param exportDir                     (optional) Folder to store results files in before export (default is tempdir)
-#' @param removeExportDir               (optional) remove the export dir after creating zip files?
-#' @param generateCohortDefinitionSet   Boolean - generate the user specified cohortDefinitionSet
-#' @returns executionSettings object
+#' @param incrementalFolder                  folder for storage of incremental results for cohort
+#'                                           generation
+#' @param vocabularyDatabaseSchema           standard vocabulary database schema
+#' @param cohortTable                        (optional) cohort table
+#' @param useBulkCohorts                     Use the cohort generator bulk rxnorm/atc standard cohort
+#'                                           set
+#' @param cohortCountTable                   (optional) count tabls
+#' @param cohortDefinitionTable              (optional) definitions table
+#' @param covariateDefTable                  (optional) where covariate definitions are stored
+#' @param covariateMeansTable                (optional) where covariate means are stored
+#' @param cosineSimStratifiedTable           (optional) where stratified cosine similarity scores are
+#'                                           stored
+#' @param minExposureSize                    (optional) Minimum number of exposures to be included in
+#'                                           cosine similarity analysis (defaults to 1000).
+#' @param logFileLocation                    (optional) Log file location
+#' @param exportDir                          (optional) Folder to store results files in before export
+#'                                           (default is tempdir)
+#' @param removeExportDir                    (optional) remove the export dir after creating zip files?
+#' @param generateCohortDefinitionSet        Boolean - generate the user specified cohortDefinitionSet
+#' @returns
+#' executionSettings object
 #' @export
 #' @importFrom digest digest2int
 createExecutionSettings <- function(connectionDetails,
                                     connection = NULL,
                                     databaseName = NULL,
                                     databaseId = NULL,
-                                    cdmDatabaseSchema,
-                                    vocabularyDatabaseSchema = cdmDatabaseSchema,
-                                    incrementalFolder = paste0("incremental_", cdmDatabaseSchema),
-                                    resultsDatabaseSchema,
-                                    cohortDatabaseSchema = resultsDatabaseSchema,
-                                    cohortTable = "cse_cohort",
-                                    tempEmulationSchema = getOption("tempEmulationSchema"),
-                                    cohortDefinitionSet = NULL,
-                                    indicationCohortSubsetDefintions = list(),
-                                    targetCohortIds = NULL,
-                                    cohortCountTable = "cse_cohort_count",
-                                    cohortDefinitionTable = "cse_cohort_definition",
-                                    covariateDefTable = "cse_covariate_ref",
-                                    covariateMeansTable = "cse_covariate_means",
-                                    cosineSimStratifiedTable = "cse_cosine_sim",
-                                    minExposureSize = 1000,
-                                    useBulkCohorts = TRUE,
-                                    logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
-                                    exportDir = tempfile(),
-                                    removeExportDir = TRUE,
-                                    generateCohortDefinitionSet = FALSE,
-                                    exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip"))) {
+
+  cdmDatabaseSchema, vocabularyDatabaseSchema = cdmDatabaseSchema, incrementalFolder = paste0("incremental_",
+    cdmDatabaseSchema), resultsDatabaseSchema, cohortDatabaseSchema = resultsDatabaseSchema, cohortTable = "cse_cohort",
+  tempEmulationSchema = getOption("tempEmulationSchema"), cohortDefinitionSet = NULL, indicationCohortSubsetDefintions = list(),
+  targetCohortIds = NULL, cohortCountTable = "cse_cohort_count", cohortDefinitionTable = "cse_cohort_definition",
+  covariateDefTable = "cse_covariate_ref", covariateMeansTable = "cse_covariate_means", cosineSimStratifiedTable = "cse_cosine_sim",
+  minExposureSize = 1000, useBulkCohorts = TRUE, logFileLocation = paste0("cse-execution-log-",
+                                                                          cdmDatabaseSchema,
+
+    ".txt"), exportDir = tempfile(), removeExportDir = TRUE, generateCohortDefinitionSet = FALSE,
+  exportZipFile = file.path(normalizePath(getwd()),
+                            paste0("cse_results_", cdmDatabaseSchema, ".zip"))) {
 
   checkmate::assertClass(connectionDetails, "ConnectionDetails")
 
@@ -97,38 +98,22 @@ createExecutionSettings <- function(connectionDetails,
     stop("Indication subset definitions added but no cohort definition set provided")
   }
 
-  executionSettings <- list(
-    connectionDetails = connectionDetails,
-    cdmDatabaseSchema = cdmDatabaseSchema,
-    databaseName = databaseName,
-    vocabularyDatabaseSchema = vocabularyDatabaseSchema,
-    resultsDatabaseSchema = resultsDatabaseSchema,
-    cohortDatabaseSchema = cohortDatabaseSchema,
-    tempEmulationSchema = tempEmulationSchema,
-    exportZipFile = exportZipFile,
-    incrementalFolder = incrementalFolder,
-    logFileLocation = logFileLocation,
-    cohortTableNames = CohortGenerator::getCohortTableNames(cohortTable),
-    cohortCountTable = cohortCountTable,
-    cohortDefinitionTable = cohortDefinitionTable,
-    covariateDefTable = covariateDefTable,
-    covariateMeansTable = covariateMeansTable,
-    cosineSimStratifiedTable = cosineSimStratifiedTable,
-    minExposureSize = minExposureSize,
-    exportDir = exportDir,
-    removeExportDir = removeExportDir,
-    cohortDefinitionSet = cohortDefinitionSet,
-    targetCohortIds = targetCohortIds,
-    indicationCohortSubsetDefintions = indicationCohortSubsetDefintions,
-    generateCohortDefinitionSet = generateCohortDefinitionSet,
-    connection = connection,
-    useBulkCohorts = useBulkCohorts
-  )
+  executionSettings <- list(connectionDetails = connectionDetails,
+                            cdmDatabaseSchema = cdmDatabaseSchema,
+
+    databaseName = databaseName, vocabularyDatabaseSchema = vocabularyDatabaseSchema, resultsDatabaseSchema = resultsDatabaseSchema,
+    cohortDatabaseSchema = cohortDatabaseSchema, tempEmulationSchema = tempEmulationSchema, exportZipFile = exportZipFile,
+    incrementalFolder = incrementalFolder, logFileLocation = logFileLocation, cohortTableNames = CohortGenerator::getCohortTableNames(cohortTable),
+    cohortCountTable = cohortCountTable, cohortDefinitionTable = cohortDefinitionTable, covariateDefTable = covariateDefTable,
+    covariateMeansTable = covariateMeansTable, cosineSimStratifiedTable = cosineSimStratifiedTable,
+    minExposureSize = minExposureSize, exportDir = exportDir, removeExportDir = removeExportDir,
+    cohortDefinitionSet = cohortDefinitionSet, targetCohortIds = targetCohortIds, indicationCohortSubsetDefintions = indicationCohortSubsetDefintions,
+    generateCohortDefinitionSet = generateCohortDefinitionSet, connection = connection, useBulkCohorts = useBulkCohorts)
   class(executionSettings) <- "executionSettings"
 
-  attr(executionSettings, ".execStatus") <- list(cohortReferencesCreated = FALSE,
-                                                 cohortsCreated = FALSE,
-                                                 simialrityScores = FALSE)
+  attr(executionSettings,
+       ".execStatus") <- list(cohortReferencesCreated = FALSE, cohortsCreated = FALSE,
+    simialrityScores = FALSE)
 
   if (!is.null(logFileLocation)) {
     ParallelLogger::clearLoggers()
@@ -143,8 +128,7 @@ createExecutionSettings <- function(connectionDetails,
 
   executionSettings$databaseId <- databaseId
   if (is.null(executionSettings$databaseId)) {
-    fields <- DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
-                                                         "
+    fields <- DatabaseConnector::renderTranslateQuerySql(executionSettings$connection, "
                                                          SELECT
                                                              CDM_SOURCE_NAME,
                                                              CDM_SOURCE_ABBREVIATION,
@@ -152,17 +136,17 @@ createExecutionSettings <- function(connectionDetails,
                                                              CDM_RELEASE_DATE
                                                          FROM @cdm_database_schema.cdm_source;
                                                          ",
-                                                         cdm_database_schema = executionSettings$cdmDatabaseSchema,
-                                                         snakeCaseToCamelCase = TRUE)
+      cdm_database_schema = executionSettings$cdmDatabaseSchema, snakeCaseToCamelCase = TRUE)
 
-    executionSettings$databaseId <- abs(digest::digest2int(paste(fields, collapse = ""), seed = 999))
+    executionSettings$databaseId <- abs(digest::digest2int(paste(fields, collapse = ""),
+                                                           seed = 999))
   }
 
   if (is.null(executionSettings$databaseName)) {
     fields <- DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
                                                          "SELECT CDM_SOURCE_NAME FROM @cdm_database_schema.cdm_source;",
-                                                         cdm_database_schema = executionSettings$cdmDatabaseSchema,
-                                                         snakeCaseToCamelCase = TRUE)
+
+      cdm_database_schema = executionSettings$cdmDatabaseSchema, snakeCaseToCamelCase = TRUE)
     executionSettings$databaseName <- fields$cdmSourceName
   }
 

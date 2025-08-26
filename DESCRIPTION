@@ -16,7 +16,7 @@ License: Apache License
 VignetteBuilder: knitr
 Encoding: UTF-8
 Depends:
-  R (>= 4.0.0)
+  R (>= 4.1.0)
 Imports:
   DatabaseConnector (>= 6.0.0),
   ParallelLogger,
@@ -27,8 +27,7 @@ Imports:
   readr,
   dplyr,
   digest,
-  withr,
-  purrr
+  withr
 Suggests:
   shiny,
   reactable,

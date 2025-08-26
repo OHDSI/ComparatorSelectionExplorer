@@ -14,7 +14,8 @@ getDataMigrator(connectionDetails, databaseSchema, tablePrefix = "")
 \item{tablePrefix}{(Optional) Use if a table prefix is used before table names (e.g. "cd_")}
 }
 \value{
-Instance of ResultModelManager::DataMigrationManager that has interface for converting existing data models
+Instance of ResultModelManager::DataMigrationManager that has interface for converting existing
+data models
 }
 \description{
 Returns ResultModelManager DataMigrationsManager instance.

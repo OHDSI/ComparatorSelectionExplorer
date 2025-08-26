@@ -15,7 +15,7 @@ migrateDataModel(connectionDetails, databaseSchema, tablePrefix = "")
 }
 \description{
 Migrate data from current state to next state
-
-It is strongly advised that you have a backup of all data (either sqlite files, a backup database (in the case you
-are using a postgres backend) or have kept the csv/zip files from your data generation.
+It is strongly advised that you have a backup of all data (either sqlite files, a backup database
+(in the case you are using a postgres backend) or have kept the csv/zip files from your data
+generation.
 }

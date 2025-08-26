@@ -1,4 +1,4 @@
-# Copyright 2022 Observational Health Data Sciences and Informatics
+# Copyright 2025 Observational Health Data Sciences and Informatics
 #
 # This file is part of CohortGenerator
 #
@@ -20,13 +20,17 @@
   on.exit(setwd(pwd))
   setwd(executionSettings$exportDir)
   DatabaseConnector::createZipFile(zipFile = executionSettings$exportZipFile,
-                                   files = list.files("./", pattern = "*.csv"))
+                                   files = list.files("./",
+    pattern = "*.csv"))
 }
 
 
-#' @title Export Results
-#' @description Create a zip file containing csvs of computed results tables
-#' @inheritParams execute
+#' @title
+#' Export Results
+#' @description
+#' Create a zip file containing csvs of computed results tables
+#' @inheritParams
+#' execute
 #' @export
 exportResults <- function(executionSettings = NULL, ...) {
 
@@ -51,14 +55,14 @@ exportResults <- function(executionSettings = NULL, ...) {
       if (nrow(data)) {
         data$database_id <- executionSettings$databaseId
       } else {
-        data <- data %>% dplyr::mutate(database_id = "")
+        data <- data %>%
+          dplyr::mutate(database_id = "")
       }
     }
 
-    readr::write_csv(data,
-                     file = file.path(executionSettings$exportDir, csvFilename),
-                     append = position != 1,
-                     na = "")
+    readr::write_csv(data, file = file.path(executionSettings$exportDir,
+                                            csvFilename), append = position !=
+      1, na = "")
 
     invisible(NULL)
   }
@@ -67,26 +71,19 @@ exportResults <- function(executionSettings = NULL, ...) {
 
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       "SELECT * FROM  @results_database_schema.@covariate_def_table",
-                                                      fun = exportResultsFun,
-                                                      args = list(
-                                                        csvFilename = "covariate_definition.csv",
-                                                        addDbId = FALSE
-                                                      ),
-                                                      covariate_def_table = executionSettings$covariateDefTable,
-                                                      results_database_schema = executionSettings$resultsDatabaseSchema)
+
+    fun = exportResultsFun, args = list(csvFilename = "covariate_definition.csv", addDbId = FALSE),
+    covariate_def_table = executionSettings$covariateDefTable, results_database_schema = executionSettings$resultsDatabaseSchema)
 
 
   sql <- "SELECT * FROM  @results_database_schema.@count_table ct WHERE ct.num_persons >= @min_exposure_size"
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       sql,
                                                       fun = exportResultsFun,
-                                                      args = list(
-                                                        csvFilename = "cohort_count.csv",
-                                                        addDbId = TRUE
-                                                      ),
-                                                      count_table = executionSettings$cohortCountTable,
-                                                      min_exposure_size = executionSettings$minExposureSize,
-                                                      results_database_schema = executionSettings$resultsDatabaseSchema)
+
+    args = list(csvFilename = "cohort_count.csv",
+                addDbId = TRUE), count_table = executionSettings$cohortCountTable,
+    min_exposure_size = executionSettings$minExposureSize, results_database_schema = executionSettings$resultsDatabaseSchema)
 
   sql <- "
   SELECT
@@ -102,14 +99,11 @@ exportResults <- function(executionSettings = NULL, ...) {
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       sql,
                                                       fun = exportResultsFun,
-                                                      args = list(
-                                                        csvFilename = "cohort_definition.csv",
-                                                        addDbId = FALSE
-                                                      ),
-                                                      count_table = executionSettings$cohortCountTable,
-                                                      min_exposure_size = executionSettings$minExposureSize,
-                                                      table = executionSettings$cohortDefinitionTable,
-                                                      results_database_schema = executionSettings$resultsDatabaseSchema)
+
+    args = list(csvFilename = "cohort_definition.csv",
+                addDbId = FALSE), count_table = executionSettings$cohortCountTable,
+    min_exposure_size = executionSettings$minExposureSize, table = executionSettings$cohortDefinitionTable,
+    results_database_schema = executionSettings$resultsDatabaseSchema)
 
   sql <- SqlRender::readSql(system.file(file.path("sql", "sql_server", "GetAtcLevels.sql"),
                                         package = utils::packageName()))
@@ -117,13 +111,10 @@ exportResults <- function(executionSettings = NULL, ...) {
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       sql,
                                                       fun = exportResultsFun,
-                                                      args = list(
-                                                        csvFilename = "atc_level.csv",
-                                                        addDbId = FALSE
-                                                      ),
-                                                      table = executionSettings$cohortDefinitionTable,
-                                                      vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema,
-                                                      results_database_schema = executionSettings$resultsDatabaseSchema)
+
+    args = list(csvFilename = "atc_level.csv",
+                addDbId = FALSE), table = executionSettings$cohortDefinitionTable,
+    vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema, results_database_schema = executionSettings$resultsDatabaseSchema)
 
   sql <- "
   SELECT t.* FROM  @results_database_schema.@table t
@@ -132,14 +123,11 @@ exportResults <- function(executionSettings = NULL, ...) {
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       sql,
                                                       fun = exportResultsFun,
-                                                      args = list(
-                                                        csvFilename = "covariate_mean.csv",
-                                                        addDbId = TRUE
-                                                      ),
-                                                      count_table = executionSettings$cohortCountTable,
-                                                      min_exposure_size = executionSettings$minExposureSize,
-                                                      table = executionSettings$covariateMeansTable,
-                                                      results_database_schema = executionSettings$resultsDatabaseSchema)
+
+    args = list(csvFilename = "covariate_mean.csv",
+                addDbId = TRUE), count_table = executionSettings$cohortCountTable,
+    min_exposure_size = executionSettings$minExposureSize, table = executionSettings$covariateMeansTable,
+    results_database_schema = executionSettings$resultsDatabaseSchema)
 
   sql <- "
   SELECT t.* FROM @results_database_schema.@table t
@@ -152,24 +140,19 @@ exportResults <- function(executionSettings = NULL, ...) {
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       sql,
                                                       fun = exportResultsFun,
-                                                      args = list(
-                                                        csvFilename = "cosine_similarity_score.csv",
-                                                        addDbId = TRUE
-                                                      ),
-                                                      count_table = executionSettings$cohortCountTable,
-                                                      min_exposure_size = executionSettings$minExposureSize,
-                                                      table = executionSettings$cosineSimStratifiedTable,
-                                                      results_database_schema = executionSettings$resultsDatabaseSchema)
+
+    args = list(csvFilename = "cosine_similarity_score.csv",
+                addDbId = TRUE), count_table = executionSettings$cohortCountTable,
+    min_exposure_size = executionSettings$minExposureSize, table = executionSettings$cosineSimStratifiedTable,
+    results_database_schema = executionSettings$resultsDatabaseSchema)
 
   sql <- "SELECT * FROM @cdm_database_schema.cdm_source"
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       sql,
                                                       fun = exportResultsFun,
-                                                      args = list(
-                                                        csvFilename = "cdm_source_info.csv",
-                                                        addDbId = TRUE
-                                                      ),
-                                                      cdm_database_schema = executionSettings$cdmDatabaseSchema)
+
+    args = list(csvFilename = "cdm_source_info.csv",
+                addDbId = TRUE), cdm_database_schema = executionSettings$cdmDatabaseSchema)
   .zipResults(executionSettings)
 
   if (executionSettings$removeExportDir) {
