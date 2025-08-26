@@ -7,6 +7,23 @@ This intends to be a brief guide on usage or the comparator selection explorer
 
 ## Creating CDM settings
 
-## Creating Results Database Schema
+```{r}
 
+```
+
+## Executing
+
+```{r}
+
+```
+
+## Running using indication subsets
+
+## Creating Results Database Schema and uploading data
+```{r}
+
+```
 ## Using the shiny explorer
+```{r}
+
+```
