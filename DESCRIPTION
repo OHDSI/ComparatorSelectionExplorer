@@ -1,7 +1,7 @@
 Package: ComparatorSelectionExplorer
 Type: Package
 Title: OHDSI Comparator Selection Explorer
-Version: 0.2.0
+Version: 1.0.0.99999
 Date: 2022-11-29
 Authors@R: c(
   person("Jamie", "Gilbert",  email = "gilbert@ohdsi.org", role = c("aut", "cre")),
