@@ -33,6 +33,7 @@ createCohorts <- function(executionSettings = NULL, ...) {
       CohortGenerator::createEmptyCohortDefinitionSet()
   }
 
+
   cohrtRef <- data.frame()
   if (executionSettings$useBulkCohorts) {
     rxNormTpl <- CohortGenerator::createRxNormCohortTemplateDefinition(connection = executionSettings$connection,
@@ -78,16 +79,14 @@ createCohorts <- function(executionSettings = NULL, ...) {
       CohortGenerator::addCohortTemplateDefintion(atcTpl)
   }
 
-
-  purrr::walk(executionSettings$indicationCohortSubsetDefintions, function(subsetDef) {
-    executionSettings$cohortDefinitionSet <<- executionSettings$cohortDefinitionSet |>
-      CohortGenerator::addCohortSubsetDefinition(subsetDef)
-  })
+  for(subsetDef in executionSettings$indicationCohortSubsetDefintions) {
+    executionSettings$cohortDefinitionSet <- executionSettings$cohortDefinitionSet |>
+      CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = cohrtRef$cohortDefinitionId)
+  }
 
   if (!"subsetParent" %in% colnames(executionSettings$cohortDefinitionSet)) {
-    executionSettings$
-      cohortDefinitionSet$
-      subsetParent <- executionSettings$cohortDefinitionSet$cohortId
+    executionSettings$cohortDefinitionSet$subsetParent <- executionSettings$cohortDefinitionSet$cohortId
+    executionSettings$cohortDefinitionSet$isSubset <- FALSE
   }
 
   CohortGenerator::createCohortTables(connection = executionSettings$connection,
@@ -104,12 +103,11 @@ createCohorts <- function(executionSettings = NULL, ...) {
                                      stopOnError = TRUE,
                                      incremental = TRUE,
                                      incrementalFolder = executionSettings$incrementalFolder)
-
   # # Insert cohort definition table
   cohrtRef <-
     cohrtRef |> dplyr::bind_rows(
       executionSettings$cohortDefinitionSet |>
-        dplyr::filter(!.data$isTemplatedCohort & !.data$cohortId %in% cohrtRef$cohortId) |>
+        dplyr::filter((.data$isSubset | !.data$isTemplatedCohort) & !.data$cohortId %in% cohrtRef$cohortId) |>
         dplyr::select("cohortId", "cohortName", "subsetParent") |>
         dplyr::mutate(atcFlag = -1,
                       conceptId = -1,
@@ -151,3 +149,4 @@ createCohorts <- function(executionSettings = NULL, ...) {
   executionSettings$cohortsGenerated <- TRUE
   invisible(executionSettings)
 }
+

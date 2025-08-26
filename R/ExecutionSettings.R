@@ -93,6 +93,10 @@ createExecutionSettings <- function(connectionDetails,
   checkmate::assertString(databaseId, null.ok = TRUE)
   checkmate::assertIntegerish(targetCohortIds, null.ok = TRUE)
 
+  if (length(indicationCohortSubsetDefintions) && is.null(cohortDefinitionSet)) {
+    stop("Indication subset definitions added but no cohort definition set provided")
+  }
+
   executionSettings <- list(
     connectionDetails = connectionDetails,
     cdmDatabaseSchema = cdmDatabaseSchema,
@@ -161,8 +165,6 @@ createExecutionSettings <- function(connectionDetails,
                                                          snakeCaseToCamelCase = TRUE)
     executionSettings$databaseName <- fields$cdmSourceName
   }
-
-  dir.create(executionSettings$incrementalFolder, showWarnings = FALSE)
 
   return(executionSettings)
 }
