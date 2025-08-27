@@ -119,7 +119,7 @@ createCohorts <- function(executionSettings = NULL, ...) {
 
     schema = executionSettings$resultsDatabaseSchema)
 
-  withr::with_options(list(scipen = 9999999), {
+  withr::with_options(list(scipen = 9999), {
     DatabaseConnector::insertTable(connection = executionSettings$connection,
                                    data = cohrtRef,
                                    tableName = executionSettings$cohortDefinitionTable,
