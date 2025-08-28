@@ -1,6 +1,17 @@
 ---
 title: "Using Comparator Selection Explorer"
-output: html_document
+author: "James P. Gilbert"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    number_sections: yes
+    toc: yes
+vignette: >
+  %\VignetteIndexEntry{Package Design}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 ---
 
 This intends to be a brief guide on usage or the comparator selection explorer
