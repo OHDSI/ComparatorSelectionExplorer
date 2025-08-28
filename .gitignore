@@ -2,6 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
+.idea/
+sql/
 /renv/
 /tests/testthat/errorReportSql.txt
 /.Rprofile
+inst/shiny/rsconnect/
