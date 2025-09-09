@@ -39,8 +39,9 @@ createCohorts <- function(executionSettings = NULL, ...) {
   cohrtRef <- data.frame()
   if (executionSettings$useBulkCohorts) {
     rxNormTpl <- CohortGenerator::createRxNormCohortTemplateDefinition(connection = executionSettings$connection,
-      cdmDatabaseSchema = executionSettings$cdmDatabaseSchema, cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-      tempEmulationSchema = executionSettings$tempEmulationSchema)
+                                                                       cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                                                       cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                                                       tempEmulationSchema = executionSettings$tempEmulationSchema)
 
     rxNormRefs <- rxNormTpl$references
 
@@ -54,8 +55,9 @@ createCohorts <- function(executionSettings = NULL, ...) {
       CohortGenerator::addCohortTemplateDefintion(rxNormTpl)
 
     atcTpl <- CohortGenerator::createAtcCohortTemplateDefinition(connection = executionSettings$connection,
-      cdmDatabaseSchema = executionSettings$cdmDatabaseSchema, cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-      tempEmulationSchema = executionSettings$tempEmulationSchema)
+                                                                 cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                                                 cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                                                 tempEmulationSchema = executionSettings$tempEmulationSchema)
 
     atcRefs <- atcTpl$references
 
@@ -87,10 +89,13 @@ createCohorts <- function(executionSettings = NULL, ...) {
 
   CohortGenerator::generateCohortSet(connection = executionSettings$connection,
                                      cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
-
-    tempEmulationSchema = executionSettings$tempEmulationSchema, cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-    cohortTableNames = executionSettings$cohortTableNames, cohortDefinitionSet = executionSettings$cohortDefinitionSet,
-    stopOnError = TRUE, incremental = TRUE, incrementalFolder = executionSettings$incrementalFolder)
+                                     tempEmulationSchema = executionSettings$tempEmulationSchema,
+                                     cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+                                     cohortTableNames = executionSettings$cohortTableNames,
+                                     cohortDefinitionSet = executionSettings$cohortDefinitionSet,
+                                     stopOnError = TRUE,
+                                     incremental = TRUE,
+                                     incrementalFolder = executionSettings$incrementalFolder)
   # # Insert cohort definition table
   cohrtRef <- cohrtRef |>
     dplyr::bind_rows(executionSettings$cohortDefinitionSet |>
@@ -123,9 +128,11 @@ createCohorts <- function(executionSettings = NULL, ...) {
     DatabaseConnector::insertTable(connection = executionSettings$connection,
                                    data = cohrtRef,
                                    tableName = executionSettings$cohortDefinitionTable,
-
-      databaseSchema = executionSettings$resultsDatabaseSchema, camelCaseToSnakeCase = TRUE, dropTableIfExists = FALSE,
-      createTable = FALSE, tempTable = FALSE)
+                                   databaseSchema = executionSettings$resultsDatabaseSchema,
+                                   camelCaseToSnakeCase = TRUE,
+                                   dropTableIfExists = FALSE,
+                                   createTable = FALSE,
+                                   tempTable = FALSE)
 
   })
   executionSettings$cohortsGenerated <- TRUE

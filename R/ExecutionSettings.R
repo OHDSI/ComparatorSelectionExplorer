@@ -69,19 +69,28 @@ createExecutionSettings <- function(connectionDetails,
                                     connection = NULL,
                                     databaseName = NULL,
                                     databaseId = NULL,
-
-  cdmDatabaseSchema, vocabularyDatabaseSchema = cdmDatabaseSchema, incrementalFolder = paste0("incremental_",
-    cdmDatabaseSchema), resultsDatabaseSchema, cohortDatabaseSchema = resultsDatabaseSchema, cohortTable = "cse_cohort",
-  tempEmulationSchema = getOption("tempEmulationSchema"), cohortDefinitionSet = NULL, indicationCohortSubsetDefintions = list(),
-  targetCohortIds = NULL, cohortCountTable = "cse_cohort_count", cohortDefinitionTable = "cse_cohort_definition",
-  covariateDefTable = "cse_covariate_ref", covariateMeansTable = "cse_covariate_means", cosineSimStratifiedTable = "cse_cosine_sim",
-  minExposureSize = 1000, useBulkCohorts = TRUE, logFileLocation = paste0("cse-execution-log-",
-                                                                          cdmDatabaseSchema,
-
-    ".txt"), exportDir = tempfile(), removeExportDir = TRUE, generateCohortDefinitionSet = FALSE,
-  exportZipFile = file.path(normalizePath(getwd()),
-                            paste0("cse_results_", cdmDatabaseSchema, ".zip"))) {
-
+                                    cdmDatabaseSchema,
+                                    vocabularyDatabaseSchema = cdmDatabaseSchema,
+                                    incrementalFolder = paste0("incremental_",cdmDatabaseSchema),
+                                    resultsDatabaseSchema,
+                                    cohortDatabaseSchema = resultsDatabaseSchema,
+                                    cohortTable = "cse_cohort",
+                                    tempEmulationSchema = getOption("tempEmulationSchema"),
+                                    cohortDefinitionSet = NULL,
+                                    indicationCohortSubsetDefintions = list(),
+                                    targetCohortIds = NULL,
+                                    cohortCountTable = "cse_cohort_count",
+                                    cohortDefinitionTable = "cse_cohort_definition",
+                                    covariateDefTable = "cse_covariate_ref",
+                                    covariateMeansTable = "cse_covariate_means",
+                                    cosineSimStratifiedTable = "cse_cosine_sim",
+                                    minExposureSize = 1000,
+                                    useBulkCohorts = TRUE,
+                                    logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
+                                    exportDir = tempfile(),
+                                    removeExportDir = TRUE,
+                                    generateCohortDefinitionSet = FALSE,
+                                    exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip"))) {
   checkmate::assertClass(connectionDetails, "ConnectionDetails")
 
   if (inherits(indicationCohortSubsetDefintions, "CohortSubsetDefinition")) {
@@ -100,20 +109,33 @@ createExecutionSettings <- function(connectionDetails,
 
   executionSettings <- list(connectionDetails = connectionDetails,
                             cdmDatabaseSchema = cdmDatabaseSchema,
-
-    databaseName = databaseName, vocabularyDatabaseSchema = vocabularyDatabaseSchema, resultsDatabaseSchema = resultsDatabaseSchema,
-    cohortDatabaseSchema = cohortDatabaseSchema, tempEmulationSchema = tempEmulationSchema, exportZipFile = exportZipFile,
-    incrementalFolder = incrementalFolder, logFileLocation = logFileLocation, cohortTableNames = CohortGenerator::getCohortTableNames(cohortTable),
-    cohortCountTable = cohortCountTable, cohortDefinitionTable = cohortDefinitionTable, covariateDefTable = covariateDefTable,
-    covariateMeansTable = covariateMeansTable, cosineSimStratifiedTable = cosineSimStratifiedTable,
-    minExposureSize = minExposureSize, exportDir = exportDir, removeExportDir = removeExportDir,
-    cohortDefinitionSet = cohortDefinitionSet, targetCohortIds = targetCohortIds, indicationCohortSubsetDefintions = indicationCohortSubsetDefintions,
-    generateCohortDefinitionSet = generateCohortDefinitionSet, connection = connection, useBulkCohorts = useBulkCohorts)
+                            databaseName = databaseName,
+                            vocabularyDatabaseSchema = vocabularyDatabaseSchema,
+                            resultsDatabaseSchema = resultsDatabaseSchema,
+                            cohortDatabaseSchema = cohortDatabaseSchema,
+                            tempEmulationSchema = tempEmulationSchema,
+                            exportZipFile = exportZipFile,
+                            incrementalFolder = incrementalFolder,
+                            logFileLocation = logFileLocation,
+                            cohortTableNames = CohortGenerator::getCohortTableNames(cohortTable),
+                            cohortCountTable = cohortCountTable,
+                            cohortDefinitionTable = cohortDefinitionTable, covariateDefTable = covariateDefTable,
+                            covariateMeansTable = covariateMeansTable,
+                            cosineSimStratifiedTable = cosineSimStratifiedTable,
+                            minExposureSize = minExposureSize,
+                            exportDir = exportDir,
+                            removeExportDir = removeExportDir,
+                            cohortDefinitionSet = cohortDefinitionSet,
+                            targetCohortIds = targetCohortIds,
+                            indicationCohortSubsetDefintions = indicationCohortSubsetDefintions,
+                            generateCohortDefinitionSet = generateCohortDefinitionSet,
+                            connection = connection,
+                            useBulkCohorts = useBulkCohorts)
   class(executionSettings) <- "executionSettings"
 
   attr(executionSettings,
        ".execStatus") <- list(cohortReferencesCreated = FALSE, cohortsCreated = FALSE,
-    simialrityScores = FALSE)
+                              simialrityScores = FALSE)
 
   if (!is.null(logFileLocation)) {
     ParallelLogger::clearLoggers()
@@ -136,7 +158,8 @@ createExecutionSettings <- function(connectionDetails,
                                                              CDM_RELEASE_DATE
                                                          FROM @cdm_database_schema.cdm_source;
                                                          ",
-      cdm_database_schema = executionSettings$cdmDatabaseSchema, snakeCaseToCamelCase = TRUE)
+                                                         cdm_database_schema = executionSettings$cdmDatabaseSchema,
+                                                         snakeCaseToCamelCase = TRUE)
 
     executionSettings$databaseId <- abs(digest::digest2int(paste(fields, collapse = ""),
                                                            seed = 999))
@@ -145,8 +168,8 @@ createExecutionSettings <- function(connectionDetails,
   if (is.null(executionSettings$databaseName)) {
     fields <- DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
                                                          "SELECT CDM_SOURCE_NAME FROM @cdm_database_schema.cdm_source;",
-
-      cdm_database_schema = executionSettings$cdmDatabaseSchema, snakeCaseToCamelCase = TRUE)
+                                                         cdm_database_schema = executionSettings$cdmDatabaseSchema,
+                                                         snakeCaseToCamelCase = TRUE)
     executionSettings$databaseName <- fields$cdmSourceName
   }
 
