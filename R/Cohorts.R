@@ -84,8 +84,8 @@ createCohorts <- function(executionSettings = NULL, ...) {
 
   CohortGenerator::createCohortTables(connection = executionSettings$connection,
                                       cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-
-    cohortTableNames = executionSettings$cohortTableNames, incremental = TRUE)
+                                      cohortTableNames = executionSettings$cohortTableNames,
+                                      incremental = TRUE)
 
   CohortGenerator::generateCohortSet(connection = executionSettings$connection,
                                      cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
