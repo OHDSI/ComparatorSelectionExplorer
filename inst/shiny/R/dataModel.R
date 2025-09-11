@@ -223,7 +223,7 @@ getPairwiseCovariateData <- function(qns, databaseId, cohortDefinitionId1, cohor
 
 getCohortSimilarityScores <- function(qns, targetCohortId, weights){
   checkmate::assertClass(qns, "QueryNamespace")
-  #checkmate::assertNumber(targetCohortId)
+  checkmate::assertNumber(targetCohortId)
 
   demographicsWeight <- weights["Demographics"]
   historyWeight <- weights["Medical history"]

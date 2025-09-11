@@ -131,8 +131,7 @@ shinydashboard::dashboardPage(
   shinydashboard::dashboardHeader(title = "Comparator Selection Explorer"),
   shinydashboard::dashboardSidebar(menu, collapsed = TRUE),
   shinydashboard::dashboardBody(
-    #Test
-    useShinyjs(),#Test
+    useShinyjs(),
     bodyTabs
   ),
   title = "Comparator Selection Explorer",
