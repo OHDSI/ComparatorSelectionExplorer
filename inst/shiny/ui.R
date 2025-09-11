@@ -1,4 +1,5 @@
 library(shiny)
+library(shinyjs)
 
 menu <- shinydashboard::sidebarMenu(
   shinydashboard::menuItem(text = "Recommend Comparators",
@@ -79,6 +80,24 @@ bodyTabs <- shinydashboard::tabItems(
               choices = c("Average similarity score", "Average source-specific rank"),
               selected = "Average similarity score"
             ),
+            #
+            checkboxInput("useWeights", "Use Custom Weights", value = FALSE),
+
+            conditionalPanel(
+              condition = "input.useWeights == true",
+              strong("Adjust Domain Weights"),
+              inputPanel(
+                sliderInput("userWeightDemo", "Demographics", min = 0.0, max = 100, value = 20, step = 1),
+                sliderInput("userWeightPres", "Presentation", min = 0.0, max = 100, value = 20, step = 1),
+                sliderInput("userWeightHist", "Medical History", min = 0.0, max = 100, value = 20, step = 1),
+                sliderInput("userWeightMeds", "Prior Meds", min = 0.0, max = 100, value = 20, step = 1),
+                sliderInput("userWeightVisit", "Visit Context", min = 0.0, max = 100, value = 20, step = 1)
+                ),
+              tableOutput("weightSummary")
+
+            )
+
+            #
           )
         ),
 
@@ -112,6 +131,7 @@ shinydashboard::dashboardPage(
   shinydashboard::dashboardHeader(title = "Comparator Selection Explorer"),
   shinydashboard::dashboardSidebar(menu, collapsed = TRUE),
   shinydashboard::dashboardBody(
+    useShinyjs(),
     bodyTabs
   ),
   title = "Comparator Selection Explorer",
