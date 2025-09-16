@@ -1,4 +1,5 @@
 ^renv$
+^sql$
 ^renv\.lock$
 ^.*\.Rproj$
 ^\.Rproj\.user$

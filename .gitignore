@@ -3,8 +3,10 @@
 .RData
 .Ruserdata
 .idea/
-sql/
+sql
 /renv/
 /tests/testthat/errorReportSql.txt
 /.Rprofile
 inst/shiny/rsconnect/
+errorReportSql.txt
+postgresql-*.jar
