@@ -1,15 +1,10 @@
-covariateUi <- function(id = "") {
-  if (id == "") {
-    ns <- function(x) { x }
-  } else {
-    ns <- shiny::NS(id)
-  }
+covariateUi <- function(ns) {
   shiny::tagList(
-    h3(strong("Visualizations")),
+    shiny::tags$h3(strong("Visualizations")),
     shiny::fluidRow(
       shiny::column(
         width = 6,
-        h6(em("Covariate prevalence")),
+        shiny::tags$h6(em("Covariate prevalence")),
         shinycssloaders::withSpinner(
           plotly::plotlyOutput(
             outputId = ns("scatterPlot")
@@ -18,7 +13,7 @@ covariateUi <- function(id = "") {
       ),
       shiny::column(
         width = 6,
-        h6(em("Standardized mean differences")),
+        shiny::tags$h6(em("Standardized mean differences")),
         shinycssloaders::withSpinner(
           plotly::plotlyOutput(
             outputId = ns("smdPlot")
@@ -27,7 +22,7 @@ covariateUi <- function(id = "") {
       )
     ),
     # display table
-    h3(strong("Covariate Tables")),
+    shiny::tags$h3(strong("Covariate Tables")),
     tabsetPanel(
       tabPanel(
         title = "Demographics",
@@ -89,8 +84,8 @@ createCovariateReactable <- function(tableData, targetName, comparatorName, fmtS
     data = tableData,
     columns = list(
       "covariateShortName" = reactable::colDef(name = "Covariate", align = "right", vAlign = "bottom"),
-      "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
-      "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+      "mean1" = reactable::colDef(name = targetName, cell = function(value) { ifelse(value >= 0.01, scales::percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
+      "mean2" = reactable::colDef(name = comparatorName, cell = function(value) { ifelse(value >= 0.01, scales::percent(value, accuracy = 0.1), "<1%") }, align = "center", vAlign = "bottom"),
       "stdDiff" = reactable::colDef(
         name = "Std. Diff.",
 
@@ -137,13 +132,13 @@ renderCovariateReactable <- function(covariateType,
   targetName <- paste0(
     cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedExposure()],
     " (n = ",
-    prettyNum(first(covData$n1), big.mark = ","),
+    prettyNum(dplyr::first(covData$n1), big.mark = ","),
     ")")
 
   comparatorName <- paste0(
     cohortDefinitions$shortName[cohortDefinitions$cohortDefinitionId == selectedComparator()],
     " (n = ",
-    prettyNum(first(covData$n2), big.mark = ","),
+    prettyNum(dplyr::first(covData$n2), big.mark = ","),
     ")")
 
   # subset data and select relevant columns
@@ -164,7 +159,7 @@ renderCovariateReactable <- function(covariateType,
 
 }
 
-exclusionCovariateUi <- function() {
+exclusionCovariateUi <- function(ns) {
   shiny::basicPage(
     tags$style(HTML("
     .inline-inputs .form-group {
@@ -180,14 +175,14 @@ exclusionCovariateUi <- function() {
           To identify a list candidate covariates for exclusion, select prevalence thresholds below"),
     div(class = "inline-inputs",
         shiny::tags$span("Show covariates with prevalance greater than"),
-        shiny::numericInput("prevInputHighMax",
+        shiny::numericInput(ns("prevInputHighMax"),
                             label = "",
                             value = 95,
                             step = 1,
                             min = 0.0,
                             max = 100.0),
         shiny::tags$span("% and less than"),
-        shiny::numericInput("prevInputHighMin",
+        shiny::numericInput(ns("prevInputHighMin"),
                             label = "",
                             value = 80,
                             step = 1,
@@ -196,14 +191,14 @@ exclusionCovariateUi <- function() {
         shiny::tags$span("% in one target/comparator"),
         shiny::br(),
         shiny::tags$span("As well as covariates with prevalanc greater than"),
-        shiny::numericInput("prevInputLowMax",
+        shiny::numericInput(ns("prevInputLowMax"),
                             label = "",
                             value = 20,
                             step = 1,
                             min = 0.0,
                             max = 100.0),
         shiny::tags$span("% and less than"),
-        shiny::numericInput("prevInputLowMin",
+        shiny::numericInput(ns("prevInputLowMin"),
                             label = "",
                             value = 5,
                             step = 1,
@@ -211,7 +206,7 @@ exclusionCovariateUi <- function() {
                             max = 100.0),
         shiny::tags$span("% in one target/comparator")
     ),
-    shinycssloaders::withSpinner(reactable::reactableOutput("covTableCoOccurrence")),
+    shinycssloaders::withSpinner(reactable::reactableOutput(ns("covTableCoOccurrence"))),
     shiny::div(
       style = "text-align:right;",
       withTooltip(shiny::tags$button("Download",
@@ -224,15 +219,18 @@ exclusionCovariateUi <- function() {
 
 
 comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
+  ns <- shiny::NS(id)
 
   menu <- shinydashboard::sidebarMenu(
-    shinydashboard::menuItem(text = "Recommend Comparators",
-                             tabName = "comparators",
-                             icon = shiny::icon("table")
+    shinydashboard::menuItem(
+      text = "Recommend Comparators",
+      tabName = "comparators",
+      icon = shiny::icon("table")
     ),
-    shinydashboard::menuItem(text = "About",
-                             tabName = "about",
-                             icon = shiny::icon("table")
+    shinydashboard::menuItem(
+      text = "About",
+      tabName = "about",
+      icon = shiny::icon("table")
     )
   )
 
@@ -242,14 +240,14 @@ comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
       shiny::fluidPage(
         shinydashboard::box(
           width = 12,
-          h3("Description"),
-          htmlTemplate("about.html"),
-          h3("Currently Available Data Sources"),
+          shiny::tags$h3("Description"),
+          shiny::htmlTemplate(system.file("shiny", "about.html", package = "ComparatorSelectionExplorer")),
+          shiny::tags$h3("Currently Available Data Sources"),
           shinycssloaders::withSpinner(
-            reactable::reactableOutput("dataSources")
+            reactable::reactableOutput(ns("dataSources"))
           ),
-          h3("License"),
-          htmlTemplate("license.html"),
+          shiny::tags$h3("License"),
+          shiny::htmlTemplate(system.file("shiny", "license.html", package = "ComparatorSelectionExplorer"))
         )
       )
     ),
@@ -263,34 +261,35 @@ comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
         shinydashboard::box(
           title = "Target Selection Settings",
           width = 12,
-          fluidRow(
-            column(
+          shiny::fluidRow(
+            shiny::column(
               width = 6,
-              selectizeInput(
-                inputId = "selectedExposure",
+              shiny::selectizeInput(
+                inputId = ns("selectedExposure"),
                 choices = NULL,
                 width = "100%",
-                label = "Select target exposure:"),
-              selectInput(
-                inputId = "selectedComparatorTypes",
+                label = "Select target exposure:"
+              ),
+              shiny::selectInput(
+                inputId = ns("selectedComparatorTypes"),
                 label = "Select comparator types:",
                 width = "100%",
                 choices = c("RxNorm Ingredients", "ATC Classes"),
                 selected = "RxNorm Ingredients",
                 multiple = TRUE
               ),
-              selectInput(
-                inputId = "selectedDatabases",
+              shiny::selectInput(
+                inputId = ns("selectedDatabases"),
                 label = "Select data sources:",
                 choices = NULL,
                 selected = NULL,
                 multiple = TRUE
               )
             ),
-            column(
+            shiny::column(
               width = 6,
-              sliderInput(
-                inputId = "minNumDatabases",
+              shiny::sliderInput(
+                inputId = ns("minNumDatabases"),
                 label = "Minimum data sources with comparator presence:",
                 min = 1,
                 max = 10,
@@ -298,35 +297,51 @@ comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
                 step = 1,
                 ticks = FALSE
               ),
-              radioButtons(
-                inputId = "avgOn",
+              shiny::radioButtons(
+                inputId = ns("avgOn"),
                 label = "Rank comparators on:",
                 choices = c("Average similarity score", "Average source-specific rank"),
                 selected = "Average similarity score"
               ),
+              shiny::checkboxInput(ns("useWeights"), "Use Custom Weights", value = FALSE),
+
+              shiny::conditionalPanel(
+                ns = ns,
+                condition = "input.useWeights",
+                shiny::strong("Adjust Domain Weights"),
+                shiny::inputPanel(
+                  shiny::sliderInput(ns("userWeightDemo"), "Demographics", min = 0.0, max = 100, value = 20, step = 1),
+                  shiny::sliderInput(ns("userWeightPres"), "Presentation", min = 0.0, max = 100, value = 20, step = 1),
+                  shiny::sliderInput(ns("userWeightHist"), "Medical History", min = 0.0, max = 100, value = 20, step = 1),
+                  shiny::sliderInput(ns("userWeightMeds"), "Prior Meds", min = 0.0, max = 100, value = 20, step = 1),
+                  shiny::sliderInput(ns("userWeightVisit"), "Visit Context", min = 0.0, max = 100, value = 20, step = 1)
+                ),
+                shiny::tableOutput(ns("weightSummary"))
+              )
             )
           ),
-
-          fluidRow(
-            column(
+          shiny::fluidRow(
+            shiny::column(
               width = 3,
-              shiny::actionButton(inputId = "getResults", "Suggest Comparators")
+              shiny::actionButton(inputId = ns("getResults"), "Suggest Comparators")
             ),
-            column(
+            shiny::column(
               width = 9,
-              conditionalPanel(
-                "input.selectedExposure != ''",
-                shiny::actionButton(inputId = "showRankings", "Show rank plot"),
+              shiny::conditionalPanel(
+                ns = ns,
+                condition = "input.selectedExposure",
+                shiny::actionButton(inputId = ns("showRankings"), "Show rank plot")
               )
             )
           )
         ),
         shiny::conditionalPanel(
+          ns = ns,
           condition = "input.getResults > 0",
           shinydashboard::box(
             width = 12,
             title = "Comparator listing",
-            shinycssloaders::withSpinner(reactable::reactableOutput("multiDatabaseSimTable"))
+            shinycssloaders::withSpinner(reactable::reactableOutput(ns("multiDatabaseSimTable")))
           )
         )
       )
@@ -337,10 +352,10 @@ comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
     shinydashboard::dashboardHeader(title = "Comparator Selection Explorer"),
     shinydashboard::dashboardSidebar(menu, collapsed = TRUE),
     shinydashboard::dashboardBody(
+      shinyjs::useShinyjs(),
       bodyTabs
     ),
     title = "Comparator Selection Explorer",
     skin = "black"
   )
-
 }

@@ -15,7 +15,7 @@ createExecutionSettings(
   resultsDatabaseSchema,
   cohortDatabaseSchema = resultsDatabaseSchema,
   cohortTable = "cse_cohort",
-  tempEmulationSchema = getOption("tempEmulationSchema"),
+  tempEmulationSchema = getOption("sqlRenderTempEmulationSchema"),
   cohortDefinitionSet = NULL,
   indicationCohortSubsetDefintions = list(),
   targetCohortIds = NULL,
