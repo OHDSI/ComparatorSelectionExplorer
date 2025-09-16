@@ -4,12 +4,15 @@
 \alias{getCohortSimilarityScores}
 \title{Get Cohort Similarity Scores}
 \usage{
-getCohortSimilarityScores(qns, targetCohortId)
+getCohortSimilarityScores(qns, targetCohortId, weights = NULL)
 }
 \arguments{
 \item{qns}{A QueryNamespace object.}
 
 \item{targetCohortId}{Integer or character. The target cohort definition ID.}
+
+\item{weights}{optional named vector of numeric weights Demographics, "Medical history" "Presentation" "prior meds" "visit context"
+with numeric values to adjust}
 }
 \value{
 A data.frame with similarity scores.

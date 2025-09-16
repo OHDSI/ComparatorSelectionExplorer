@@ -8,9 +8,8 @@ createResultsQueryNamespace(
   connectionDetails,
   resultsSchema,
   tablePrefix = "",
-  dataModelSpecPath =
-    ResultModelManager::loadResultsDataModelSpecifications(system.file("settings",
-    "resultsDataModel.csv", package = utils::packageName())),
+  dataModelSpecPath = system.file("settings", "resultsDataModel.csv", package =
+    "ComparatorSelectionExplorer"),
   usePooledConnection = FALSE
 )
 }

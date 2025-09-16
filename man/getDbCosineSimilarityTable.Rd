@@ -9,7 +9,9 @@ getDbCosineSimilarityTable(
   targetCohortId,
   comparatorCohortId,
   databaseId,
-  returnReactable = FALSE
+  weights = NULL,
+  returnReactable = FALSE,
+  fmtSim = "\%.3f"
 )
 }
 \arguments{
@@ -21,7 +23,11 @@ getDbCosineSimilarityTable(
 
 \item{databaseId}{Character or integer. The database ID.}
 
+\item{weights}{a set of numeric weights > 0 to scale each covariate domain in the cosine similarity calculation (optional)}
+
 \item{returnReactable}{Logical. If TRUE, returns a Reactable table; otherwise returns a data.frame.}
+
+\item{fmtSim}{number of signficant figures to format float output}
 }
 \value{
 A Reactable table or data.frame of cosine similarity values.
