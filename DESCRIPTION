@@ -21,7 +21,6 @@ Imports:
   DatabaseConnector (>= 6.0.0),
   ParallelLogger,
   ResultModelManager (>= 0.4.0),
-  CohortGenerator (>= 1.0.0),
   checkmate,
   SqlRender (>= 1.9.0),
   readr,
@@ -38,10 +37,6 @@ Suggests:
   Eunomia,
   testthat (>= 3.0.0),
   knitr
-Remotes:
-  ohdsi/ResultModelManager,
-  ohdsi/CohortGenerator@cohort_templates,
-  ohdsi/Eunomia
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
 Copyright: See file COPYRIGHTS
 Config/testthat/edition: 3
