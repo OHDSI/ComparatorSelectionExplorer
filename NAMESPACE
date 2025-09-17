@@ -3,6 +3,7 @@
 export(createExecutionSettings)
 export(createResultsDataModel)
 export(createResultsQueryNamespace)
+export(createShinyApp)
 export(execute)
 export(exportResults)
 export(generateSimilarityScores)

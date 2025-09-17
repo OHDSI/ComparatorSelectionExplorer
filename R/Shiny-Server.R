@@ -826,7 +826,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
 }
 
 #' Launch the Comparator Selection Shiny App
-#'
+#' @description
 #' Launches the full Shiny application for comparator selection, using the modular UI and server functions.
 #'
 #' @param connectionDetails DatabaseConnector connection details object.
@@ -837,9 +837,9 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
 #' @export
 #' @examples
 #' \dontrun{
-#' launchShinyApp(connectionDetails, "results_schema", tablePrefix = "myPrefix_")
+#' createShinyApp(connectionDetails, "results_schema", tablePrefix = "myPrefix_")
 #' }
-launchShinyApp <- function(connectionDetails, resultsSchema, tablePrefix, ...) {
+createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix, ...) {
 
   qns <- createResultsQueryNamespace(connectionDetails = connectionDetails, resultsSchema = resultsSchema, tablePrefix = tablePrefix, usePooledConnection = TRUE, ...)
   ui <- shiny::fluidPage(
@@ -851,5 +851,23 @@ launchShinyApp <- function(connectionDetails, resultsSchema, tablePrefix, ...) {
   }
 
   app <- shiny::shinyApp(ui = ui, server = server)
+
+  return(invisible(app))
+}
+
+
+#' Launch the Comparator Selection Shiny App
+#'
+#' Launches the full Shiny application for comparator selection, using the modular UI and server functions.
+#'
+#' @inheritParams createShinyApp
+#' @return A Shiny app object (invisibly; called for its side effect of launching the app).
+#' @export
+#' @examples
+#' \dontrun{
+#' launchShinyApp(connectionDetails, "results_schema", tablePrefix = "myPrefix_")
+#' }
+launchShinyApp <- function(connectionDetails, resultsSchema, tablePrefix, ...) {
+  app <- createShinyApp(connectionDetails, resultsSchema, tablePrefix, ...)
   shiny::runApp(app)
 }
