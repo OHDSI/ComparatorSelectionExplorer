@@ -125,17 +125,18 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
       }, message = "Loading cohort definitions")
     })
 
+    getTargetClassSelection <- shiny::reactive({
+      atcSelection <- as.integer(input$selectedComparatorTypes)
+      if (length(atcSelection) == 0) {
+        atcSelection <- c(0, 1)
+      }
+      return(atcSelection)
+    })
+
     shiny::observe({
       shiny::withProgress({
-        if (length(input$selectedComparatorTypes) == 0) {
-          atcSelection <- c(0, 1)
-        } else if (input$selectedComparatorTypes == "RxNorm Ingredients") {
-          atcSelection <- c(0)
-        } else if (input$selectedComparatorTypes == "ATC Classes") {
-          atcSelection <- c(1)
-        }
 
-        cohortDefinitions <- dplyr::filter(cohortTable(), isAtc %in% atcSelection)
+        cohortDefinitions <- dplyr::filter(cohortTable(), .data$isAtc %in% getTargetClassSelection())
 
         if (nrow(cohortDefinitions)) {
           exposureSelection <- cohortDefinitions$cohortDefinitionId
@@ -154,9 +155,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
       shiny::validate(shiny::need(input$selectedExposure, "must select exposure"))
 
       shiny::withProgress({
-        if (length(input$selectedComparatorTypes) == 2L) { atcSelection <- c(0, 1) }
-        else if (input$selectedComparatorTypes == "RxNorm Ingredients") { atcSelection <- c(0) }
-        else if (input$selectedComparatorTypes == "ATC Classes") { atcSelection <- c(1) }
+        atcSelection <- getTargetClassSelection()
         resultsData <- getDatabaseSimilarityScores(qns,
                                                    targetCohortId = targetCohortId,
                                                    databaseIds = input$selectedDatabases)
@@ -172,10 +171,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
       weights <- shiny::isolate(domainWeights())
 
       shiny::withProgress({
-        if (length(input$selectedComparatorTypes) == 0) { atcSelection <- c(0, 1) }
-        else if (input$selectedComparatorTypes == "RxNorm Ingredients") { atcSelection <- c(0) }
-        else if (input$selectedComparatorTypes == "ATC Classes") { atcSelection <- c(1) }
-
+        atcSelection <- getTargetClassSelection()
         resultsData <- getCohortSimilarityScores(qns, targetCohortId, weights)
       }, message = "Loading similarity scores", value = 0.5)
 

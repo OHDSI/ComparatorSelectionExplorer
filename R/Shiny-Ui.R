@@ -160,6 +160,7 @@ renderCovariateReactable <- function(covariateType,
 }
 
 exclusionCovariateUi <- function(ns) {
+
   shiny::basicPage(
     tags$style(HTML("
     .inline-inputs .form-group {
@@ -220,6 +221,8 @@ exclusionCovariateUi <- function(ns) {
 
 comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
   ns <- shiny::NS(id)
+  atcSelections <- c(0, 1)
+  names(atcSelections)  <- c("RxNorm Ingredients", "ATC Classes")
 
   menu <- shinydashboard::sidebarMenu(
     shinydashboard::menuItem(
@@ -274,8 +277,8 @@ comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
                 inputId = ns("selectedComparatorTypes"),
                 label = "Select comparator types:",
                 width = "100%",
-                choices = c("RxNorm Ingredients", "ATC Classes"),
-                selected = "RxNorm Ingredients",
+                choices = atcSelections,
+                selected = 0,
                 multiple = TRUE
               ),
               shiny::selectInput(
