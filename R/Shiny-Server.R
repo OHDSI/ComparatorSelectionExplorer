@@ -183,8 +183,8 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
       if (targetId == "")
         return("")
 
-      dbName <- dplyr::filter(databaseSources(), databaseId == selectedDatabase()) |>
-        dplyr::select(cdmSourceAbbreviation) |>
+      dbName <- dplyr::filter(databaseSources(), .data$databaseId == selectedDatabase()) |>
+        dplyr::select("cdmSourceAbbreviation") |>
         dplyr::pull()
 
       cohortDefinitions <- getCohortDefinitionsWithDbCounts()
@@ -218,21 +218,21 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
 
     getAllDbSimFiltered <- shiny::reactive({
       getSimilarityAllDatabases() |>
-        dplyr::filter(databaseId %in% input$selectedDatabases) |>
-        dplyr::arrange(databaseId, cdmSourceAbbreviation, dplyr::desc(cosineSimilarity)) |>
-        dplyr::group_by(databaseId, cdmSourceAbbreviation, .add = FALSE) |>
+        dplyr::filter(.data$databaseId %in% input$selectedDatabases) |>
+        dplyr::arrange(.data$databaseId, .data$cdmSourceAbbreviation, dplyr::desc(.data$cosineSimilarity)) |>
+        dplyr::group_by(.data$databaseId, .data$cdmSourceAbbreviation, .add = FALSE) |>
         dplyr::mutate(
           cdmSpecificRank = dplyr::row_number(),
-          comparatorsInCdm = dplyr::n_distinct(cohortDefinitionId2)
+          comparatorsInCdm = dplyr::n_distinct(.data$cohortDefinitionId2)
         ) |>
         dplyr::ungroup() |>
         dplyr::mutate(
           cdmSpecificRankStr = paste(
-            prettyNum(cdmSpecificRank, big.mark = ","),
+            prettyNum(.data$cdmSpecificRank, big.mark = ","),
             "of",
-            prettyNum(comparatorsInCdm, big.mark = ","))
+            prettyNum(.data$comparatorsInCdm, big.mark = ","))
         ) |>
-        dplyr::group_by(cohortDefinitionId2) |>
+        dplyr::group_by(.data$cohortDefinitionId2) |>
         dplyr::filter(dplyr::n() >= input$minNumDatabases) |>
         dplyr::ungroup()
     })
@@ -242,33 +242,33 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
 
       resSum <- resAll |>
         dplyr::ungroup() |>
-        dplyr::group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) |>
+        dplyr::group_by(.data$cohortDefinitionId2, .data$shortName, .data$isAtc2, .data$atc3Related, .data$atc4Related) |>
         dplyr::summarise(
           nDatabases = dplyr::n(),
-          avg = mean(ifelse(input$avgOn == "Average similarity score", cosineSimilarity, cdmSpecificRank)),
+          avg = mean(ifelse(input$avgOn == "Average similarity score", .data$cosineSimilarity, .data$cdmSpecificRank)),
           .groups = "drop") |>
-        dplyr::arrange(dplyr::desc(avg * ifelse(input$avgOn == "Average similarity score", 1, -1))) |>
+        dplyr::arrange(dplyr::desc(.data$avg * ifelse(input$avgOn == "Average similarity score", 1, -1))) |>
         dplyr::mutate(rank = dplyr::row_number())
 
       if (input$avgOn == "Average similarity score") {
         resSum <- resAll |>
           dplyr::ungroup() |>
-          dplyr::group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) |>
+          dplyr::group_by(.data$cohortDefinitionId2, .data$shortName, .data$isAtc2, .data$atc3Related, .data$atc4Related) |>
           dplyr::summarise(
             nDatabases = dplyr::n(),
-            avg = mean(cosineSimilarity),
+            avg = mean(.data$cosineSimilarity),
             .groups = "drop") |>
-          dplyr::arrange(dplyr::desc(avg)) |>
+          dplyr::arrange(dplyr::desc(.data$avg)) |>
           dplyr::mutate(rank = dplyr::row_number())
       } else if (input$avgOn == "Average source-specific rank") {
         resSum <- resAll |>
           dplyr::ungroup() |>
-          dplyr::group_by(cohortDefinitionId2, shortName, isAtc2, atc3Related, atc4Related) |>
+          dplyr::group_by(.data$cohortDefinitionId2, .data$shortName, .data$isAtc2, .data$atc3Related, .data$atc4Related) |>
           dplyr::summarise(
             nDatabases = dplyr::n(),
-            avg = mean(cdmSpecificRank),
+            avg = mean(.data$cdmSpecificRank),
             .groups = "drop") |>
-          dplyr::arrange(avg) |>
+          dplyr::arrange(.data$avg) |>
           dplyr::mutate(rank = dplyr::row_number())
       }
 
@@ -288,7 +288,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
         )
 
         rt <- reactable::reactable(
-          data = dplyr::select(resSum, isAtc2, shortName, rank, avg, nDatabases, atc3Related, atc4Related, cohortDefinitionId2),
+          data = dplyr::select("resSum", "isAtc2", "shortName", "rank", "avg", "nDatabases", "atc3Related", "atc4Related", "cohortDefinitionId2"),
           details = function(index) {
             cohortId <- resSum$cohortDefinitionId2[index]
             detailData <- resAll[resAll$shortName == resSum$shortName[index], c("databaseId", "cdmSourceAbbreviation", "numPersons", "cosineSimilarity", "cdmSpecificRankStr")]
@@ -507,10 +507,10 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
 
       tableData <- covData |>
         dplyr::filter() |>
-        dplyr::arrange(dplyr::desc(abs(stdDiff))) |>
-        dplyr::mutate(covariateShortName = gsub("concept co-occurrence:", "", covariateShortName)) |>
-        dplyr::mutate(conceptId = abs(covariateId)) |>
-        dplyr::select(conceptId, cdmSourceAbbreviation, covariateShortName, mean1, mean2, stdDiff)
+        dplyr::arrange(dplyr::desc(abs(.data$stdDiff))) |>
+        dplyr::mutate(covariateShortName = gsub("concept co-occurrence:", "", .data$covariateShortName)) |>
+        dplyr::mutate(conceptId = abs(.data$covariateId)) |>
+        dplyr::select("conceptId", "cdmSourceAbbreviation", "covariateShortName", "mean1", "mean2", "stdDiff")
 
       reactable::reactable(
         data = tableData,
@@ -560,13 +560,13 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
           rank = dplyr::row_number(),
           tooltip = stringr::str_wrap(
             string = paste0(
-              shortName,
+              .data$shortName,
               " (",
-              sprintf(fmtSim, cosineSimilarity),
+              sprintf(fmtSim, .data$cosineSimilarity),
               ") #",
-              prettyNum(cdmSpecificRank, big.mark = ","),
+              prettyNum(.data$cdmSpecificRank, big.mark = ","),
               " of ",
-              prettyNum(comparatorsInCdm, big.mark = ",")),
+              prettyNum(.data$comparatorsInCdm, big.mark = ",")),
             width = 20, indent = 1, exdent = 1))
 
       plotly::plot_ly(
@@ -604,27 +604,27 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
 
       plot <- getCovData() |>
         dplyr::mutate(
-          covariateShortName = gsub("Condition in <=30d prior:", "", covariateShortName),
-          covariateShortName = gsub("Condition in >30d prior:", "", covariateShortName),
-          covariateShortName = gsub("Drug with start >30d prior:", "", covariateShortName),
-          covariateShortName = stringr::str_to_sentence(gsub("<=30d prior|Visit:", "", covariateShortName))) |>
+          covariateShortName = gsub("Condition in <=30d prior:", "", .data$covariateShortName),
+          covariateShortName = gsub("Condition in >30d prior:", "", .data$covariateShortName),
+          covariateShortName = gsub("Drug with start >30d prior:", "", .data$covariateShortName),
+          covariateShortName = stringr::str_to_sentence(gsub("<=30d prior|Visit:", "", .data$covariateShortName))) |>
         dplyr::mutate(
           type = NA,
-          type = ifelse(covariateType == "Demographics", "Demographics", type),
-          type = ifelse(covariateType == "Presentation", "Presentation", type),
-          type = ifelse(covariateType == "Medical history", "Medical History", type),
-          type = ifelse(covariateType == "prior meds", "Prior Medications", type),
-          type = ifelse(covariateType == "visit context", "Visit Context", type),
-          type = factor(type, levels = c("Demographics", "Presentation", "Medical History", "Prior Medications", "Visit Context")),
+          type = ifelse(.data$covariateType == "Demographics", "Demographics", .data$type),
+          type = ifelse(.data$covariateType == "Presentation", "Presentation", .data$type),
+          type = ifelse(.data$covariateType == "Medical history", "Medical History", .data$type),
+          type = ifelse(.data$covariateType == "prior meds", "Prior Medications", .data$type),
+          type = ifelse(.data$covariateType == "visit context", "Visit Context", .data$type),
+          type = factor(.data$type, levels = c("Demographics", "Presentation", "Medical History", "Prior Medications", "Visit Context")),
           tooltip = paste0(
             "<b>",
-            stringr::str_wrap(string = covariateShortName, width = 20, indent = 1, exdent = 1),
+            stringr::str_wrap(string = .data$covariateShortName, width = 20, indent = 1, exdent = 1),
             "</b>\n",
-            "Target: ", ifelse(mean1 < 0.01, "<1%", scales::percent(mean1, accuracy = 0.1)), "\n",
-            "Comparator: ", ifelse(mean2 < 0.01, "<1%", scales::percent(mean2, accuracy = 0.1)), "\n",
-            "Std. Diff.: ", ifelse(mean1 < 0.01 | mean2 < 0.01,
-                                   ifelse(mean1 < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, stdDiff)), paste0("(\u2264) ", sprintf(fmtSmd, stdDiff))),
-                                   sprintf(fmtSmd, stdDiff))
+            "Target: ", ifelse(.data$mean1 < 0.01, "<1%", scales::percent(.data$mean1, accuracy = 0.1)), "\n",
+            "Comparator: ", ifelse(.data$mean2 < 0.01, "<1%", scales::percent(.data$mean2, accuracy = 0.1)), "\n",
+            "Std. Diff.: ", ifelse(.data$mean1 < 0.01 | .data$mean2 < 0.01,
+                                   ifelse(.data$mean1 < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, .data$stdDiff)), paste0("(\u2264) ", sprintf(fmtSmd, .data$stdDiff))),
+                                   sprintf(fmtSmd, .data$stdDiff))
           )) |>
         plotly::plot_ly(
           type = 'scatter',
@@ -671,27 +671,27 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
 
       plot <- getCovData() |>
         dplyr::mutate(
-          covariateShortName = gsub("Condition in <=30d prior:", "", covariateShortName),
-          covariateShortName = gsub("Condition in >30d prior:", "", covariateShortName),
-          covariateShortName = gsub("Drug with start >30d prior:", "", covariateShortName),
-          covariateShortName = stringr::str_to_sentence(gsub("<=30d prior|Visit:", "", covariateShortName))) |>
+          covariateShortName = gsub("Condition in <=30d prior:", "", .data$covariateShortName),
+          covariateShortName = gsub("Condition in >30d prior:", "", .data$covariateShortName),
+          covariateShortName = gsub("Drug with start >30d prior:", "", .data$covariateShortName),
+          covariateShortName = stringr::str_to_sentence(gsub("<=30d prior|Visit:", "", .data$covariateShortName))) |>
         dplyr::mutate(
           type = NA,
-          type = ifelse(covariateType == "Demographics", "Demographics", type),
-          type = ifelse(covariateType == "Presentation", "Presentation", type),
-          type = ifelse(covariateType == "Medical history", "Medical History", type),
-          type = ifelse(covariateType == "prior meds", "Prior Medications", type),
-          type = ifelse(covariateType == "visit context", "Visit Context", type),
-          type = factor(type, levels = (c("Demographics", "Presentation", "Medical History", "Prior Medications", "Visit Context"))),
+          type = ifelse(.data$covariateType == "Demographics", "Demographics", .data$type),
+          type = ifelse(.data$covariateType == "Presentation", "Presentation", .data$type),
+          type = ifelse(.data$covariateType == "Medical history", "Medical History", .data$type),
+          type = ifelse(.data$covariateType == "prior meds", "Prior Medications", .data$type),
+          type = ifelse(.data$covariateType == "visit context", "Visit Context", .data$type),
+          type = factor(.data$type, levels = (c("Demographics", "Presentation", "Medical History", "Prior Medications", "Visit Context"))),
           tooltip = paste0(
             "<b>",
-            stringr::str_wrap(string = covariateShortName, width = 20, indent = 1, exdent = 1),
+            stringr::str_wrap(string = .data$covariateShortName, width = 20, indent = 1, exdent = 1),
             "</b>\n",
-            "Target: ", ifelse(mean1 < 0.01, "<1%", scales::percent(mean1, accuracy = 0.1)), "\n",
-            "Comparator: ", ifelse(mean2 < 0.01, "<1%", scales::percent(mean2, accuracy = 0.1)), "\n",
-            "Std. Diff.: ", ifelse(mean1 < 0.01 | mean2 < 0.01,
-                                   ifelse(mean1 < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, stdDiff)), paste0("(\u2264) ", sprintf(fmtSmd, stdDiff))),
-                                   sprintf(fmtSmd, stdDiff))
+            "Target: ", ifelse(.data$mean1 < 0.01, "<1%", scales::percent(.data$mean1, accuracy = 0.1)), "\n",
+            "Comparator: ", ifelse(.data$mean2 < 0.01, "<1%", scales::percent(.data$mean2, accuracy = 0.1)), "\n",
+            "Std. Diff.: ", ifelse(.data$mean1 < 0.01 | .data$mean2 < 0.01,
+                                   ifelse(.data$mean1 < 0.01, paste0("(\u2265) ", sprintf(fmtSmd, .data$stdDiff)), paste0("(\u2264) ", sprintf(fmtSmd, .data$stdDiff))),
+                                   sprintf(fmtSmd, .data$stdDiff))
           )) |>
         plotly::plot_ly(
           hovertemplate = "%{text}"
@@ -712,7 +712,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
 
     inBalanceString <- function(covData) {
       inBalanceCount <- covData |>
-        dplyr::filter(abs(stdDiff) < 0.1) |>
+        dplyr::filter(abs(.data$stdDiff) < 0.1) |>
         dplyr::count() |>
         dplyr::pull()
 
@@ -722,7 +722,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
     }
 
     output$covTableDemoBalance <- shiny::renderText({
-      covData <- getCovData() |> dplyr::filter(covariateType == "Demographics")
+      covData <- getCovData() |> dplyr::filter(.data$covariateType == "Demographics")
       inBalanceString(covData)
     })
 
@@ -738,7 +738,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
     })
 
     output$covTablePresBalance <- shiny::renderText({
-      covData <- getCovData() |> dplyr::filter(covariateType == "Presentation")
+      covData <- getCovData() |> dplyr::filter(.data$covariateType == "Presentation")
       inBalanceString(covData)
     })
 
@@ -753,7 +753,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
     })
 
     output$covTableMhistBalance <- shiny::renderText({
-      covData <- getCovData() |> dplyr::filter(covariateType == "Medical history")
+      covData <- getCovData() |> dplyr::filter(.data$covariateType == "Medical history")
       inBalanceString(covData)
     })
 
@@ -768,7 +768,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
     })
 
     output$covTablePmedsBalance <- shiny::renderText({
-      covData <- getCovData() |> dplyr::filter(covariateType == "prior meds")
+      covData <- getCovData() |> dplyr::filter(.data$covariateType == "prior meds")
       inBalanceString(covData)
     })
 
@@ -783,7 +783,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
     })
 
     output$covTableVisitBalance <- shiny::renderText({
-      covData <- getCovData() |> dplyr::filter(covariateType == "visit context")
+      covData <- getCovData() |> dplyr::filter(.data$covariateType == "visit context")
       inBalanceString(covData)
     })
 
@@ -828,7 +828,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
 #' @param connectionDetails DatabaseConnector connection details object.
 #' @param resultsSchema Character. Results database schema.
 #' @param tablePrefix Character. Optional table prefix for results tables. Default is "".
-#'
+#' @param ... additional parameters to pass to shiny::shinyApp
 #' @return A Shiny app object (invisibly; called for its side effect of launching the app).
 #' @export
 #' @examples
@@ -846,7 +846,7 @@ createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix, ...) {
     comparatorSelectionAppModuleServer("main", qns)
   }
 
-  app <- shiny::shinyApp(ui = ui, server = server)
+  app <- shiny::shinyApp(ui = ui, server = server, ...)
 
   return(invisible(app))
 }

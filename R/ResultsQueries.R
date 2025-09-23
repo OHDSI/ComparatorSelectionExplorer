@@ -477,14 +477,14 @@ getDbCosineSimilarityTable <- function(qns, targetCohortId, comparatorCohortId, 
   if (showWeights) {
     # Apply weights to matching domain names
     detailData <- detailData %>%
-      dplyr::filter(covariateType != "average") %>%
+      dplyr::filter(.data$covariateType != "average") %>%
       dplyr::mutate(
         weight = dplyr::case_when(
-          covariateType == "Demographics" ~ weights["Demographics"],
-          covariateType == "Presentation" ~ weights["Presentation"],
-          covariateType == "Medical history" ~ weights["Medical history"],
-          covariateType == "prior meds" ~ weights["prior meds"],
-          covariateType == "visit context" ~ weights["visit context"],
+          .data$covariateType == "Demographics" ~ weights["Demographics"],
+          .data$covariateType == "Presentation" ~ weights["Presentation"],
+          .data$covariateType == "Medical history" ~ weights["Medical history"],
+          .data$covariateType == "prior meds" ~ weights["prior meds"],
+          .data$covariateType == "visit context" ~ weights["visit context"],
           TRUE ~ 0
         )
       )
@@ -502,7 +502,7 @@ getDbCosineSimilarityTable <- function(qns, targetCohortId, comparatorCohortId, 
     )
   } else {
     detailData <- detailData %>%
-      dplyr::filter(covariateType != "average")
+      dplyr::filter(.data$covariateType != "average")
   }
 
   if (returnReactable) {

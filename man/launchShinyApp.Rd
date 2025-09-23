@@ -12,6 +12,8 @@ launchShinyApp(connectionDetails, resultsSchema, tablePrefix, ...)
 \item{resultsSchema}{Character. Results database schema.}
 
 \item{tablePrefix}{Character. Optional table prefix for results tables. Default is "".}
+
+\item{...}{additional parameters to pass to shiny::shinyApp}
 }
 \value{
 A Shiny app object (invisibly; called for its side effect of launching the app).

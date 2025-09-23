@@ -1,10 +1,12 @@
+tags <- shiny::tags
+
 covariateUi <- function(ns) {
   shiny::tagList(
-    shiny::tags$h3(strong("Visualizations")),
+    shiny::tags$h3(shiny::strong("Visualizations")),
     shiny::fluidRow(
       shiny::column(
         width = 6,
-        shiny::tags$h6(em("Covariate prevalence")),
+        shiny::tags$h6(shiny::tags$em("Covariate prevalence")),
         shinycssloaders::withSpinner(
           plotly::plotlyOutput(
             outputId = ns("scatterPlot")
@@ -13,7 +15,7 @@ covariateUi <- function(ns) {
       ),
       shiny::column(
         width = 6,
-        shiny::tags$h6(em("Standardized mean differences")),
+        shiny::tags$h6(shiny::tags$em("Standardized mean differences")),
         shinycssloaders::withSpinner(
           plotly::plotlyOutput(
             outputId = ns("smdPlot")
@@ -22,47 +24,47 @@ covariateUi <- function(ns) {
       )
     ),
     # display table
-    shiny::tags$h3(strong("Covariate Tables")),
-    tabsetPanel(
-      tabPanel(
+    shiny::tags$h3(shiny::strong("Covariate Tables")),
+    shiny::tabsetPanel(
+      shiny::tabPanel(
         title = "Demographics",
-        h4(strong("Demographics")),
-        textOutput(ns("covTableDemoBalance")),
+        shiny::tags$h4(shiny::strong("Demographics")),
+        shiny::textOutput(ns("covTableDemoBalance")),
         shinycssloaders::withSpinner(reactable::reactableOutput(ns("covTableDemo")))
       ),
-      tabPanel(
+      shiny::tabPanel(
         title = "Presentation",
-        h4(strong("Presentation")),
-        h5(em("One covariate per condition observed in 30 days prior to index")),
-        textOutput(ns("covTablePresBalance")),
+        shiny::tags$h4(shiny::strong("Presentation")),
+        shiny::tags$h5(shiny::tags$em("One covariate per condition observed in 30 days prior to index")),
+        shiny::textOutput(ns("covTablePresBalance")),
         shinycssloaders::withSpinner(reactable::reactableOutput(ns("covTablePres")))
       ),
-      tabPanel(
+      shiny::tabPanel(
         title = "Medical history",
-        h4(strong("Medical history")),
-        h5(em("One covariate per condition observed more than 30 days prior to index")),
-        textOutput(ns("covTableMhistBalance")),
+        shiny::tags$h4(shiny::strong("Medical history")),
+        shiny::tags$h5(shiny::tags$em("One covariate per condition observed more than 30 days prior to index")),
+        shiny::textOutput(ns("covTableMhistBalance")),
         shinycssloaders::withSpinner(reactable::reactableOutput(ns("covTableMhist")))
       ),
-      tabPanel(
+      shiny::tabPanel(
         title = "Prior medications",
-        h4(strong("Prior medications")),
-        h5(em("One covariate per RxNorm ingredient observed more than 30 days prior to index")),
-        textOutput(ns("covTablePmedsBalance")),
+        shiny::tags$h4(shiny::strong("Prior medications")),
+        shiny::tags$h5(shiny::tags$em("One covariate per RxNorm ingredient observed more than 30 days prior to index")),
+        shiny::textOutput(ns("covTablePmedsBalance")),
         shinycssloaders::withSpinner(reactable::reactableOutput(ns("covTablePmeds")))
       ),
-      tabPanel(
+      shiny::tabPanel(
         title = "Visit context",
-        h4(strong("Visit context")),
-        h5(em("Inpatient and emergency department visits observed in 30 days prior to index")),
-        textOutput(ns("covTableVisitBalance")),
+        shiny::tags$h4(shiny::strong("Visit context")),
+        shiny::tags$h5(shiny::tags$em("Inpatient and emergency department visits observed in 30 days prior to index")),
+        shiny::textOutput(ns("covTableVisitBalance")),
         shinycssloaders::withSpinner(reactable::reactableOutput(ns("covTableVisit")))
       ),
-      tabPanel(
+      shiny::tabPanel(
         title = "Index date",
-        h4(strong("Index date")),
-        h5(em("Variables observed on the same date as exposure index")),
-        p("Note that these covariates are not used in cacluation of similarity scores. Many will likely bias propensity
+        shiny::tags$h4(shiny::strong("Index date")),
+        shiny::tags$h5(shiny::tags$em("Variables observed on the same date as exposure index")),
+        shiny::p("Note that these covariates are not used in cacluation of similarity scores. Many will likely bias propensity
         score matching and should be excluded from models."),
         shinycssloaders::withSpinner(reactable::reactableOutput(ns("covTableIndex")))
       )
@@ -144,7 +146,7 @@ renderCovariateReactable <- function(covariateType,
   # subset data and select relevant columns
   tableData <- covData %>%
     dplyr::filter(.data$covariateType == !!covariateType) %>%
-    dplyr::arrange(desc(abs(.data$stdDiff))) %>%
+    dplyr::arrange(dplyr::desc(abs(.data$stdDiff))) %>%
     dplyr::select("covariateShortName", "mean1", "mean2", "stdDiff")
 
   if (covariateReplaceString != "") {
@@ -162,19 +164,19 @@ renderCovariateReactable <- function(covariateType,
 exclusionCovariateUi <- function(ns) {
 
   shiny::basicPage(
-    tags$style(HTML("
+    shiny::tags$style(shiny::HTML("
     .inline-inputs .form-group {
       display: inline-block;
       margin-right: 0px;
       width: 55px;
     }
   ")),
-    tags$head(tags$style(".modal-dialog{ width:95%}")),
-    h4(strong("Find exclusion covariates")),
-    p("Adjunctive procedures, drugs, conditions, or visits that frequently co-occur with the target or comparator
+    shiny::tags$head(shiny::tags$style(".modal-dialog{ width:95%}")),
+    shiny::tags$h4(shiny::strong("Find exclusion covariates")),
+    shiny::p("Adjunctive procedures, drugs, conditions, or visits that frequently co-occur with the target or comparator
           exposure may lead to propensity score model fitting issues.
           To identify a list candidate covariates for exclusion, select prevalence thresholds below"),
-    div(class = "inline-inputs",
+    shiny::div(class = "inline-inputs",
         shiny::tags$span("Show covariates with prevalance greater than"),
         shiny::numericInput(ns("prevInputHighMax"),
                             label = "",
