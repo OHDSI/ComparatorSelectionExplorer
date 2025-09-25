@@ -64,10 +64,22 @@ select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
 
 
 insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, covariate_type)
-select distinct
-	covariate_id, 'Age decile: ' || cast(right(covariate_id, 2) as int)*10 || ' - ' || (cast(right(covariate_id, 2) as int)+1)*10-1 as covariate_name,
-	'Demographics' as covariate_type
-from #cov_summary
+SELECT DISTINCT
+  covariate_id,
+  CONCAT(
+    'Age decile: ',
+    CAST(age_decile_start AS VARCHAR),
+    ' - ',
+    CAST(age_decile_end AS VARCHAR)
+  ) AS covariate_name,
+  'Demographics' AS covariate_type
+FROM (
+  SELECT
+    covariate_id,
+    CAST(RIGHT(CAST(covariate_id AS VARCHAR), 2) AS INT) * 10 AS age_decile_start,
+    (CAST(RIGHT(CAST(covariate_id AS VARCHAR), 2) AS INT) + 1) * 10 - 1 AS age_decile_end
+  FROM #cov_summary
+) sub;
 ;
 
 
@@ -100,7 +112,8 @@ select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
 
 insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, covariate_type)
 select
-	covariate_id, 'Sex: ' || c1.concept_name as covariate_name,
+	covariate_id,
+	CONCAT('Sex: ', c1.concept_name) as covariate_name,
 	'Demographics' as covariate_type
 from
 (select distinct covariate_id from #cov_summary) cs1
@@ -141,7 +154,7 @@ select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
 insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, concept_id, time_at_risk_start, time_at_risk_end, covariate_type)
 select
 	covariate_id,
-	'Condition in <=30d prior: ' || c1.concept_name as covariate_name,
+	CONCAT('Condition in <=30d prior: ' , c1.concept_name) as covariate_name,
 	covariate_id as concept_id,
 	-30 as time_at_risk_start,
 	0 as time_at_risk_end,
@@ -184,7 +197,7 @@ select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
 insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, concept_id, time_at_risk_start, time_at_risk_end, covariate_type)
 select
 	covariate_id,
-	'Condition in >30d prior: ' || c1.concept_name as covariate_name,
+	CONCAT('Condition in >30d prior: ', c1.concept_name) as covariate_name,
 	covariate_id/1000 as concept_id,
 	-999 as time_at_risk_start,
 	-30 as time_at_risk_end,
@@ -221,7 +234,9 @@ select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
 
 
 insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, concept_id, time_at_risk_start, time_at_risk_end, covariate_type)
-select covariate_id, 'Drug with start >30d prior: ' || c1.concept_name as covariate_name, covariate_id/1000 as concept_id, 0 as time_at_risk_start, 30 as time_at_risk_end, 'prior meds' as covariate_type
+select covariate_id,
+CONCAT('Drug with start >30d prior: ', c1.concept_name) as covariate_name,
+covariate_id/1000 as concept_id, 0 as time_at_risk_start, 30 as time_at_risk_end, 'prior meds' as covariate_type
 from
 (select distinct covariate_id from #cov_summary) cs1
 inner join @cdm_database_schema.concept c1
@@ -253,7 +268,9 @@ insert into @results_database_schema.@covariate_means_table (cohort_definition_i
 select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
 
 insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, covariate_type)
-select covariate_id, 'Visit: Inpatient <=30d prior' as covariate_name, 'visit context' as covariate_type
+select covariate_id,
+'Visit: Inpatient <=30d prior' as covariate_name,
+'visit context' as covariate_type
 from
 (select distinct covariate_id from #cov_summary) cs1
 inner join @cdm_database_schema.concept c1
@@ -372,7 +389,7 @@ select cohort_definition_id, covariate_id, covariate_mean from #cov_summary;
 insert into @results_database_schema.@covariate_def_table (covariate_id, covariate_name, concept_id, time_at_risk_start, time_at_risk_end, covariate_type)
 select
 	covariate_id,
-	'concept co-occurrence: ' || c1.concept_name as covariate_name,
+	CONCAT('concept co-occurrence: ', c1.concept_name) as covariate_name,
 	covariate_id/-1 as concept_id,   --normalize back to conceptId from the mask
 	0 as time_at_risk_start,
 	0 as time_at_risk_end,
