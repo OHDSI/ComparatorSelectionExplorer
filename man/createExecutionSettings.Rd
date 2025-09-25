@@ -11,13 +11,11 @@ createExecutionSettings(
   databaseId = NULL,
   cdmDatabaseSchema,
   vocabularyDatabaseSchema = cdmDatabaseSchema,
-  incrementalFolder = paste0("incremental_", cdmDatabaseSchema),
   resultsDatabaseSchema,
   cohortDatabaseSchema = resultsDatabaseSchema,
-  cohortTable = "cse_cohort",
+  cohortTable,
   tempEmulationSchema = getOption("sqlRenderTempEmulationSchema"),
   cohortDefinitionSet = NULL,
-  indicationCohortSubsetDefintions = list(),
   targetCohortIds = NULL,
   cohortCountTable = "cse_cohort_count",
   cohortDefinitionTable = "cse_cohort_definition",
@@ -25,11 +23,9 @@ createExecutionSettings(
   covariateMeansTable = "cse_covariate_means",
   cosineSimStratifiedTable = "cse_cosine_sim",
   minExposureSize = 1000,
-  useBulkCohorts = TRUE,
   logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
   exportDir = tempfile(),
   removeExportDir = TRUE,
-  generateCohortDefinitionSet = FALSE,
   exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_",
     cdmDatabaseSchema, ".zip"))
 )
@@ -48,26 +44,18 @@ persistent storage of reference}
 
 \item{vocabularyDatabaseSchema}{standard vocabulary database schema}
 
-\item{incrementalFolder}{folder for storage of incremental results for cohort
-generation}
-
 \item{resultsDatabaseSchema}{String Database schema - where similarity scores are
 stored}
 
 \item{cohortDatabaseSchema}{String Database schema - where cohort table is created}
 
-\item{cohortTable}{(optional) cohort table}
+\item{cohortTable}{cohort table for exposures}
 
 \item{tempEmulationSchema}{String DatabaseSchema - temp emulation schema for oracle,
 bigquery}
 
 \item{cohortDefinitionSet}{CohortGenerator::cohortDefinitionSet - intended to be
 custom exposures or indication cohorts}
-
-\item{indicationCohortSubsetDefintions}{List of CohortGenerator::cohortSubsetDefinitions these
-subsets will be applied to all cohorts used in this study.
-See cohortGenerator package documentation for detailed
-instructions on creating cohort subsets}
 
 \item{targetCohortIds}{(optional) Integer ids for cohorts to limit cosine
 similarity calculation to Must be a valid RxNorm
@@ -88,17 +76,12 @@ stored}
 \item{minExposureSize}{(optional) Minimum number of exposures to be included in
 cosine similarity analysis (defaults to 1000).}
 
-\item{useBulkCohorts}{Use the cohort generator bulk rxnorm/atc standard cohort
-set}
-
 \item{logFileLocation}{(optional) Log file location}
 
 \item{exportDir}{(optional) Folder to store results files in before export
 (default is tempdir)}
 
 \item{removeExportDir}{(optional) remove the export dir after creating zip files?}
-
-\item{generateCohortDefinitionSet}{Boolean - generate the user specified cohortDefinitionSet}
 
 \item{exportZipFile}{Path to zip file output of project}
 }

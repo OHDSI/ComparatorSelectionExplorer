@@ -3,15 +3,17 @@ ComparatorSelectionExplorer 1.0.0
 
 Breaking changes:
 
-1. Use of cohort_templates from the cohort template package
+1. Use of cohort_templates from the cohort generator package
 
-2. Change of API around usage of indication cohort definitions
+2. Removal of cohort generation within this package to simplify execution
+
+3. Changes to results data model to reflect dependency on cohort generator
 
 Changes:
 
 1. Inclusion of parameters to allow adjustment of different weights in shiny app
 
-ComparatorSelectionExplorer 0.2.0
+ComparatorSelectionExplorer 0.3.0
 =================================
 
 Changes:

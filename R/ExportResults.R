@@ -88,28 +88,24 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       min_exposure_size = executionSettings$minExposureSize,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
 
-  sql <- "
-  SELECT
-    t.cohort_definition_id,
-    t.COHORT_DEFINITION_NAME,
-    t.SHORT_NAME,
-    t.CONCEPT_ID,
-    t.ATC_FLAG,
-    t.subset_parent
-    FROM  @results_database_schema.@table t
-  INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id = ct.cohort_definition_id
-  WHERE ct.num_persons >= @min_exposure_size"
-  DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
-                                                      sql,
-                                                      fun = exportResultsFun,
-                                                      args = list(
-                                                        csvFilename = "cohort_definition.csv",
-                                                        addDbId = FALSE
-                                                      ),
-                                                      count_table = executionSettings$cohortCountTable,
-                                                      min_exposure_size = executionSettings$minExposureSize,
-                                                      table = executionSettings$cohortDefinitionTable,
-                                                      results_database_schema = executionSettings$resultsDatabaseSchema)
+  # Add tags for all rxNorm and ATC cohorts
+  templateDefinitions <- CohortGenerator::getTemplateDefinitions(executionSettings$cohortDefinitionSet)
+  purrr::walk(templateDefinitions, function(tpl) {
+    if (grepl("RxNorm", tpl$name)){
+      tagId <- "RxNorm"
+    }
+
+    if (grepl("ATC", tpl$name)) {
+      tagId <- "ATC"
+    }
+    tags <- data.frame(cohortDefinitionId = tpl$references$cohortId, tag = tagId)
+    filepath <- file.path(executionSettings$exportDir, "cse_cohort_tag.csv")
+    colnames(tags) <- tolower(SqlRender::camelCaseToSnakeCase(colnames(tags)))
+    readr::write_csv(tags,
+                     file = file.path(executionSettings$exportDir, "cse_cohort_tag.csv"),
+                     append = file.exists(filepath),
+                     na = "")
+  })
 
   sql <- SqlRender::readSql(system.file(file.path("sql", "sql_server", "GetAtcLevels.sql"),
                                         package = utils::packageName()))
@@ -121,9 +117,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                         csvFilename = "atc_level.csv",
                                                         addDbId = FALSE
                                                       ),
-                                                      table = executionSettings$cohortDefinitionTable,
-                                                      vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema,
-                                                      results_database_schema = executionSettings$resultsDatabaseSchema)
+                                                      vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema)
 
   sql <- "
   SELECT t.* FROM  @results_database_schema.@table t

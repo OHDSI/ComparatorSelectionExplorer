@@ -28,10 +28,6 @@
 #'                                           stored
 #' @param cohortDefinitionSet                CohortGenerator::cohortDefinitionSet - intended to be
 #'                                           custom exposures or indication cohorts
-#' @param indicationCohortSubsetDefintions   List of CohortGenerator::cohortSubsetDefinitions these
-#'                                           subsets will be applied to all cohorts used in this study.
-#'                                           See cohortGenerator package documentation for detailed
-#'                                           instructions on creating cohort subsets
 #' @param tempEmulationSchema                String DatabaseSchema - temp emulation schema for oracle,
 #'                                           bigquery
 #' @param exportZipFile                      Path to zip file output of project
@@ -42,12 +38,8 @@
 #'                                           ingredient, ATC class or included in the
 #'                                           cohortDefinitionSet
 #'
-#' @param incrementalFolder                  folder for storage of incremental results for cohort
-#'                                           generation
 #' @param vocabularyDatabaseSchema           standard vocabulary database schema
-#' @param cohortTable                        (optional) cohort table
-#' @param useBulkCohorts                     Use the cohort generator bulk rxnorm/atc standard cohort
-#'                                           set
+#' @param cohortTable                        cohort table for exposures
 #' @param cohortCountTable                   (optional) count tabls
 #' @param cohortDefinitionTable              (optional) definitions table
 #' @param covariateDefTable                  (optional) where covariate definitions are stored
@@ -60,7 +52,6 @@
 #' @param exportDir                          (optional) Folder to store results files in before export
 #'                                           (default is tempdir)
 #' @param removeExportDir                    (optional) remove the export dir after creating zip files?
-#' @param generateCohortDefinitionSet        Boolean - generate the user specified cohortDefinitionSet
 #' @returns
 #' executionSettings object
 #' @export
@@ -71,13 +62,11 @@ createExecutionSettings <- function(connectionDetails,
                                     databaseId = NULL,
                                     cdmDatabaseSchema,
                                     vocabularyDatabaseSchema = cdmDatabaseSchema,
-                                    incrementalFolder = paste0("incremental_",cdmDatabaseSchema),
                                     resultsDatabaseSchema,
                                     cohortDatabaseSchema = resultsDatabaseSchema,
-                                    cohortTable = "cse_cohort",
+                                    cohortTable,
                                     tempEmulationSchema = getOption("sqlRenderTempEmulationSchema"),
                                     cohortDefinitionSet = NULL,
-                                    indicationCohortSubsetDefintions = list(),
                                     targetCohortIds = NULL,
                                     cohortCountTable = "cse_cohort_count",
                                     cohortDefinitionTable = "cse_cohort_definition",
@@ -85,27 +74,15 @@ createExecutionSettings <- function(connectionDetails,
                                     covariateMeansTable = "cse_covariate_means",
                                     cosineSimStratifiedTable = "cse_cosine_sim",
                                     minExposureSize = 1000,
-                                    useBulkCohorts = TRUE,
                                     logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
                                     exportDir = tempfile(),
                                     removeExportDir = TRUE,
-                                    generateCohortDefinitionSet = FALSE,
                                     exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip"))) {
   checkmate::assertClass(connectionDetails, "ConnectionDetails")
-
-  if (inherits(indicationCohortSubsetDefintions, "CohortSubsetDefinition")) {
-    indicationCohortSubsetDefintions <- list(indicationCohortSubsetDefintions)
-  }
-
-  checkmate::assertList(indicationCohortSubsetDefintions, "CohortSubsetDefinition")
   checkmate::assertTRUE(is.null(cohortDefinitionSet) || CohortGenerator::isCohortDefinitionSet(cohortDefinitionSet))
   checkmate::assertIntegerish(databaseId, null.ok = TRUE)
   checkmate::assertString(databaseId, null.ok = TRUE)
   checkmate::assertIntegerish(targetCohortIds, null.ok = TRUE)
-
-  if (length(indicationCohortSubsetDefintions) && is.null(cohortDefinitionSet)) {
-    stop("Indication subset definitions added but no cohort definition set provided")
-  }
 
   executionSettings <- list(connectionDetails = connectionDetails,
                             cdmDatabaseSchema = cdmDatabaseSchema,
@@ -115,11 +92,11 @@ createExecutionSettings <- function(connectionDetails,
                             cohortDatabaseSchema = cohortDatabaseSchema,
                             tempEmulationSchema = tempEmulationSchema,
                             exportZipFile = exportZipFile,
-                            incrementalFolder = incrementalFolder,
                             logFileLocation = logFileLocation,
                             cohortTableNames = CohortGenerator::getCohortTableNames(cohortTable),
                             cohortCountTable = cohortCountTable,
-                            cohortDefinitionTable = cohortDefinitionTable, covariateDefTable = covariateDefTable,
+                            cohortDefinitionTable = cohortDefinitionTable,
+                            covariateDefTable = covariateDefTable,
                             covariateMeansTable = covariateMeansTable,
                             cosineSimStratifiedTable = cosineSimStratifiedTable,
                             minExposureSize = minExposureSize,
@@ -127,15 +104,11 @@ createExecutionSettings <- function(connectionDetails,
                             removeExportDir = removeExportDir,
                             cohortDefinitionSet = cohortDefinitionSet,
                             targetCohortIds = targetCohortIds,
-                            indicationCohortSubsetDefintions = indicationCohortSubsetDefintions,
-                            generateCohortDefinitionSet = generateCohortDefinitionSet,
-                            connection = connection,
-                            useBulkCohorts = useBulkCohorts)
+                            connection = connection)
   class(executionSettings) <- "executionSettings"
 
   attr(executionSettings,
-       ".execStatus") <- list(cohortReferencesCreated = FALSE, cohortsCreated = FALSE,
-                              simialrityScores = FALSE)
+       ".execStatus") <- list(cohortReferencesCreated = FALSE, cohortsCreated = FALSE, simialrityScores = FALSE)
 
   if (!is.null(logFileLocation)) {
     ParallelLogger::clearLoggers()
