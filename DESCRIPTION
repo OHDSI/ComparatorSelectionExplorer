@@ -26,11 +26,13 @@ Imports:
   readr,
   dplyr,
   digest,
-  purrr
-Suggests:
+  purrr,
+  CohortGenerator,
+  shiny,
   shiny,
   shinyjs,
   reactable,
+Suggests:
   scales,
   ggplot2,
   plotly,
@@ -43,7 +45,6 @@ Suggests:
   Eunomia,
   testthat (>= 3.0.0),
   knitr,
-  CohortGenerator,
   withr
 Remotes:
   OHDSI/CohortGenerator@develop
