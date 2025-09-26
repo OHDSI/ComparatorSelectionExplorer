@@ -56,7 +56,7 @@
 #' executionSettings object
 #' @export
 #' @importFrom digest digest2int
-createExecutionSettings <- function(connectionDetails,
+createExecutionSettings <- function(connectionDetails = NULL,
                                     connection = NULL,
                                     databaseName = NULL,
                                     databaseId = NULL,
@@ -78,7 +78,7 @@ createExecutionSettings <- function(connectionDetails,
                                     exportDir = tempfile(),
                                     removeExportDir = TRUE,
                                     exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip"))) {
-  checkmate::assertClass(connectionDetails, "ConnectionDetails")
+  checkmate::assertClass(connectionDetails, "ConnectionDetails", null.ok = TRUE)
   checkmate::assertTRUE(is.null(cohortDefinitionSet) || CohortGenerator::isCohortDefinitionSet(cohortDefinitionSet))
   checkmate::assertIntegerish(databaseId, null.ok = TRUE)
   checkmate::assertString(databaseId, null.ok = TRUE)

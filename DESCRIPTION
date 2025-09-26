@@ -46,7 +46,8 @@ Suggests:
   testthat (>= 3.0.0),
   knitr,
   withr,
-  reticulate
+  reticulate,
+  duckdb
 Remotes:
   OHDSI/CohortGenerator@develop
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues

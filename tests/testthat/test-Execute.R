@@ -30,14 +30,14 @@ test_that("Execution", {
     CohortGenerator::addCohortTemplateDefintion(cohortTemplateDefintion = rxNormDefinition) |>
     CohortGenerator::addCohortSubsetDefinition(subsetDef)
 
-  executionSettings <- createExecutionSettings(connectionDetails = connectionDetails,
+  executionSettings <- createExecutionSettings(connection = connection,
                                                cohortDefinitionSet = cohortDefinitionSet,
                                                cdmDatabaseSchema = "main",
                                                resultsDatabaseSchema = "main",
                                                cohortTable = "cse_cohort")
 
   CohortGenerator::runCohortGeneration(
-    executionSettings$connectionDetails,
+    connectionDetails = connectionDetails,
     cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
     tempEmulationSchema = executionSettings$tempEmulationSchema,
     cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
@@ -49,7 +49,6 @@ test_that("Execution", {
     incrementalFolder = tempfile()
   )
 
-
   unlink(executionSettings$exportZipFile)
 
   on.exit({
@@ -57,7 +56,7 @@ test_that("Execution", {
   })
 
   checkmate::expect_class(executionSettings, "executionSettings")
-  addFakeAtcVocab(executionSettings)
+
   execute(executionSettings)
   checkmate::expect_file_exists(executionSettings$exportZipFile)
 

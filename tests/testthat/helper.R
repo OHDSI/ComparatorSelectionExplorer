@@ -132,7 +132,7 @@ getPlatformConnectionDetails <- function(dbmsPlatform) {
 
 
 addFakeAtcVocab <- function(connection) {
-  sql <- sql <- "
+  sql <- "
   INSERT INTO concept (CONCEPT_ID, CONCEPT_NAME, DOMAIN_ID, VOCABULARY_ID, CONCEPT_CLASS_ID,
                        STANDARD_CONCEPT, CONCEPT_CODE, VALID_START_DATE, VALID_END_DATE)
   SELECT
@@ -144,6 +144,8 @@ addFakeAtcVocab <- function(connection) {
                                 max_levels_of_separation)
   SELECT 21603991 as ancestor_concept_id, 1118084 as descendant_concept_id,
          1 as min_levels_of_separation,1  as max_levels_of_separation;
+
+
   "
   DatabaseConnector::renderTranslateExecuteSql(connection, sql)
   invisible()

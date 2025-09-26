@@ -1,11 +1,3 @@
--- PARAMETERS
--- @cohort_counts: name of table where cohort sample sizes are stored
--- @cohort: name of cohort table to use for feature extraction
--- @cdm_database_schema: CDM schema referenced by @results_database_schema
--- @results_database_schema: schema where cohort table is stored
--- @covariate_def_table: name of output table where covariate defs are stored
--- @covariate_means_table: name of output table where covariate means are stored
---
 
 drop table if exists @results_database_schema.@covariate_def_table;
 
@@ -81,8 +73,6 @@ FROM (
     (CAST(RIGHT(CAST(covariate_id AS VARCHAR), 2) AS INT) + 1) * 10 - 1 AS age_decile_end
   FROM #cov_summary
 ) sub;
-;
-
 
 --demographics: sex
 drop table if exists #cov_summary;
@@ -244,7 +234,6 @@ inner join @cdm_database_schema.concept c1
 on cs1.covariate_id/1000 = c1.concept_id
 ;
 
---visit context:  IP <=30d prior
 
 drop table if exists #cov_summary;
 select scd1.cohort_definition_id,  9201 as covariate_id, 1.0*t1.num_persons/scd1.num_persons as covariate_mean
@@ -279,8 +268,6 @@ on cs1.covariate_id = c1.concept_id
 ;
 
 
-
---visit context:  ER <=30d prior
 drop table if exists #cov_summary;
 select scd1.cohort_definition_id,  9203 as covariate_id, 1.0*t1.num_persons/scd1.num_persons as covariate_mean
 INTO #cov_summary

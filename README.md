@@ -51,8 +51,21 @@ uploadResults(resultsConnectionDetails,
               tablePrefix = "")
 ```
 
-## TODO
-* Github repo and actions
-* Shiny app changes
-* Import results from a zip file
-* Properly implement custom cohorts and allow them in shiny app
+## Supported database platforms
+
+Queries have been successfully tested on most DatbaseConnector/SqlRender platforms:
+
+* bigquery
+* postgresql
+* redshift
+* spark
+* databricks
+* sql server
+* snowflake
+* duckdb
+* sqlite
+* hive
+
+Platforms not currently supported/tested:
+
+* oracle

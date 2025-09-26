@@ -16,33 +16,38 @@
 
 
 .getFeaturesSql <- function(executionSettings, dbms = DatabaseConnector::dbms(executionSettings$connection)) {
-  SqlRender::loadRenderTranslateSql("SelectiveFeatureExtraction.sql",
-                                    packageName = utils::packageName(),
-                                    dbms = dbms,
-                                    cohort_counts = executionSettings$cohortCountTable,
-                                    cohort = executionSettings$cohortTableNames$cohortTable,
-                                    cdm_database_schema = executionSettings$cdmDatabaseSchema,
-                                    results_database_schema = executionSettings$resultsDatabaseSchema,
-                                    covariate_def_table = executionSettings$covariateDefTable,
-                                    covariate_means_table = executionSettings$covariateMeansTable,
-                                    cohort_database_schema = executionSettings$cohortDatabaseSchema,
-                                    tempEmulationSchema = executionSettings$tempEmulationSchema)
+  sql <- SqlRender::loadRenderTranslateSql("SelectiveFeatureExtraction.sql",
+                                           packageName = utils::packageName(),
+                                           dbms = dbms,
+                                           cohort_counts = executionSettings$cohortCountTable,
+                                           cohort = executionSettings$cohortTableNames$cohortTable,
+                                           cdm_database_schema = executionSettings$cdmDatabaseSchema,
+                                           results_database_schema = executionSettings$resultsDatabaseSchema,
+                                           covariate_def_table = executionSettings$covariateDefTable,
+                                           covariate_means_table = executionSettings$covariateMeansTable,
+                                           cohort_database_schema = executionSettings$cohortDatabaseSchema,
+                                           tempEmulationSchema = executionSettings$tempEmulationSchema) |>
+    as.character()
+
+  return(sql)
 }
 
 
 .getCosineSimilaritySql <- function(executionSettings, dbms = DatabaseConnector::dbms(executionSettings$connection)) {
-  SqlRender::loadRenderTranslateSql("CosineSimilarity.sql",
-                                    packageName = utils::packageName(),
-                                    dbms = dbms,
-                                    cohort_definition = executionSettings$cohortDefinitionTable,
-                                    cdm_database_schema = executionSettings$cdmDatabaseSchema,
-                                    results_database_schema = executionSettings$resultsDatabaseSchema,
-                                    tempEmulationSchema = executionSettings$tempEmulationSchema,
-                                    cohort_counts = executionSettings$cohortCountsTable,
-                                    covariate_def_table = executionSettings$covariateDefTable,
-                                    covariate_means_table = executionSettings$covariateMeansTable,
-                                    cosine_sim_table_2 = executionSettings$cosineSimStratifiedTable,
-                                    target_cohort_ids = executionSettings$targetCohortIds)
+  sql <- SqlRender::loadRenderTranslateSql("CosineSimilarity.sql",
+                                           packageName = utils::packageName(),
+                                           dbms = dbms,
+                                           cohort_definition = executionSettings$cohortDefinitionTable,
+                                           cdm_database_schema = executionSettings$cdmDatabaseSchema,
+                                           results_database_schema = executionSettings$resultsDatabaseSchema,
+                                           tempEmulationSchema = executionSettings$tempEmulationSchema,
+                                           cohort_counts = executionSettings$cohortCountsTable,
+                                           covariate_def_table = executionSettings$covariateDefTable,
+                                           covariate_means_table = executionSettings$covariateMeansTable,
+                                           cosine_sim_table_2 = executionSettings$cosineSimStratifiedTable,
+                                           target_cohort_ids = executionSettings$targetCohortIds) |>
+    as.character()
+  return(sql)
 }
 
 
@@ -59,6 +64,7 @@ generateSimilarityScores <- function(executionSettings = NULL, ...) {
 
   ParallelLogger::logInfo("Generating similarity scores")
   sql <- .getFeaturesSql(executionSettings)
+
   DatabaseConnector::executeSql(executionSettings$connection, sql)
 
   ParallelLogger::logInfo("Computing cosine similarity")

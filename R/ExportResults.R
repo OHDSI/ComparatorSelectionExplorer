@@ -91,7 +91,7 @@ exportResults <- function(executionSettings = NULL, ...) {
   # Add tags for all rxNorm and ATC cohorts
   templateDefinitions <- CohortGenerator::getTemplateDefinitions(executionSettings$cohortDefinitionSet)
   purrr::walk(templateDefinitions, function(tpl) {
-    if (grepl("RxNorm", tpl$name)){
+    if (grepl("RxNorm", tpl$name)) {
       tagId <- "RxNorm"
     }
 
@@ -118,7 +118,9 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                         addDbId = FALSE
                                                       ),
                                                       vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema)
-
+  DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
+                                             sql,
+                                             vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema)
   sql <- "
   SELECT t.* FROM  @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id = ct.cohort_definition_id

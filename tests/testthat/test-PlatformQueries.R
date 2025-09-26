@@ -6,7 +6,9 @@ sqlTestDbmsPlatforms <- list(
   "spark" = "spark",
   "tsql" = "sql server",
   "snowflake" = "snowflake",
-  "duckdb" = "duckdb"
+  "duckdb" = "duckdb",
+  "sqlite" = "sqlite",
+  "hive" = "hive"
 )
 mockExecutionSettings <- createMockExecutionSettings(databaseName = "test",
                                                      databaseId = "test",
