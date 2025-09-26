@@ -45,7 +45,8 @@ Suggests:
   Eunomia,
   testthat (>= 3.0.0),
   knitr,
-  withr
+  withr,
+  reticulate
 Remotes:
   OHDSI/CohortGenerator@develop
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues

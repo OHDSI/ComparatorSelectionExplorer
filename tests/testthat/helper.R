@@ -131,9 +131,8 @@ getPlatformConnectionDetails <- function(dbmsPlatform) {
 }
 
 
-
 addFakeAtcVocab <- function(executionSettings) {
-  sql <-   sql <- "
+  sql <- sql <- "
   INSERT INTO concept (CONCEPT_ID, CONCEPT_NAME, DOMAIN_ID, VOCABULARY_ID, CONCEPT_CLASS_ID,
                        STANDARD_CONCEPT, CONCEPT_CODE, VALID_START_DATE, VALID_END_DATE)
   SELECT
@@ -148,4 +147,126 @@ addFakeAtcVocab <- function(executionSettings) {
   "
   DatabaseConnector::renderTranslateExecuteSql(executionSettings$connection, sql)
   invisible()
+}
+
+
+createMockExecutionSettings <- function(connectionDetails = DatabaseConnector::createConnectionDetails("sqlite", server = ":memory:"),
+                                        connection = NULL,
+                                        databaseName = NULL,
+                                        databaseId = NULL,
+                                        cdmDatabaseSchema,
+                                        vocabularyDatabaseSchema = cdmDatabaseSchema,
+                                        resultsDatabaseSchema,
+                                        cohortDatabaseSchema = resultsDatabaseSchema,
+                                        cohortTable,
+                                        tempEmulationSchema = getOption("sqlRenderTempEmulationSchema"),
+                                        cohortDefinitionSet = NULL,
+                                        targetCohortIds = NULL,
+                                        cohortCountTable = "cse_cohort_count",
+                                        cohortDefinitionTable = "cse_cohort_definition",
+                                        covariateDefTable = "cse_covariate_ref",
+                                        covariateMeansTable = "cse_covariate_means",
+                                        cosineSimStratifiedTable = "cse_cosine_sim",
+                                        minExposureSize = 1000,
+                                        logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
+                                        exportDir = tempfile(),
+                                        removeExportDir = TRUE,
+                                        exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip"))) {
+
+  executionSettings <- list(connectionDetails = connectionDetails,
+                            cdmDatabaseSchema = cdmDatabaseSchema,
+                            databaseName = databaseName,
+                            vocabularyDatabaseSchema = vocabularyDatabaseSchema,
+                            resultsDatabaseSchema = resultsDatabaseSchema,
+                            cohortDatabaseSchema = cohortDatabaseSchema,
+                            tempEmulationSchema = tempEmulationSchema,
+                            exportZipFile = exportZipFile,
+                            logFileLocation = logFileLocation,
+                            cohortTableNames = CohortGenerator::getCohortTableNames(cohortTable),
+                            cohortCountTable = cohortCountTable,
+                            cohortDefinitionTable = cohortDefinitionTable,
+                            covariateDefTable = covariateDefTable,
+                            covariateMeansTable = covariateMeansTable,
+                            cosineSimStratifiedTable = cosineSimStratifiedTable,
+                            minExposureSize = minExposureSize,
+                            exportDir = exportDir,
+                            removeExportDir = removeExportDir,
+                            cohortDefinitionSet = cohortDefinitionSet,
+                            targetCohortIds = targetCohortIds,
+                            connection = connection)
+  class(executionSettings) <- "executionSettings"
+
+  executionSettings$databaseId <- databaseId
+  if (is.null(executionSettings$databaseId)) {
+
+    executionSettings$databaseId <- abs(digest::digest2int(paste("OHDSI", collapse = ""), seed = 999))
+  }
+
+  if (is.null(executionSettings$databaseName)) {
+    executionSettings$databaseName <- "OHDSI"
+  }
+
+  return(executionSettings)
+}
+
+
+testPlatform <- function(dbmsDetails) {
+  cohortTableNames <- getCohortTableNames(cohortTable = dbmsDetails$cohortTable)
+  platformOutputFolder <- file.path(tempfile(), dbmsDetails$connectionDetails$dbms)
+
+
+
+  # Load cohort definition set
+  cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(settingsFileName = "Cohorts.csv",
+                                                                 jsonFolder = "cohorts",
+                                                                 sqlFolder = "sql/sql_server")
+
+  # Large vectors makes cosine similarity calculation slow
+  if (getOption("cseTestUseFullCohorts", default = FALSE)) {
+    connection <- DatabaseConnector::connect(dbmsDetails$connectionDetails)
+    on.exit(DatabaseConnector::disconnect(connection))
+    rxNormDefinition <-
+      CohortGenerator::createRxNormCohortTemplateDefinition(
+        connection = connection,
+        cdmDatabaseSchema = dbmsDetails$cdmDatabaseSchema,
+        cohortDatabaseSchema = dbmsDetails$cohortDatabaseSchema,
+        priorObservationPeriod = 365,
+        nameSuffix = ""
+      )
+
+    cohortDefinitionSet <- cohortDefinitionSet |>
+      CohortGenerator::addCohortTemplateDefintion(cohortTemplateDefintion = rxNormDefinition)
+  }
+
+  executionSettings <- createExecutionSettings(connectionDetails = dbmsDetails$connectionDetails,
+                                               cohortDefinitionSet = cohortDefinitionSet,
+                                               cdmDatabaseSchema = dbmsDetails$cdmDatabaseSchema,
+                                               resultsDatabaseSchema = dbmsDetails$cohortDatabaseSchema,
+                                               # NOTE Just tests the sql and export - so using a small count here
+                                               targetCohortIds = cohortDefinitionSet$targetCohortId[1:5,],
+                                               cohortTable = "cse_cohort")
+
+  # NOTE - this should use cached cohorts to speed up computation time
+  CohortGenerator::runCohortGeneration(
+    connectionDetails = executionSettings$connectionDetails,
+    cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+    tempEmulationSchema = executionSettings$tempEmulationSchema,
+    cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+    cohortTableNames = executionSettings$cohortTableNames,
+    cohortDefinitionSet = executionSettings$cohortDefinitionSet,
+    outputFolder = platformOutputFolder,
+    databaseId = executionSettings$databaseId,
+    incremental = TRUE,
+    incrementalFolder = tempfile()
+  )
+
+ unlink(executionSettings$exportZipFile)
+
+  on.exit({
+    unlink(executionSettings$exportZipFile)
+  })
+
+  checkmate::expect_class(executionSettings, "executionSettings")
+  execute(executionSettings)
+  checkmate::expect_file_exists(executionSettings$exportZipFile)
 }

@@ -1,13 +1,14 @@
 -- PARAMETERS
---- @cohort_counts: name of table where cohort sample sizes are stored
---- @cohort: name of cohort table to use for feature extraction
---- @cdm_database_schema: CDM schema referenced by @results_database_schema
---- @results_database_schema: schema where cohort table is stored
---- @covariate_def_table: name of output table where covariate defs are stored
---- @covariate_means_table: name of output table where covariate means are stored
+-- @cohort_counts: name of table where cohort sample sizes are stored
+-- @cohort: name of cohort table to use for feature extraction
+-- @cdm_database_schema: CDM schema referenced by @results_database_schema
+-- @results_database_schema: schema where cohort table is stored
+-- @covariate_def_table: name of output table where covariate defs are stored
+-- @covariate_means_table: name of output table where covariate means are stored
+--
 
---- Create results tables
 drop table if exists @results_database_schema.@covariate_def_table;
+
 create table @results_database_schema.@covariate_def_table
 (
   covariate_id bigint,
