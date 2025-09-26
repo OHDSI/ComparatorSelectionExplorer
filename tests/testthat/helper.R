@@ -133,17 +133,44 @@ getPlatformConnectionDetails <- function(dbmsPlatform) {
 
 addFakeAtcVocab <- function(connection) {
   sql <- "
-  INSERT INTO concept (CONCEPT_ID, CONCEPT_NAME, DOMAIN_ID, VOCABULARY_ID, CONCEPT_CLASS_ID,
-                       STANDARD_CONCEPT, CONCEPT_CODE, VALID_START_DATE, VALID_END_DATE)
-  SELECT
-    21603991 as concept_id, 'Coxibs' as concept_name, 'Drug' as domain_id, 'ATC' as vocabulary_id,
-    'ATC 4th' as concept_class_id, 'C' as  standard_concept, 'M01AH' as concept_code,
-    '1970-01-01' as valid_start_date, '2099-12-31' as valid_end_date;
+INSERT INTO concept (CONCEPT_ID, CONCEPT_NAME, DOMAIN_ID, VOCABULARY_ID, CONCEPT_CLASS_ID,
+                     STANDARD_CONCEPT, CONCEPT_CODE, VALID_START_DATE, VALID_END_DATE)
+SELECT
+  21603991 as concept_id, 'Coxibs' as concept_name, 'Drug' as domain_id, 'ATC' as vocabulary_id,
+  'ATC 4th' as concept_class_id, 'C' as  standard_concept, 'M01AH' as concept_code,
+  '1970-01-01' as valid_start_date, '2099-12-31' as valid_end_date;
 
-  INSERT INTO concept_ancestor (ancestor_concept_id, descendant_concept_id, min_levels_of_separation,
-                                max_levels_of_separation)
-  SELECT 21603991 as ancestor_concept_id, 1118084 as descendant_concept_id,
-         1 as min_levels_of_separation,1  as max_levels_of_separation;
+INSERT INTO concept_ancestor (ancestor_concept_id, descendant_concept_id, min_levels_of_separation,
+                              max_levels_of_separation)
+SELECT 21603991 as ancestor_concept_id, 1118084 as descendant_concept_id,
+       1 as min_levels_of_separation,1  as max_levels_of_separation;
+
+  -- ATC ancestor concept
+INSERT INTO concept (concept_id, concept_name, domain_id, vocabulary_id, concept_class_id,
+                     standard_concept, concept_code, valid_start_date, valid_end_date)
+SELECT
+  300 AS concept_id, 'ATC Example' AS concept_name, 'Drug' AS domain_id, 'ATC' AS vocabulary_id,
+  'ATC 2nd' AS concept_class_id, 'C' AS standard_concept, 'A01' AS concept_code,
+  '1970-01-01' AS valid_start_date, '2099-12-31' AS valid_end_date
+UNION
+SELECT
+  101 AS concept_id, 'Drug A' AS concept_name, 'Drug' AS domain_id, 'RxNorm' AS vocabulary_id,
+  'ATC 3rd' AS concept_class_id, 'C' AS standard_concept, 'X01' AS concept_code,
+  '1970-01-01' AS valid_start_date, '2099-12-31' AS valid_end_date
+UNION
+SELECT
+  102 AS concept_id, 'Drug B' AS concept_name, 'Drug' AS domain_id, 'RxNorm' AS vocabulary_id,
+  'ATC 5th' AS concept_class_id, 'C' AS standard_concept, 'X02' AS concept_code,
+  '1970-01-01' AS valid_start_date, '2099-12-31' AS valid_end_date;
+
+-- Both RxNorm drugs map to the same ATC ancestor
+INSERT INTO concept_ancestor (ancestor_concept_id, descendant_concept_id, min_levels_of_separation,
+                              max_levels_of_separation)
+SELECT
+  300 AS ancestor_concept_id, 101 AS descendant_concept_id, 1 AS min_levels_of_separation, 1 AS max_levels_of_separation
+UNION ALL
+SELECT
+  300 AS ancestor_concept_id, 102 AS descendant_concept_id, 1 AS min_levels_of_separation, 1 AS max_levels_of_separation;
 
 
   "

@@ -118,9 +118,6 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                         addDbId = FALSE
                                                       ),
                                                       vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema)
-  DatabaseConnector::renderTranslateQuerySql(executionSettings$connection,
-                                             sql,
-                                             vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema)
   sql <- "
   SELECT t.* FROM  @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id = ct.cohort_definition_id
