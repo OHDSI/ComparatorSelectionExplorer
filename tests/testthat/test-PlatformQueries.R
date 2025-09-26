@@ -38,7 +38,6 @@ test_that("Platform test queries for cosine similarity", {
   }
 
   for (dbms in names(sqlTestDbmsPlatforms)) {
-    print("Testing using sqlglot on")
     sql <- .getFeaturesSql(mockExecutionSettings, dbms = sqlTestDbmsPlatforms[[dbms]])
     expect_silent(parseQuery(sql, dbms))
     sql <- .getCosineSimilaritySql(mockExecutionSettings, dbms = sqlTestDbmsPlatforms[[dbms]])

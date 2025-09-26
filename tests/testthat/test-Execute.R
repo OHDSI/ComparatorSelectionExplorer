@@ -1,7 +1,7 @@
 test_that("Execution", {
   connection <- DatabaseConnector::connect(connectionDetails)
   on.exit(DatabaseConnector::disconnect(connection))
-
+  addFakeAtcVocab(connection)
   # Load cohort definition set
   cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(settingsFileName = "Cohorts.csv",
                                                                  jsonFolder = "cohorts",
