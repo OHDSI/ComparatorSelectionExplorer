@@ -29,7 +29,6 @@ Imports:
   purrr,
   CohortGenerator,
   shiny,
-  shiny,
   shinyjs,
   reactable,
 Suggests:

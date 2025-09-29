@@ -9,6 +9,8 @@ Breaking changes:
 
 3. Changes to results data model to reflect dependency on cohort generator
 
+4. Added testing for most SqlRender supported database platforms
+
 Changes:
 
 1. Inclusion of parameters to allow adjustment of different weights in shiny app

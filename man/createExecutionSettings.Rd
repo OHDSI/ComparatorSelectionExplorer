@@ -5,7 +5,7 @@
 \title{createExecutionSettings}
 \usage{
 createExecutionSettings(
-  connectionDetails,
+  connectionDetails = NULL,
   connection = NULL,
   databaseName = NULL,
   databaseId = NULL,
