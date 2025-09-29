@@ -14,7 +14,7 @@ getCohortDefinitions <- function(qns) {
   qns$queryDb("select distinct
                t.cohort_definition_id,
                cohort_name as short_name,
-               coalesce(tag, 0) as is_atc
+               coalesce(tag, '0') = 'ATC' as is_atc
              from @schema.@cg_cohort_definition t
              left join @schema.@cse_cohort_tag ct on t.cohort_definition_id = ct.cohort_definition_id AND tag = 'ATC'
              where t.cohort_definition_id is not null
@@ -201,7 +201,7 @@ getCohortDefinitionsTable <- function(qns, databaseId, counts = TRUE) {
     select distinct
                t.cohort_definition_id,
                cohort_name as short_name,
-               coalesce(tag, 0) as is_atc,
+               coalesce(tag, 'RxNorm') = 'ATC' as is_atc,
                c.num_persons,
                c.database_id
              from @schema.@cg_cohort_definition t
@@ -365,8 +365,8 @@ getCohortSimilarityScores <- function(qns, targetCohortId, weights = NULL) {
               end as cohort_definition_id_2,
 
               case
-                    when t.cohort_definition_id_1 = @targetCohortId then coalesce(ct2.tag, 0)
-                    else coalesce(ct.tag, 0)
+                    when t.cohort_definition_id_1 = @targetCohortId then coalesce(ct2.tag, 'RxNorm') = 'ATC'
+                    else coalesce(ct.tag, 'RxNorm') = 'ATC'
               end as is_atc_2,
 
               case  when t.cohort_definition_id_1 = @targetCohortId then cd2.cohort_name
@@ -391,10 +391,10 @@ getCohortSimilarityScores <- function(qns, targetCohortId, weights = NULL) {
 	              left join @schema.@cse_cohort_tag ct on t.cohort_definition_id_1 = ct.cohort_definition_id AND ct.tag = 'ATC'
 	              inner join @schema.@cg_cohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
 	              left join @schema.@cse_cohort_tag ct2 on t.cohort_definition_id_2 = ct.cohort_definition_id AND ct2.tag = 'ATC'
-	              left join @schema.@atc_level atc on (t.cohort_definition_id_1 = atc.cohort_definition_id_1
-	                  and t.cohort_definition_id_2 = atc.cohort_definition_id_2)
-	                  or (t.cohort_definition_id_2 = atc.cohort_definition_id_1
-	                  and t.cohort_definition_id_1 = atc.cohort_definition_id_2)
+	              left join @schema.@cse_atc_level atc on (t.cohort_definition_id_1/1000 = atc.drug_concept_id_1
+	                  and t.cohort_definition_id_2/1000 = atc.drug_concept_id_2)
+	                  or (t.cohort_definition_id_2/1000 = atc.drug_concept_id_1
+	                  and t.cohort_definition_id_1/1000 = atc.drug_concept_id_2)
 	              where (t.cohort_definition_id_1 = @targetCohortId or t.cohort_definition_id_2 = @targetCohortId)
 	              and t.covariate_type not in  ('average', 'Co-occurrence')
 	          ) domains
@@ -435,8 +435,8 @@ getDatabaseSimilarityScores <- function(qns, targetCohortId, databaseIds) {
                END as cohort_definition_id_2,
 
                CASE
-                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN coalesce(ct2.tag, 0)
-                  ELSE coalesce(ct.tag, 0)
+                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN coalesce(ct2.tag, '0') = 'ATC'
+                  ELSE coalesce(ct.tag, '0') = 'ATC'
                END as is_atc_2,
 
                CASE

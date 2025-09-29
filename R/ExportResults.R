@@ -114,7 +114,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       sql,
                                                       fun = exportResultsFun,
                                                       args = list(
-                                                        csvFilename = "atc_level.csv",
+                                                        csvFilename = "cse_atc_level.csv",
                                                         addDbId = FALSE
                                                       ),
                                                       vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema)

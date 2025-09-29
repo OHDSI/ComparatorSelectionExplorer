@@ -28,7 +28,7 @@ createTestShinyData <- function(resultsConnectionDetails) {
 
   cohortDefinitionSet <-
     CohortGenerator::addCohortTemplateDefintion(cohortTemplateDefintion = rxNormDefinition) |>
-    CohortGenerator::addCohortTemplateDefintion(cohortTemplateDefintion = atcDefinition)
+      CohortGenerator::addCohortTemplateDefintion(cohortTemplateDefintion = atcDefinition)
 
   executionSettings <- createExecutionSettings(connection = connection,
                                                cohortDefinitionSet = cohortDefinitionSet,
@@ -50,9 +50,10 @@ createTestShinyData <- function(resultsConnectionDetails) {
     incrementalFolder = tempfile()
   )
 
-  CohortGenerator::createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = "cse_")
-  CohortGenerator::uploadResults(resultsConnectionDetails, "main",
-                                 tablePrefix = "cse_",
+  CohortGenerator::createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = "")
+  CohortGenerator::uploadResults(resultsConnectionDetails,
+                                 "main",
+                                 tablePrefix = "",
                                  resultsFolder = cgResFolder,
                                  purgeSiteDataBeforeUploading = FALSE)
 
@@ -66,18 +67,18 @@ createTestShinyData <- function(resultsConnectionDetails) {
   unlink("test.sqlite")
 
   on.exit(unlink("test.sqlite"), add = TRUE)
-  createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = "cse_")
+  createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = "")
 
   uploadResults(connectionDetails = resultsConnectionDetails,
                 databaseSchema = "main",
                 zipFileName = executionSettings$exportZipFile,
                 forceOverWriteOfSpecifications = FALSE,
                 purgeSiteDataBeforeUploading = FALSE,
-                tablePrefix = "cse_")
+                tablePrefix = "")
 }
 
 unlink("test_cse.db")
-resultsConnectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "sqlite",
+resultsConnectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "duckdb",
                                                                        server = "./test_cse.db")
 createTestShinyData(resultsConnectionDetails)
-launchShinyApp(resultsConnectionDetails, "main", "cse_")
+launchShinyApp(resultsConnectionDetails, "main", "")

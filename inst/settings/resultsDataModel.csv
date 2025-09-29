@@ -27,14 +27,14 @@ covariate_mean,database_id,bigint,Yes,no,database definition id
 covariate_mean,cohort_definition_id,bigint,Yes,no,database definition id
 covariate_mean,covariate_id,bigint,Yes,no,d
 covariate_mean,covariate_mean,float,No,no,database definition id
-atc_level,drug_concept_id_1,bigint,Yes,no,drug concept id
-atc_level,drug_concept_id_2,bigint,Yes,no,drug concept id
-atc_level,level_closest_atc_relation,bigint,no,no,atc info
-atc_level,level_furthest_atc_relation,bigint,no,no,atc info
-atc_level,atc_1_related,bigint,no,no,atc info
-atc_level,atc_2_related,bigint,no,no,atc info
-atc_level,atc_3_related,bigint,no,no,atc info
-atc_level,atc_4_related,bigint,no,no,atc info
-atc_level,atc_5_related,bigint,no,no,atc info
+cse_atc_level,drug_concept_id_1,bigint,Yes,no,drug concept id
+cse_atc_level,drug_concept_id_2,bigint,Yes,no,drug concept id
+cse_atc_level,level_closest_atc_relation,bigint,no,no,atc info
+cse_atc_level,level_furthest_atc_relation,bigint,no,no,atc info
+cse_atc_level,atc_1_related,bigint,no,no,atc info
+cse_atc_level,atc_2_related,bigint,no,no,atc info
+cse_atc_level,atc_3_related,bigint,no,no,atc info
+cse_atc_level,atc_4_related,bigint,no,no,atc info
+cse_atc_level,atc_5_related,bigint,no,no,atc info
 cse_cohort_tag,cohort_definition_id,bigint,yes,no,cohort id
 cse_cohort_tag,tag,text,yes,no,a string tag

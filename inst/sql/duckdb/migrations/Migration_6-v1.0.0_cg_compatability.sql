@@ -20,7 +20,7 @@ CREATE TABLE @database_schema.@table_prefix@cse_atc_level (
 );
 
 INSERT INTO @database_schema.@table_prefix@cse_atc_level
-(drug_concept_id_1, drug_concept_id_2, level_closest_atc_relation, level_furthest_atc_relation, atc_1_related, atc_2_related, atc_3_related, atc_4_related, atc_5_related)
+            (drug_concept_id_1, drug_concept_id_2, level_closest_atc_relation, level_furthest_atc_relation, atc_1_related, atc_2_related, atc_3_related, atc_4_related, atc_5_related)
 
 SELECT
     a.cohort_definition_id_1/1000 as drug_concept_id_1,
