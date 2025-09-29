@@ -29,7 +29,7 @@ getCohortDefinitions <- function(qns) {
 #' @param cohortIds optional cohort ids
 getCohortTags <- function(qns, cohortIds = NULL) {
   qns$queryDb("
-    SELECT DISTINCT TAG FROM @schema.@cohort_ t
+    SELECT DISTINCT TAG FROM @schema.@cse_cohort_tag
     {@cohort_ids != ''} ? {WHERE cohort_definition_id IN (@cohort_ids)}",
               cohort_ids = cohortIds
   )
@@ -440,8 +440,8 @@ getDatabaseSimilarityScores <- function(qns, targetCohortId, databaseIds) {
                END as is_atc_2,
 
                CASE
-                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN cd2.short_name
-                  ELSE cd.short_name
+                  WHEN t.cohort_definition_id_1 = @targetCohortId THEN cd2.cohort_name
+                  ELSE cd.cohort_name
                END as short_name,
                cosine_similarity,
                CASE
@@ -453,9 +453,9 @@ getDatabaseSimilarityScores <- function(qns, targetCohortId, databaseIds) {
              inner join @schema.@cse_cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
              inner join @schema.@cse_cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1 and ec2.database_id = t.database_id
               inner join @schema.@cg_cohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
-              left join @schema.@cse_cohort_tag ct on t.cohort_definition_id_1 = ct.cohort_definition_id AND tag = 'ATC'
+              left join @schema.@cse_cohort_tag ct on t.cohort_definition_id_1 = ct.cohort_definition_id AND ct.tag = 'ATC'
               inner join @schema.@cg_cohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
-              left join @schema.@cse_cohort_tag ct2 on t.cohort_definition_id_2 = ct.cohort_definition_id AND tag = 'ATC'
+              left join @schema.@cse_cohort_tag ct2 on t.cohort_definition_id_2 = ct.cohort_definition_id AND ct.tag = 'ATC'
              inner join @schema.@cse_cdm_source_info d ON t.database_id = d.database_id
              where (t.cohort_definition_id_1 = @targetCohortId or t.cohort_definition_id_2 = @targetCohortId)
              and t.database_id IN (@database_ids)
@@ -621,7 +621,7 @@ createResultsQueryNamespace <- function(
   dataModelSpecPath = system.file("settings", "resultsDataModel.csv", package = "ComparatorSelectionExplorer"),
   usePooledConnection = FALSE
 ) {
-  dataModelSpec <- ResultModelManager::loadResultsDataModelSpecifications(dataModelSpecPath) |>
+  dataModelSpec <- getResultsDataModelSpec() |>
     dplyr::bind_rows(CohortGenerator::getResultsDataModelSpecifications())
 
   qns <- ResultModelManager::createQueryNamespace(

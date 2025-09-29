@@ -244,7 +244,6 @@ testPlatform <- function(dbmsDetails) {
   platformOutputFolder <- file.path(tempfile(), dbmsDetails$connectionDetails$dbms)
 
 
-
   # Load cohort definition set
   cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(settingsFileName = "Cohorts.csv",
                                                                  jsonFolder = "cohorts",
@@ -289,7 +288,7 @@ testPlatform <- function(dbmsDetails) {
     incrementalFolder = tempfile()
   )
 
- unlink(executionSettings$exportZipFile)
+  unlink(executionSettings$exportZipFile)
 
   on.exit({
     unlink(executionSettings$exportZipFile)
@@ -298,4 +297,78 @@ testPlatform <- function(dbmsDetails) {
   checkmate::expect_class(executionSettings, "executionSettings")
   execute(executionSettings)
   checkmate::expect_file_exists(executionSettings$exportZipFile)
+}
+
+createTestDb <- function(resultsConnectionDetails, tablePrefix, resultsTestSchema = "main") {
+
+  connectionDetails <- Eunomia::getEunomiaConnectionDetails()
+  connection <- DatabaseConnector::connect(connectionDetails)
+  on.exit(DatabaseConnector::disconnect(connection))
+  addFakeAtcVocab(connection)
+
+
+  rxNormDefinition <-
+    CohortGenerator::createRxNormCohortTemplateDefinition(
+      connection = connection,
+      cdmDatabaseSchema = "main",
+      cohortDatabaseSchema = "main",
+      priorObservationPeriod = 365,
+      nameSuffix = ""
+    )
+
+  atcDefinition <-
+    CohortGenerator::createAtcCohortTemplateDefinition(
+      connection = connection,
+      cdmDatabaseSchema = "main",
+      cohortDatabaseSchema = "main",
+      priorObservationPeriod = 365,
+      nameSuffix = ""
+    )
+
+  cohortDefinitionSet <-
+    CohortGenerator::addCohortTemplateDefintion(cohortTemplateDefintion = rxNormDefinition) |>
+      CohortGenerator::addCohortTemplateDefintion(cohortTemplateDefintion = atcDefinition)
+
+  executionSettings <- createExecutionSettings(connection = connection,
+                                               cohortDefinitionSet = cohortDefinitionSet,
+                                               cdmDatabaseSchema = "main",
+                                               resultsDatabaseSchema = "main",
+                                               cohortTable = "cse_cohort")
+
+  cgResFolder <- tempfile()
+  CohortGenerator::runCohortGeneration(
+    connectionDetails = connectionDetails,
+    cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+    tempEmulationSchema = executionSettings$tempEmulationSchema,
+    cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+    cohortTableNames = executionSettings$cohortTableNames,
+    cohortDefinitionSet = executionSettings$cohortDefinitionSet,
+    outputFolder = cgResFolder,
+    databaseId = executionSettings$databaseId,
+    incremental = TRUE,
+    incrementalFolder = tempfile()
+  )
+
+  CohortGenerator::createResultsDataModel(resultsConnectionDetails, resultsTestSchema, tablePrefix = tablePrefix)
+  CohortGenerator::uploadResults(resultsConnectionDetails,
+                                 resultsTestSchema,
+                                 tablePrefix = tablePrefix,
+                                 resultsFolder = cgResFolder,
+                                 purgeSiteDataBeforeUploading = FALSE)
+
+  unlink(executionSettings$exportZipFile)
+
+  on.exit({
+    unlink(executionSettings$exportZipFile)
+  })
+
+  execute(executionSettings)
+  createResultsDataModel(resultsConnectionDetails, resultsTestSchema, tablePrefix = tablePrefix)
+
+  uploadResults(connectionDetails = resultsConnectionDetails,
+                databaseSchema = resultsTestSchema,
+                zipFileName = executionSettings$exportZipFile,
+                forceOverWriteOfSpecifications = FALSE,
+                purgeSiteDataBeforeUploading = FALSE,
+                tablePrefix = tablePrefix)
 }

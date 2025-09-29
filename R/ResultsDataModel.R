@@ -105,14 +105,14 @@ uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tableP
     on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
 
     sql <- "
-    CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcosine_similarity_@database_id
-    PARTITION OF @database_schema.@table_prefixcosine_similarity_score FOR VALUES IN (@database_id);
+    CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_id
+    PARTITION OF @database_schema.@table_prefixcse_cosine_similarity_score FOR VALUES IN (@database_id);
 
-    CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcovariate_mean_@database_id
-    PARTITION OF @database_schema.@table_prefixcovariate_mean FOR VALUES IN (@database_id);
+    CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_covariate_mean_@database_id
+    PARTITION OF @database_schema.@table_prefixcse_covariate_mean FOR VALUES IN (@database_id);
     "
 
-    sourceInfo <- readr::read_csv(file.path(importFilpath, "cdm_source_info.csv"),
+    sourceInfo <- readr::read_csv(file.path(importFilpath, "cse_cdm_source_info.csv"),
                                   show_col_types = FALSE)
     databaseIds <- unique(sourceInfo$database_id)
 
