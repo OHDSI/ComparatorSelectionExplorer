@@ -1,6 +1,6 @@
 library(ComparatorSelectionExplorer)
 
-createTestShinyData <- function(resultsConnectionDetails) {
+createTestShinyData <- function(resultsConnectionDetails, tablePrefix) {
   devtools::load_all()
   connectionDetails <- Eunomia::getEunomiaConnectionDetails()
   connection <- DatabaseConnector::connect(connectionDetails)
@@ -50,10 +50,10 @@ createTestShinyData <- function(resultsConnectionDetails) {
     incrementalFolder = tempfile()
   )
 
-  CohortGenerator::createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = "")
+  CohortGenerator::createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = tablePrefix)
   CohortGenerator::uploadResults(resultsConnectionDetails,
                                  "main",
-                                 tablePrefix = "",
+                                 tablePrefix = tablePrefix,
                                  resultsFolder = cgResFolder,
                                  purgeSiteDataBeforeUploading = FALSE)
 
@@ -67,18 +67,19 @@ createTestShinyData <- function(resultsConnectionDetails) {
   unlink("test.sqlite")
 
   on.exit(unlink("test.sqlite"), add = TRUE)
-  createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = "")
+  createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = tablePrefix)
 
   uploadResults(connectionDetails = resultsConnectionDetails,
                 databaseSchema = "main",
                 zipFileName = executionSettings$exportZipFile,
                 forceOverWriteOfSpecifications = FALSE,
                 purgeSiteDataBeforeUploading = FALSE,
-                tablePrefix = "")
+                tablePrefix = tablePrefix)
 }
 
-unlink("test_cse.db")
+unlink("test_cse.db", force = TRUE, recursive = TRUE)
 resultsConnectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "duckdb",
                                                                        server = "./test_cse.db")
-createTestShinyData(resultsConnectionDetails)
-launchShinyApp(resultsConnectionDetails, "main", "")
+createTestShinyData(resultsConnectionDetails, "test_")
+launchShinyApp(resultsConnectionDetails, "main", "test_")
+# qns <- createResultsQueryNamespace(resultsConnectionDetails, "main", tablePrefix = "test_")

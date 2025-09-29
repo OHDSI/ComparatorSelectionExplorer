@@ -846,7 +846,13 @@ createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix, ...) {
     comparatorSelectionAppModuleServer("main", qns)
   }
 
-  app <- shiny::shinyApp(ui = ui, server = server, ...)
+  app <- shiny::shinyApp(ui = ui, server = server, onStart = function() {
+
+    shiny::onStop(function() {
+      qns$closeConnection()
+    })
+  }, ...)
+
 
   return(invisible(app))
 }
