@@ -1,32 +1,32 @@
 table_name,column_name,data_type,primary_key,min_cell_count,description
-cdm_source_info,database_id,bigint,Yes,no,database definition id
-cdm_source_info,cdm_source_abbreviation,varchar,no,no,cdm info
-cdm_source_info,cdm_holder,varchar,no,no,cdm info
-cdm_source_info,source_description,varchar,no,no,cdm info
-cdm_source_info,source_documentation_reference,varchar,no,no,cdm info
-cdm_source_info,cdm_etl_reference,varchar,no,no,cdm info
-cdm_source_info,source_release_date,date,no,no,cdm info
-cdm_source_info,cdm_release_date,date,no,no,cdm info
-cdm_source_info,cdm_version,varchar,no,no,cdm info
-cdm_source_info,vocabulary_version,varchar,no,no,cdm info
-cohort_count,num_persons,bigint,no,Yes,cohort size
-cohort_count,cohort_definition_id,bigint,Yes,no,cohort definition id
-cohort_count,database_id,bigint,Yes,no,database definition id
-cosine_similarity_score,database_id,bigint,Yes,no,database definition id
-cosine_similarity_score,cohort_definition_id_1,bigint,Yes,no,cohort definition id
-cosine_similarity_score,cohort_definition_id_2,bigint,Yes,no,cohort definition id
-cosine_similarity_score,covariate_type,varchar,yes,no,type of strata
-cosine_similarity_score,cosine_similarity,float,no,no,similarity score
-covariate_definition,covariate_id,bigint,yes,no,covariate id
-covariate_definition,covariate_name,varchar,no,no,covariate name
-covariate_definition,concept_id,bigint,no,no,covariate id
-covariate_definition,time_at_risk_start,int,no,no,time at risk start
-covariate_definition,time_at_risk_end,int,no,no,time at risk end
-covariate_definition,covariate_type,varchar,no,no,database definition id
-covariate_mean,database_id,bigint,Yes,no,database definition id
-covariate_mean,cohort_definition_id,bigint,Yes,no,database definition id
-covariate_mean,covariate_id,bigint,Yes,no,d
-covariate_mean,covariate_mean,float,No,no,database definition id
+cse_cdm_source_info,database_id,bigint,Yes,no,database definition id
+cse_cdm_source_info,cdm_source_abbreviation,varchar,no,no,cdm info
+cse_cdm_source_info,cdm_holder,varchar,no,no,cdm info
+cse_cdm_source_info,source_description,varchar,no,no,cdm info
+cse_cdm_source_info,source_documentation_reference,varchar,no,no,cdm info
+cse_cdm_source_info,cdm_etl_reference,varchar,no,no,cdm info
+cse_cdm_source_info,source_release_date,date,no,no,cdm info
+cse_cdm_source_info,cdm_release_date,date,no,no,cdm info
+cse_cdm_source_info,cdm_version,varchar,no,no,cdm info
+cse_cdm_source_info,vocabulary_version,varchar,no,no,cdm info
+cse_cohort_count,num_persons,bigint,no,Yes,cohort size
+cse_cohort_count,cohort_definition_id,bigint,Yes,no,cohort definition id
+cse_cohort_count,database_id,bigint,Yes,no,database definition id
+cse_cosine_similarity_score,database_id,bigint,Yes,no,database definition id
+cse_cosine_similarity_score,cohort_definition_id_1,bigint,Yes,no,cohort definition id
+cse_cosine_similarity_score,cohort_definition_id_2,bigint,Yes,no,cohort definition id
+cse_cosine_similarity_score,covariate_type,varchar,yes,no,type of strata
+cse_cosine_similarity_score,cosine_similarity,float,no,no,similarity score
+cse_covariate_definition,covariate_id,bigint,yes,no,covariate id
+cse_covariate_definition,covariate_name,varchar,no,no,covariate name
+cse_covariate_definition,concept_id,bigint,no,no,covariate id
+cse_covariate_definition,time_at_risk_start,int,no,no,time at risk start
+cse_covariate_definition,time_at_risk_end,int,no,no,time at risk end
+cse_covariate_definition,covariate_type,varchar,no,no,database definition id
+cse_covariate_mean,database_id,bigint,Yes,no,database definition id
+cse_covariate_mean,cohort_definition_id,bigint,Yes,no,database definition id
+cse_covariate_mean,covariate_id,bigint,Yes,no,d
+cse_covariate_mean,covariate_mean,float,No,no,database definition id
 cse_atc_level,drug_concept_id_1,bigint,Yes,no,drug concept id
 cse_atc_level,drug_concept_id_2,bigint,Yes,no,drug concept id
 cse_atc_level,level_closest_atc_relation,bigint,no,no,atc info

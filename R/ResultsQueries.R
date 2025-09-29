@@ -56,7 +56,7 @@ getDbDataSourcesTable <- function(qns, reactableTable = TRUE) {
               cdm_version,
               vocabulary_version,
               source_release_date
-      from @schema.@cdm_source_info t")
+      from @schema.@cse_cdm_source_info t")
 
   if (reactableTable) {
     colnames(dataSourceData) <- SqlRender::camelCaseToTitleCase(colnames(dataSourceData))
@@ -131,15 +131,15 @@ getCoOccurenceTableData <- function(qns,
               		end as mean_2
               	from (
               	  select t.*, covd.covariate_name, covd.covariate_type
-              	  from @schema.@covariate_mean t
-              	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
+              	  from @schema.@cse_covariate_mean t
+              	  inner join @schema.@cse_covariate_definition covd on covd.covariate_id = t.covariate_id
               	  where t.cohort_definition_id = @cohortDefinitionId1
               	  and t.database_id IN (@database_ids)
             	  ) as c1
               	left join (
               	  select t.*, covd.covariate_name, covd.covariate_type
-              	  from @schema.@covariate_mean t
-              	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
+              	  from @schema.@cse_covariate_mean t
+              	  inner join @schema.@cse_covariate_definition covd on covd.covariate_id = t.covariate_id
               	  where t.cohort_definition_id = @cohortDefinitionId2
               	  and t.database_id IN (@database_ids)
               	 ) as c2
@@ -160,11 +160,11 @@ getCoOccurenceTableData <- function(qns,
             c1.num_persons as n_1,
             c2.num_persons as n_2
             from means_cte as m
-            inner join @schema.@cohort_count as c1
+            inner join @schema.@cse_cohort_count as c1
             on m.cohort_definition_id_1 = c1.cohort_definition_id and c1.database_id = m.database_id
-            inner join @schema.@cohort_count as c2
+            inner join @schema.@cse_cohort_count as c2
               on m.cohort_definition_id_2 = c2.cohort_definition_id and c2.database_id = m.database_id
-            inner join @schema.@cdm_source_info as d on d.database_id = m.database_id
+            inner join @schema.@cse_cdm_source_info as d on d.database_id = m.database_id
 
             WHERE (
               (m.mean_1 > @prevInputHighMax AND m.mean_2 < @prevInputHighMin) OR
@@ -205,7 +205,7 @@ getCohortDefinitionsTable <- function(qns, databaseId, counts = TRUE) {
                c.num_persons,
                c.database_id
              from @schema.@cg_cohort_definition t
-             inner join @schema.@cohort_count c ON c.cohort_definition_id = t.cohort_definition_id
+             inner join @schema.@cse_cohort_count c ON c.cohort_definition_id = t.cohort_definition_id
              left join @schema.@cse_cohort_tag ct on t.cohort_definition_id = ct.cohort_definition_id AND tag = 'ATC'
              where t.cohort_definition_id is not null
              and c.database_id IN (@database_id)
@@ -260,14 +260,14 @@ getPairwiseCovariateData <- function(qns, databaseId, cohortDefinitionId1, cohor
               			else c2.covariate_mean
               		end as mean_2
               	from (
-              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@covariate_mean t
-              	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
+              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@cse_covariate_mean t
+              	  inner join @schema.@cse_covariate_definition covd on covd.covariate_id = t.covariate_id
               	  where t.cohort_definition_id = @cohortDefinitionId1
               	  and t.database_id = @database_id
             	  ) as c1
               	full join (
-              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@covariate_mean t
-              	  inner join @schema.@covariate_definition covd on covd.covariate_id = t.covariate_id
+              	  select t.*, covd.covariate_name, covd.covariate_type from @schema.@cse_covariate_mean t
+              	  inner join @schema.@cse_covariate_definition covd on covd.covariate_id = t.covariate_id
               	   where t.cohort_definition_id = @cohortDefinitionId2
               	   and t.database_id = @database_id
               	 ) as c2
@@ -283,9 +283,9 @@ getPairwiseCovariateData <- function(qns, databaseId, cohortDefinitionId1, cohor
               c1.num_persons as n_1,
               c2.num_persons as n_2
               from means as m
-              join @schema.@cohort_count as c1
+              join @schema.@cse_cohort_count as c1
               	on m.cohort_definition_id_1 = c1.cohort_definition_id and c1.database_id = @database_id
-              join @schema.@cohort_count as c2
+              join @schema.@cse_cohort_count as c2
               	on m.cohort_definition_id_2 = c2.cohort_definition_id and c2.database_id = @database_id
               ;",
     database_id = databaseId,
@@ -381,12 +381,12 @@ getCohortSimilarityScores <- function(qns, targetCohortId, weights = NULL) {
                     else ec2.num_persons
               end as num_persons
 
-              from @schema.@cosine_similarity_score  t
-	              inner join @schema.@cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2
+              from @schema.@cse_cosine_similarity_score  t
+	              inner join @schema.@cse_cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2
 	                  and ec.database_id = t.database_id
-	              inner join @schema.@cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1
+	              inner join @schema.@cse_cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1
 	                  and ec2.database_id = t.database_id
-	              inner join @schema.@cdm_source_info csi ON csi.database_id = t.database_id
+	              inner join @schema.@cse_cdm_source_info csi ON csi.database_id = t.database_id
 	              inner join @schema.@cg_cohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
 	              left join @schema.@cse_cohort_tag ct on t.cohort_definition_id_1 = ct.cohort_definition_id AND ct.tag = 'ATC'
 	              inner join @schema.@cg_cohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
@@ -449,14 +449,14 @@ getDatabaseSimilarityScores <- function(qns, targetCohortId, databaseIds) {
                   ELSE ec2.num_persons
                END as num_persons,
                t.covariate_type
-             from @schema.@cosine_similarity_score t
-             inner join @schema.@cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
-             inner join @schema.@cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1 and ec2.database_id = t.database_id
+             from @schema.@cse_cosine_similarity_score t
+             inner join @schema.@cse_cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2 and ec.database_id = t.database_id
+             inner join @schema.@cse_cohort_count ec2 ON ec2.cohort_definition_id = t.cohort_definition_id_1 and ec2.database_id = t.database_id
               inner join @schema.@cg_cohort_definition cd ON cd.cohort_definition_id = t.cohort_definition_id_1
               left join @schema.@cse_cohort_tag ct on t.cohort_definition_id_1 = ct.cohort_definition_id AND tag = 'ATC'
               inner join @schema.@cg_cohort_definition cd2 ON cd2.cohort_definition_id = t.cohort_definition_id_2
               left join @schema.@cse_cohort_tag ct2 on t.cohort_definition_id_2 = ct.cohort_definition_id AND tag = 'ATC'
-             inner join @schema.@cdm_source_info d ON t.database_id = d.database_id
+             inner join @schema.@cse_cdm_source_info d ON t.database_id = d.database_id
              where (t.cohort_definition_id_1 = @targetCohortId or t.cohort_definition_id_2 = @targetCohortId)
              and t.database_id IN (@database_ids)
            ",
@@ -483,7 +483,7 @@ getDbCosineSimilarityTable <- function(qns, targetCohortId, comparatorCohortId, 
 
 
   checkmate::assertClass(qns, "QueryNamespace")
-  sql <- "SELECT covariate_type, cosine_similarity FROM @schema.@cosine_similarity_score
+  sql <- "SELECT covariate_type, cosine_similarity FROM @schema.@cse_cosine_similarity_score
     WHERE database_id = @database_id
     AND cohort_definition_id_1 in (@target, @comparator)
     AND cohort_definition_id_2 in (@target, @comparator)
@@ -586,7 +586,7 @@ getDbCosineSimilarityTable <- function(qns, targetCohortId, comparatorCohortId, 
 #' # getDatabaseSources(qns)
 getDatabaseSources <- function(qns) {
   checkmate::assertClass(qns, "QueryNamespace")
-  qns$queryDb(sql = "select distinct * from @schema.@cdm_source_info t")
+  qns$queryDb(sql = "select distinct * from @schema.@cse_cdm_source_info t")
 }
 
 

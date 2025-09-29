@@ -3,7 +3,7 @@
 .RData
 .Ruserdata
 .idea/
-sql
+sql/
 /renv/
 /tests/testthat/errorReportSql.txt
 /.Rprofile

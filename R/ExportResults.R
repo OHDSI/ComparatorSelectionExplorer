@@ -69,7 +69,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       "SELECT * FROM  @results_database_schema.@covariate_def_table",
                                                       fun = exportResultsFun,
                                                       args = list(
-                                                        csvFilename = "covariate_definition.csv",
+                                                        csvFilename = "cse_covariate_definition.csv",
                                                         addDbId = FALSE
                                                       ),
                                                       covariate_def_table = executionSettings$covariateDefTable,
@@ -81,7 +81,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       sql,
                                                       fun = exportResultsFun,
                                                       args = list(
-                                                        csvFilename = "cohort_count.csv",
+                                                        csvFilename = "cse_cohort_count.csv",
                                                         addDbId = TRUE
                                                       ),
                                                       count_table = executionSettings$cohortCountTable,
@@ -126,7 +126,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       sql,
                                                       fun = exportResultsFun,
                                                       args = list(
-                                                        csvFilename = "covariate_mean.csv",
+                                                        csvFilename = "cse_covariate_mean.csv",
                                                         addDbId = TRUE
                                                       ),
                                                       count_table = executionSettings$cohortCountTable,
@@ -146,7 +146,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       sql,
                                                       fun = exportResultsFun,
                                                       args = list(
-                                                        csvFilename = "cosine_similarity_score.csv",
+                                                        csvFilename = "cse_cosine_similarity_score.csv",
                                                         addDbId = TRUE
                                                       ),
                                                       count_table = executionSettings$cohortCountTable,
@@ -159,7 +159,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       sql,
                                                       fun = exportResultsFun,
                                                       args = list(
-                                                        csvFilename = "cdm_source_info.csv",
+                                                        csvFilename = "cse_cdm_source_info.csv",
                                                         addDbId = TRUE
                                                       ),
                                                       cdm_database_schema = executionSettings$cdmDatabaseSchema)
