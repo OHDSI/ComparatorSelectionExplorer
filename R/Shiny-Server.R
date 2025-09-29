@@ -288,7 +288,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
         )
 
         rt <- reactable::reactable(
-          data = dplyr::select("resSum", "isAtc2", "shortName", "rank", "avg", "nDatabases", "atc3Related", "atc4Related", "cohortDefinitionId2"),
+          data = dplyr::select(resSum, "isAtc2", "shortName", "rank", "avg", "nDatabases", "atc3Related", "atc4Related", "cohortDefinitionId2"),
           details = function(index) {
             cohortId <- resSum$cohortDefinitionId2[index]
             detailData <- resAll[resAll$shortName == resSum$shortName[index], c("databaseId", "cdmSourceAbbreviation", "numPersons", "cosineSimilarity", "cdmSpecificRankStr")]
