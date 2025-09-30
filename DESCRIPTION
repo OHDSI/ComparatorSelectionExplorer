@@ -21,25 +21,35 @@ Imports:
   DatabaseConnector (>= 6.0.0),
   ParallelLogger,
   ResultModelManager (>= 0.4.0),
-  CohortGenerator,
   checkmate,
   SqlRender (>= 1.9.0),
   readr,
   dplyr,
   digest,
-  withr
-Suggests:
+  purrr,
+  CohortGenerator,
   shiny,
+  shinyjs,
   reactable,
+Suggests:
+  scales,
   ggplot2,
+  plotly,
+  htmltools,
+  shinycssloaders,
+  shinydashboard,
+  stringr,
+  tippy,
+  tidyr,
   Eunomia,
   testthat (>= 3.0.0),
-  knitr
+  knitr,
+  withr,
+  reticulate,
+  duckdb
 Remotes:
-  ohdsi/ResultModelManager,
-  ohdsi/CohortGenerator@cohort_templates,
-  ohdsi/Eunomia
+  OHDSI/CohortGenerator@develop
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
 Copyright: See file COPYRIGHTS
 Config/testthat/edition: 3
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3

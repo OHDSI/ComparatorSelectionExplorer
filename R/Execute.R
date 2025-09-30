@@ -30,7 +30,6 @@ execute <- function(executionSettings = NULL, ...) {
     executionSettings <- createExecutionSettings(...)
   }
 
-  executionSettings <- createCohorts(executionSettings)
   executionSettings <- generateSimilarityScores(executionSettings)
   executionSettings <- exportResults(executionSettings)
 
