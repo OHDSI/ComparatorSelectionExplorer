@@ -55,6 +55,7 @@ getDataMigrator <- function(connectionDetails, databaseSchema, tablePrefix = "")
   ResultModelManager::DataMigrationManager$new(connectionDetails = connectionDetails,
                                                databaseSchema = databaseSchema,
                                                tablePrefix = tablePrefix,
+                                               packageTablePrefix = "cse_",
                                                migrationPath = "migrations",
                                                packageName = utils::packageName())
 }
