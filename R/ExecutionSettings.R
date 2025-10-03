@@ -108,7 +108,7 @@ createExecutionSettings <- function(connectionDetails = NULL,
   class(executionSettings) <- "executionSettings"
 
   attr(executionSettings,
-       ".execStatus") <- list(cohortReferencesCreated = FALSE, cohortsCreated = FALSE, simialrityScores = FALSE)
+       ".execStatus") <- list(cohortReferencesCreated = FALSE, simialrityScores = FALSE)
 
   if (!is.null(logFileLocation)) {
     ParallelLogger::clearLoggers()
