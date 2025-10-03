@@ -37,7 +37,7 @@ Suggests:
   knitr
 Remotes:
   ohdsi/ResultModelManager,
-  ohdsi/CohortGenerator@cohort_templates,
+  ohdsi/CohortGenerator@develop,
   ohdsi/Eunomia
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
 Copyright: See file COPYRIGHTS
