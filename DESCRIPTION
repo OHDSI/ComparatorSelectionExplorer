@@ -27,19 +27,30 @@ Imports:
   readr,
   dplyr,
   digest,
-  withr
-Suggests:
+  purrr,
+  CohortGenerator,
   shiny,
+  shinyjs,
   reactable,
+Suggests:
+  scales,
   ggplot2,
+  plotly,
+  htmltools,
+  shinycssloaders,
+  shinydashboard,
+  stringr,
+  tippy,
+  tidyr,
   Eunomia,
   testthat (>= 3.0.0),
-  knitr
+  knitr,
+  withr,
+  reticulate,
+  duckdb
 Remotes:
-  ohdsi/ResultModelManager,
-  ohdsi/CohortGenerator@develop,
-  ohdsi/Eunomia
+  ohdsi/CohortGenerator@develop
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
 Copyright: See file COPYRIGHTS
 Config/testthat/edition: 3
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3

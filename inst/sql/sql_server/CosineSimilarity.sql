@@ -2,10 +2,7 @@
 {DEFAULT @vector_length = ''}
 {DEFAULT @target_cohort_ids = ''}
 {DEFAULT @exclude_co_occurrence_average = TRUE}
-/***
-compute cosine similarity for all relavant cohort-cohort comparisons
 
-***/
 
 -- PARAMETERS
 --- @cohort_counts: name of table where cohort sample sizes are stored
@@ -47,12 +44,10 @@ select
 INTO #dotproduct_concept
 from @results_database_schema.@covariate_means_table scs1
 inner join @results_database_schema.@covariate_def_table scovd1 on scs1.covariate_id = scovd1.covariate_id
-inner join @results_database_schema.@cohort_definition scd1 on scs1.cohort_definition_id = scd1.cohort_definition_id
 inner join @results_database_schema.@covariate_means_table scs2 on scs1.covariate_id = scs2.covariate_id
-inner join @results_database_schema.@cohort_definition scd2 on scs2.cohort_definition_id = scd2.cohort_definition_id
 
 -- Either compute half pairs or only pairs for specified target cohort ids
-where {@target_cohort_ids == ''} ? { scd1.cohort_definition_id  < scd2.cohort_definition_id} : {scd1.cohort_definition_id IN (@target_cohort_ids)}
+where {@target_cohort_ids == ''} ? { scs1.cohort_definition_id  < scs2.cohort_definition_id} : {scs1.cohort_definition_id IN (@target_cohort_ids)}
 group by scs1.cohort_definition_id, scs2.cohort_definition_id, scovd1.covariate_type
 ;
 

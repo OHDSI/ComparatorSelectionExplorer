@@ -22,10 +22,9 @@ uploadResults(
 
 \item{tablePrefix}{(Optional) Use if a table prefix is used before table names (e.g. "cd_")}
 
-\item{importFilpath}{file path to export zipped results to before upload (optional - default
-is temporary)}
+\item{importFilpath}{file path to export zipped results to before upload (optional - default is temporary)}
 
-\item{...}{Elipsis - see ResultModelManager::uploadResults}
+\item{...}{Elipsis  - see ResultModelManager::uploadResults}
 }
 \description{
 Upload results to database server
