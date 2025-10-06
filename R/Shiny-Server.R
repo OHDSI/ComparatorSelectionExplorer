@@ -835,7 +835,7 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
 #' \dontrun{
 #' createShinyApp(connectionDetails, "results_schema", tablePrefix = "myPrefix_")
 #' }
-createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix, ...) {
+createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix = "", ...) {
 
   qns <- createResultsQueryNamespace(connectionDetails = connectionDetails, resultsSchema = resultsSchema, tablePrefix = tablePrefix, usePooledConnection = TRUE, ...)
   ui <- shiny::fluidPage(
@@ -869,7 +869,7 @@ createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix, ...) {
 #' \dontrun{
 #' launchShinyApp(connectionDetails, "results_schema", tablePrefix = "myPrefix_")
 #' }
-launchShinyApp <- function(connectionDetails, resultsSchema, tablePrefix, ...) {
+launchShinyApp <- function(connectionDetails, resultsSchema, tablePrefix= "", ...) {
   app <- createShinyApp(connectionDetails, resultsSchema, tablePrefix, ...)
   shiny::runApp(app)
 }
