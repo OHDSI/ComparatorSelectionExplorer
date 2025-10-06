@@ -1,0 +1,44 @@
+---
+title: "Using Comparator Selection Explorer"
+author: "James P. Gilbert"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+  pdf_document:
+    toc: yes
+vignette: >
+  %\VignetteIndexEntry{Package Design}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+This intends to be a brief guide on usage or the comparator selection explorer
+
+## Creating CDM settings
+
+```{r}
+library(Eunomia)
+library(DatabaseConnector)
+connectionDetails <- getEunomiaConnectionDetails()
+connection <- connect(connectionDetails)
+querySql(connection, "SELECT COUNT(*) FROM person;")
+```
+
+## Executing
+
+```{r}
+
+```
+
+## Running using indication subsets
+
+## Creating Results Database Schema and uploading data
+```{r}
+
+```
+## Using the shiny explorer
+```{r}
+
+```
