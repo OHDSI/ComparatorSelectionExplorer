@@ -1,6 +1,6 @@
 ---
-title: "Using Comparator Selection Explorer with Subsets"
-author: "James P. Gilbert"
+title: "Using Comparator Selection Explorer"
+author: "James P. Gilbert, Cameron Atkins"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -14,127 +14,32 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
 ---
 
-This documents provides a step-by-step guide on using the Comparator Selection Explorer
-with subsets in R. It covers setting up the environment, creating cohorts from JSON 
-files, and generating cohort tables in a database. The guide also demonstrates how to 
-customize cohorts using SQL, RxNorm and ATC templates, and how to leverage the Shiny
-explorer for interactive cohort analysis.
+This document serves as a comprehensive guide to using the Comparator Selection Explorer in R for cohort definition and analysis within the OMOP Common Data Model. It covers setting up the environment, creating cohort templates based on RxNorm ingredients and ATC classifications, generating cohorts in a database, and managing results. Additionally, it demonstrates how to upload results to a database and explore outcomes interactively using a Shiny app. This step-by-step approach enables users to efficiently develop and analyze cohorts for observational research.
 
-#Setup Environment and Load Libraries
-
-```{r}
+# Setup Environment and Load Libraries
+This block loads the necessary R packages and establishes a connection to the Eunomia testing database, preparing the environment for cohort creation and exploration.
+```{r, message=FALSE}
 #Load required libraries
 library(Eunomia)
 library(DatabaseConnector)
 library(CohortGenerator)
+library(ComparatorSelectionExplorer)
 
 #Establish required connection to Eunomia
 connectionDetails <- getEunomiaConnectionDetails()
 connection <- connect(connectionDetails)
 ```
 
-#Install OHDSI Cohort Generator (if not already installed)
-```{r}
+# Install OHDSI Cohort Generator (if not already installed)
+This optional step installs the latest development versions of the OHDSI Cohort Generator and Comparator Selection Explorer packages directly from GitHub.
+```{r eval=FALSE}
 remotes::install_github("OHDSI/CohortGenerator", ref = "develop")
+remotes::install_github("OHDSI/ComparatorSelectionExplorer", ref = "develop")
 ```
 
-#Create Cohort Definitions from JSON files
-```{r}
-#Initialize empty Cohort Definition set
-cohortsToCreate <- CohortGenerator::createEmptyCohortDefinitionSet()
-
-#Load cohort JSON files from package directory
-cohortJsonFiles <- list.files(path = system.file("testdata/name/cohorts", 
-                                                 package = "CohortGenerator"), full.names = TRUE)
-
-#Loop to read JSONs and create SQL
-for (i in 1:length(cohortJsonFiles)) {
-  cohortJsonFileName <- cohortJsonFiles[i]
-  cohortName <- tools::file_path_sans_ext(basename(cohortJsonFileName))
-  # Here we read in the JSON in order to create the SQL
-  # using [CirceR](https://ohdsi.github.io/CirceR/)
-  # If you have your JSON and SQL stored differenly, you can
-  # modify this to read your JSON/SQL files however you require
-  cohortJson <- readChar(cohortJsonFileName, file.info(cohortJsonFileName)$size)
-  cohortExpression <- CirceR::cohortExpressionFromJson(cohortJson)
-  cohortSql <- CirceR::buildCohortQuery(cohortExpression, options= 
-                                         CirceR::createGenerateOptions(generateStats = FALSE))
-  cohortsToCreate <- rbind(cohortsToCreate, data.frame(cohortId = i,
-                                                       cohortName = cohortName, 
-                                                       sql = cohortSql,
-                                                       stringsAsFactors = FALSE))
-}
-
-```
-
-#Create Cohort Tables in Database
-
-```{r}
-# Generate the cohort set against Eunomia. 
-# cohortsGenerated contains a list of the cohortIds 
-# successfully generated against the CDM
-
-
-# Create the cohort tables to hold the cohort generation results
-cohortTableNames <- CohortGenerator::getCohortTableNames(cohortTable = "my_cohort_table")
-CohortGenerator::createCohortTables(connectionDetails = connectionDetails,
-                                                        cohortDatabaseSchema = "main",
-                                                        cohortTableNames = cohortTableNames)
-```
-
-#Create Cohorts in Database
-
-```{r}
-#Create Empty Cohort Definition Set
-cohortDefinitionSet <- createEmptyCohortDefinitionSet()
-
-createCohortTables(connection = connection, cohortDatabaseSchema = "main")
-#status <- generateCohortSet(connection = connection,
- #                           cdmDatabaseSchema = "main",
-  #                          cohortTableNames = getCohortTableNames(),
-   #                         cohortDefinitionSet = cohortDefinitionSet,
-    #                        incremental = TRUE,
-     #                       incrementalFolder = tempfile())
-```
-
-```{r}
-# Generate the cohorts
-cohortsGenerated <- CohortGenerator::generateCohortSet(
-                                          connectionDetails = connectionDetails,
-                                          cdmDatabaseSchema = "main",
-                                          cohortDatabaseSchema = "main",
-                                          cohortTableNames = cohortTableNames,
-                                          cohortDefinitionSet = cohortsToCreate)
-
-# View cohort counts
-cohortCounts <- CohortGenerator::getCohortCounts(connectionDetails = connectionDetails,
-                                                 cohortDatabaseSchema = "main",
-                                                 cohortTable = cohortTableNames$cohortTable)
-print(cohortCounts)
-```
-
-
-
-
-#View Cohort Tables
-```{r}
-# Define your cohort table name
-cohortTable <- getCohortTableNames()$cohortTable
-
-# SQL to select all entries
-sql <- paste0(
-  "SELECT * FROM main.", cohortTable,
-  " WHERE cohort_definition_id = 1"  # assuming cohortId 1
-)
-
-# Run the query
-cohortEntries <- querySql(connection, sql)
-
-# View the first few entries
-head(cohortEntries)
-```
-
-```{r}
+# Create RxNorm Cohort Definitions and view results
+This section creates a cohort template based on RxNorm ingredients, adds it to the cohort set, and displays the first few references of the generated template.
+```{r, results='hide', message=FALSE}
 # Create RxNorm ingredient cohort template
 rxNormDefinition <- createRxNormCohortTemplateDefinition(
   connection = connection,  # Testing with Eunomia Database
@@ -142,8 +47,7 @@ rxNormDefinition <- createRxNormCohortTemplateDefinition(
   priorObservationPeriod = 365
 )
 
-cohortDefinitionSet <- cohortDefinitionSet |>
-        addCohortTemplateDefintion(cohortTemplateDefintion = rxNormDefinition)
+cohortDefinitionSet <- addCohortTemplateDefintion(cohortTemplateDefintion = rxNormDefinition)
 
 
 # View details of generated template references
@@ -151,8 +55,10 @@ rxNormReferences <- rxNormDefinition$getTemplateReferences()
 head(rxNormReferences)
 ```
 
-## ATC Based cohorts
-```{r}
+
+# Create ATC Based cohorts
+This block creates a cohort template based on ATC drug classifications, adds it to the cohort set, and displays the first few references for review.
+```{r eval=FALSE}
 # Create ATC-based cohort template
 atcDefinition <- createAtcCohortTemplateDefinition(
   connection = connection,  # Replace with your DatabaseConnector connection
@@ -169,13 +75,70 @@ atcReferences <- atcDefinition$getTemplateReferences()
 head(atcReferences)
 ```
 
-## Error(s) expected because no ATC in Eunomia dataset
+# Create Cohort Tables in Database
+This code generates the necessary cohort tables in the database to store cohort data, using specified schema and table names.
+```{r results='hide', message=FALSE}
+# Generate the cohort set against Eunomia. 
+# cohortsGenerated contains a list of the cohortIds 
+# successfully generated against the CDM
 
 
-## Running using indication subsets
+# Create the cohort tables to hold the cohort generation results
+cohortTableNames <- CohortGenerator::getCohortTableNames(cohortTable = "my_cohort_table")
+CohortGenerator::createCohortTables(connectionDetails = connectionDetails,
+                                                        cohortDatabaseSchema = "main",
+                                                        cohortTableNames = cohortTableNames)
+```
 
-## Creating Results Database Schema and uploading data
+# Generate the Cohort Set and view counts
+This section runs the cohort generation process, creating cohorts in the database, and then retrieves and prints the counts of each cohort.
+```{r,results='hide', message=FALSE}
+# Generate the cohorts
+cohortsGenerated <- CohortGenerator::generateCohortSet(
+                                          connectionDetails = connectionDetails,
+                                          cdmDatabaseSchema = "main",
+                                          cohortDatabaseSchema = "main",
+                                          cohortTableNames = cohortTableNames,
+                                          cohortDefinitionSet = cohortDefinitionSet)
 
-## Using the shiny explorer
+# View cohort counts
+cohortCounts <- CohortGenerator::getCohortCounts(connectionDetails = connectionDetails,
+                                                 cohortDatabaseSchema = "main",
+                                                 cohortTable = cohortTableNames$cohortTable)
+print(cohortCounts)
+```
+
+# Create Execution Settings
+This block sets up the execution environment with all necessary parameters and executes the cohort creation process.
+```{r, results='hide', message=FALSE}
+executionSettings <- createExecutionSettings(connection = connection,
+                                             cohortDefinitionSet = cohortDefinitionSet,
+                                             cdmDatabaseSchema = "main",
+                                             resultsDatabaseSchema = "main",
+                                             cohortTable = cohortTableNames$cohortTable)
+execute(executionSettings)
+```
+
+# Creating Results Database Schema and uploading data
+This code creates a results schema in a SQLite database, prepares it for data, and uploads the cohort results and specifications.
+```{r, results='hide', message=FALSE, warning=FALSE}
+resultsConnectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "sqlite", server="resultsfile.db")
+createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = "")
+
+uploadResults(connectionDetails = resultsConnectionDetails,
+              databaseSchema = "main",
+              zipFileName = executionSettings$exportZipFile,
+              forceOverWriteOfSpecifications = FALSE,
+              purgeSiteDataBeforeUploading = FALSE,
+              tablePrefix = "")
+```
+
+
+# Using the shiny explorer
+This final step launches an interactive Shiny app for exploring the cohort results stored in the database.
+```{r eval=FALSE}
+launchShinyApp(resultsConnectionDetails, "main")
+```
+
 
 
