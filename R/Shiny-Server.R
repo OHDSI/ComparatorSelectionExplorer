@@ -48,17 +48,21 @@ powerTabModuleServer <- function(id, qns) {
     # Render gt table
     output$powerResultsTable <- gt::render_gt({
       res <- powerResults() |>
-        dplyr::select(-"cohortDefinitionId")
+        dplyr::mutate(totalPersonTimeYears = .data$totalPersonTimeDays/365.25) |>
+        dplyr::select(-"cohortDefinitionId", -"totalPersonTimeDays")
+
       shiny::validate(shiny::need(nrow(res) > 0, "No results to display"))
 
       res |>
         gt::gt() |>
-        gt::fmt_number(columns = c(totalPersonTimeDays, baselineIncidence, expectedEvents, mdrr), decimals = 3) |>
+        gt::fmt_integer(columns = c("expectedEvents")) |>
+        gt::fmt_number(columns = c("totalPersonTimeYears", "baselineIncidence", "expectedEvents", "mdrr"), decimals = 3) |>
+        gt::fmt_number(columns = c("totalPersonTimeYears"), decimals = 2) |>
         gt::cols_label(
           cohortName = "Exposure",
           database = "Data source",
-          totalPersonTimeDays = "Total Person-Time (Days)",
-          baselineIncidence = "Baseline Incidence",
+          totalPersonTimeYears = "Person-Time (Years)",
+          baselineIncidence = "Incidence P100py",
           expectedEvents = "Expected Events",
           mdrr = "MDRR"
         ) |>

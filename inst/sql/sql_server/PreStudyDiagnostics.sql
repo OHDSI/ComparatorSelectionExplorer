@@ -23,7 +23,9 @@ SELECT
 FROM @cohort_database_schema.@cohort sc
 INNER JOIN @cdm_database_schema.condition_occurrence co
     ON sc.subject_id = co.person_id
+    -- Outcome event must occur after cohort start + 1 and before cohort ends
     AND DATEDIFF(day, sc.cohort_start_date, co.condition_start_date) > 1
+    AND  co.condition_start_date < sc.cohort_end_date
 INNER JOIN @cdm_database_schema.concept_ancestor ca
     ON ca.descendant_concept_id = co.condition_concept_id
 INNER JOIN @cdm_database_schema.concept c

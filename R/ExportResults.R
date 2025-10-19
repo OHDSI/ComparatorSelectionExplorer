@@ -201,6 +201,7 @@ exportResults <- function(executionSettings = NULL, ...) {
     FROM @results_database_schema.@condition_concept_counts cc
     INNER JOIN @results_database_schema.@count_table ct ON cc.cohort_definition_id = ct.cohort_definition_id
     WHERE ct.num_persons >= @min_exposure_size
+    AND (cc.descendant_occurrence_count != 0 OR cc.occurrence_count != 0)
     "
     DatabaseConnector::renderTranslateQueryApplyBatched(
       executionSettings$connection,

@@ -302,6 +302,7 @@ Well defined phenotype algorithms will likley adjust this estimate."),
 Estimates of incidence between target and comparator populations are not adjusted for confounding variables and should not be interpreted as a treatment effect."),
       shiny::p("0
 Only single outcome counts are included if they occur in the post exposure period, indiviudals can experience many outcomes outside of the time at risk.
+Indiviudals may have outcomes prior to exposure which would most likely be excluded in an active comparator new user design.
 Currently, only time on treatement is considered in this analysis."),
       shinycssloaders::withSpinner(
         gt::gt_output(ns("powerResultsTable"))
