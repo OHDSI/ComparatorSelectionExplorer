@@ -47,7 +47,8 @@ Suggests:
   knitr,
   withr,
   reticulate,
-  duckdb
+  duckdb,
+  gt
 Remotes:
   ohdsi/CohortGenerator@develop
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
