@@ -23,6 +23,9 @@ mockExecutionSettings <- createMockExecutionSettings(databaseName = "test",
                                                      covariateDefTable = "cse_covariate_ref",
                                                      covariateMeansTable = "cse_covariate_means",
                                                      cosineSimStratifiedTable = "cse_cosine_sim",
+                                                     conditionConceptCountsTable = "cse_condition_concept_counts",
+                                                     cohortPersonTimeTable = "cse_cohort_person_time",
+                                                     exportPreStudyDiagnostics = TRUE,
                                                      minExposureSize = 1000)
 
 
@@ -43,6 +46,8 @@ test_that("Platform test queries for cosine similarity", {
     sql <- .getFeaturesSql(mockExecutionSettings, dbms = sqlTestDbmsPlatforms[[dbms]])
     expect_silent(parseQuery(sql, dbms))
     sql <- .getCosineSimilaritySql(mockExecutionSettings, dbms = sqlTestDbmsPlatforms[[dbms]])
+    expect_silent(parseQuery(sql, dbms))
+    sql <- .getPreStudyDiagnostics(mockExecutionSettings, dbms = sqlTestDbmsPlatforms[[dbms]])
     expect_silent(parseQuery(sql, dbms))
   }
 })

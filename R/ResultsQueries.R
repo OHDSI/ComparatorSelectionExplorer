@@ -589,6 +589,96 @@ getDatabaseSources <- function(qns) {
   qns$queryDb(sql = "select distinct * from @schema.@cse_cdm_source_info t")
 }
 
+#' Get Minimum Detectable Relative Risk (MDRR) for Cohorts
+#'
+#' Computes MDRR for each cohort in the cse_cohort_person_time table
+#' using baseline incidence calculated from occurrence counts for one or more outcome concepts.
+#'
+#' @param qns A QueryNamespace object.
+#' @param alpha Significance level — must be one of 0.05, 0.01, 0.001.
+#' @param power Desired study power — must be one of 0.80, 0.90, 0.95.
+#' @param outcomeConceptIds Integer vector of one or more condition_concept_ids for the outcome(s) of interest.
+#' @param databaseId The database_id to filter results for a specific source.
+#' @param cohortIds Optional vector of cohort_definition_ids to filter results.
+#' @param useDescendants Logical; if TRUE, use descendant_occurrence_count for baseline incidence.
+#'
+#' @return A data.frame with MDRR estimates per cohort.
+#'
+#' @examples
+#' # Single outcome concept, direct counts
+#' getCohortMdrr(qns, alpha = 0.05, power = 0.80, outcomeConceptIds = 201826, databaseId = 1)
+#'
+#' # Multiple outcomes, using descendants
+#' getCohortMdrr(qns, alpha = 0.05, power = 0.90, outcomeConceptIds = c(201826, 320128), databaseId = 1, useDescendants = TRUE)
+getCohortMdrr <- function(qns,
+                          alpha = 0.05,
+                          power = 0.80,
+                          outcomeConceptIds,
+                          databaseId,
+                          cohortIds = NULL,
+                          useDescendants = TRUE) {
+  checkmate::assertClass(qns, "QueryNamespace")
+
+  # Restrict alpha and power to allowed values
+  allowedAlpha <- c(0.05, 0.01, 0.001)
+  allowedPower <- c(0.80, 0.90, 0.95)
+  if (!(alpha %in% allowedAlpha)) {
+    stop(sprintf("alpha must be one of: %s", paste(allowedAlpha, collapse = ", ")))
+  }
+  if (!(power %in% allowedPower)) {
+    stop(sprintf("power must be one of: %s", paste(allowedPower, collapse = ", ")))
+  }
+
+  checkmate::assertIntegerish(outcomeConceptIds, lower = 1)
+  checkmate::assertIntegerish(databaseId, lower = 1)
+  if (!is.null(cohortIds)) checkmate::assertIntegerish(cohortIds, lower = 1)
+  checkmate::assertLogical(useDescendants, len = 1)
+
+  outcomeConceptIdsStr <- paste(outcomeConceptIds, collapse = ",")
+  cohortIdsStr <- if (!is.null(cohortIds)) paste(cohortIds, collapse = ",") else ""
+
+  qns$queryDb("
+    SELECT
+        pt.cohort_definition_id,
+        pt.total_person_time_days,
+        SUM({@use_descendants} ? cc.descendant_occurrence_count : cc.occurrence_count) / (pt.total_person_time_days / 365.25) AS baseline_incidence,
+        (pt.total_person_time_days / 365.25) *
+        (SUM({@use_descendants} ? cc.descendant_occurrence_count : cc.occurrence_count) / (pt.total_person_time_days / 365.25)) AS expected_events,
+        EXP(
+            (
+                CASE
+                    WHEN @alpha = 0.05 THEN 1.96
+                    WHEN @alpha = 0.01 THEN 2.576
+                    WHEN @alpha = 0.001 THEN 3.291
+                    ELSE NULL
+                END
+                +
+                CASE
+                    WHEN @power = 0.80 THEN 0.84
+                    WHEN @power = 0.90 THEN 1.282
+                    WHEN @power = 0.95 THEN 1.645
+                    ELSE NULL
+                END
+            ) / SQRT((pt.total_person_time_days / 365.25) *
+                     (SUM({@use_descendants} ? cc.descendant_occurrence_count : cc.occurrence_count) / (pt.total_person_time_days / 365.25)))
+        ) AS mdrr
+    FROM @schema.cse_cohort_person_time pt
+    INNER JOIN @schema.cse_condition_concept_counts cc
+        ON pt.cohort_definition_id = cc.cohort_definition_id
+        AND pt.database_id = cc.database_id
+        AND cc.condition_concept_id IN (@outcome_concept_ids)
+    WHERE pt.database_id = @database_id
+    {@cohort_ids != ''} ? {AND pt.cohort_definition_id IN (@cohort_ids)}
+    GROUP BY pt.cohort_definition_id, pt.total_person_time_days;
+  ",
+  alpha = alpha,
+  power = power,
+  outcome_concept_ids = outcomeConceptIdsStr,
+  database_id = databaseId,
+  cohort_ids = cohortIdsStr,
+  use_descendants = useDescendants
+  )
+}
 
 #' Create Query Namespace for Results Data Model
 #'
@@ -599,7 +689,6 @@ getDatabaseSources <- function(qns) {
 #' @param connectionDetails A DatabaseConnector connection details object.
 #' @param resultsSchema The database schema where the results tables are located.
 #' @param tablePrefix Optional table prefix for the results tables (default is \code{""}).
-#' @param dataModelSpecPath Path to the results data model specification CSV file (default is \code{"resultsDataModel.csv"}).
 #' @param usePooledConnection Logical; whether to use pooled connections (default is \code{FALSE}).
 #'
 #' @return A query namespace object as returned by \code{ResultModelManager::createQueryNamespace()}.
@@ -618,7 +707,6 @@ createResultsQueryNamespace <- function(
   connectionDetails,
   resultsSchema,
   tablePrefix = "",
-  dataModelSpecPath = system.file("settings", "resultsDataModel.csv", package = "ComparatorSelectionExplorer"),
   usePooledConnection = FALSE
 ) {
   dataModelSpec <- getResultsDataModelSpec() |>

@@ -49,6 +49,7 @@
 #' @param minExposureSize                    (optional) Minimum number of exposures to be included in
 #'                                           cosine similarity analysis (defaults to 1000).
 #' @param logFileLocation                    (optional) Log file location
+#' @param exportPreStudyDiagnostics          (optional) export pre-study diagnostics for computation of MDRR power statistic
 #' @param exportDir                          (optional) Folder to store results files in before export
 #'                                           (default is tempdir)
 #' @param removeExportDir                    (optional) remove the export dir after creating zip files?
@@ -73,6 +74,10 @@ createExecutionSettings <- function(connectionDetails = NULL,
                                     covariateDefTable = "cse_covariate_ref",
                                     covariateMeansTable = "cse_covariate_means",
                                     cosineSimStratifiedTable = "cse_cosine_sim",
+                                    conditionConceptCountsTable = "cse_condition_concept_counts",
+                                    cohortPersonTimeTable = "cse_cohort_person_time",
+                                    exportPreStudyDiagnostics = TRUE,
+                                    minPersonCount = 10,
                                     minExposureSize = 1000,
                                     logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
                                     exportDir = tempfile(),
@@ -99,11 +104,15 @@ createExecutionSettings <- function(connectionDetails = NULL,
                             covariateDefTable = covariateDefTable,
                             covariateMeansTable = covariateMeansTable,
                             cosineSimStratifiedTable = cosineSimStratifiedTable,
+                            conditionConceptCountsTable = conditionConceptCountsTable,
+                            cohortPersonTimeTable = cohortPersonTimeTable,
+                            exportPreStudyDiagnostics = exportPreStudyDiagnostics,
                             minExposureSize = minExposureSize,
                             exportDir = exportDir,
                             removeExportDir = removeExportDir,
                             cohortDefinitionSet = cohortDefinitionSet,
                             targetCohortIds = targetCohortIds,
+                            minPersonCount = minPersonCount,
                             connection = connection)
   class(executionSettings) <- "executionSettings"
 

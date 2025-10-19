@@ -38,3 +38,13 @@ cse_atc_level,atc_4_related,bigint,no,no,atc info
 cse_atc_level,atc_5_related,bigint,no,no,atc info
 cse_cohort_tag,cohort_definition_id,bigint,yes,no,cohort id
 cse_cohort_tag,tag,text,yes,no,a string tag
+cse_condition_concept_counts,cohort_definition_id,bigint,Yes,no,cohort definition id
+cse_condition_concept_counts,condition_concept_id,bigint,Yes,no,condition concept id
+cse_condition_concept_counts,condition_concept_name,varchar,no,no,condition concept name
+cse_condition_concept_counts,occurrence_count,bigint,no,Yes,count of persons with direct condition occurrence after index
+cse_condition_concept_counts,descendant_occurrence_count,bigint,no,Yes,count of persons with descendant condition occurrence after index
+cse_condition_concept_counts,database_id,bigint,Yes,no,database definition id
+cse_cohort_person_time,cohort_definition_id,bigint,Yes,no,cohort definition id
+cse_cohort_person_time,total_person_time_days,bigint,no,Yes,aggregated total person-time in days for cohort
+cse_cohort_person_time,database_id,bigint,Yes,no,database definition id
+cse_cohort_person_time,tar_id,int,Yes,no,time at risk id (not currently used)

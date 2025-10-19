@@ -51,7 +51,7 @@ exportResults <- function(executionSettings = NULL, ...) {
       if (nrow(data)) {
         data$database_id <- executionSettings$databaseId
       } else {
-        data <- data %>% dplyr::mutate(database_id = "")
+        data <- data |> dplyr::mutate(database_id = "")
       }
     }
 
@@ -163,6 +163,62 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                         addDbId = TRUE
                                                       ),
                                                       cdm_database_schema = executionSettings$cdmDatabaseSchema)
+
+  if (executionSettings$exportPreStudyDiagnostics) {
+    sql <- "
+    SELECT cpt.* FROM @results_database_schema.@cohort_person_time cpt
+    INNER JOIN @results_database_schema.@count_table ct ON cpt.cohort_definition_id = ct.cohort_definition_id
+    WHERE ct.num_persons >= @min_exposure_size"
+    DatabaseConnector::renderTranslateQueryApplyBatched(
+      executionSettings$connection,
+      sql,
+      fun = exportResultsFun,
+      args = list(
+        csvFilename = "cse_cohort_person_time.csv",
+        addDbId = TRUE
+      ),
+      cohort_person_time = executionSettings$cohortPersonTimeTable,
+      min_exposure_size = executionSettings$minExposureSize,
+      count_table = executionSettings$cohortCountTable,
+      results_database_schema = executionSettings$resultsDatabaseSchema
+    )
+
+    # Export cse_condition_concept_counts
+    sql <- "
+    SELECT
+      cc.cohort_definition_id,
+      cc.condition_concept_id,
+      cc.condition_concept_name,
+      CASE
+        WHEN cc.occurrence_count >= @min_person_count THEN cc.occurrence_count
+        WHEN cc.occurrence_count = 0 THEN 0
+        WHEN cc.occurrence_count < @min_person_count THEN -@min_person_count
+      END as occurrence_count,
+      CASE
+        WHEN cc.descendant_occurrence_count >= @min_person_count THEN cc.descendant_occurrence_count
+        WHEN cc.descendant_occurrence_count = 0 THEN 0
+        WHEN cc.descendant_occurrence_count < @min_person_count THEN -@min_person_count
+      END as descendant_occurrence_count
+    FROM @results_database_schema.@condition_concept_counts cc
+    INNER JOIN @results_database_schema.@count_table ct ON cc.cohort_definition_id = ct.cohort_definition_id
+    WHERE ct.num_persons >= @min_exposure_size
+    "
+    DatabaseConnector::renderTranslateQueryApplyBatched(
+      executionSettings$connection,
+      sql,
+      fun = exportResultsFun,
+      args = list(
+        csvFilename = "cse_condition_concept_counts.csv",
+        addDbId = TRUE
+      ),
+      min_exposure_size = executionSettings$minExposureSize,
+      min_person_count = executionSettings$minPersonCount,
+      condition_concept_counts = executionSettings$conditionConceptCountsTable,
+      count_table = executionSettings$cohortCountTable,
+      results_database_schema = executionSettings$resultsDatabaseSchema
+    )
+  }
+
   .zipResults(executionSettings)
 
   if (executionSettings$removeExportDir) {

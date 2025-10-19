@@ -31,6 +31,10 @@ execute <- function(executionSettings = NULL, ...) {
   }
 
   executionSettings <- generateSimilarityScores(executionSettings)
+
+  if (executionSettings$exportPreStudyDiagnostics)
+    executionSettings <- executePreStudyDiagnostics(executionSettings)
+
   executionSettings <- exportResults(executionSettings)
 
   # 3. export results and zip
