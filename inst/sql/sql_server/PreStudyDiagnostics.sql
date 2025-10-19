@@ -4,7 +4,6 @@ DROP TABLE IF EXISTS @results_database_schema.@condition_concept_counts;
 CREATE TABLE @results_database_schema.@condition_concept_counts (
     cohort_definition_id bigint,
     condition_concept_id bigint,
-    condition_concept_name varchar(255),
     occurrence_count bigint,
     descendant_occurrence_count bigint
 );
@@ -13,7 +12,6 @@ INSERT INTO @results_database_schema.@condition_concept_counts
 SELECT
     sc.cohort_definition_id,
     ca.ancestor_concept_id AS condition_concept_id,
-    c.concept_name AS condition_concept_name,
     COUNT(DISTINCT CASE
         WHEN co.condition_concept_id = ca.ancestor_concept_id
         THEN co.person_id

@@ -40,7 +40,6 @@ cse_cohort_tag,cohort_definition_id,bigint,yes,no,cohort id
 cse_cohort_tag,tag,text,yes,no,a string tag
 cse_condition_concept_counts,cohort_definition_id,bigint,Yes,no,cohort definition id
 cse_condition_concept_counts,condition_concept_id,bigint,Yes,no,condition concept id
-cse_condition_concept_counts,condition_concept_name,varchar,no,no,condition concept name
 cse_condition_concept_counts,occurrence_count,bigint,no,Yes,count of persons with direct condition occurrence after index
 cse_condition_concept_counts,descendant_occurrence_count,bigint,no,Yes,count of persons with descendant condition occurrence after index
 cse_condition_concept_counts,database_id,bigint,Yes,no,database definition id

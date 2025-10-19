@@ -188,7 +188,6 @@ exportResults <- function(executionSettings = NULL, ...) {
     SELECT
       cc.cohort_definition_id,
       cc.condition_concept_id,
-      cc.condition_concept_name,
       CASE
         WHEN cc.occurrence_count >= @min_person_count THEN cc.occurrence_count
         WHEN cc.occurrence_count = 0 THEN 0

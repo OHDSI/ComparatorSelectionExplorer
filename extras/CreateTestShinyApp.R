@@ -1,7 +1,7 @@
 devtools::load_all()
-unlink("tests/testthat/test_db/test_cse.db", force = TRUE, recursive = TRUE)
+unlink("test_cse.db", force = TRUE, recursive = TRUE)
 resultsConnectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "duckdb",
-                                                                       server = "tests/testthat/test_db/test_cse.db")
+                                                                       server = "test_cse.db")
 createTestShinyData(resultsConnectionDetails, "test_")
-#launchShinyApp(resultsConnectionDetails, "main", "test_")
+devtools::load_all(); launchShinyApp(resultsConnectionDetails, "main", "test_")
 # qns <- createResultsQueryNamespace(resultsConnectionDetails, "main", tablePrefix = "test_")

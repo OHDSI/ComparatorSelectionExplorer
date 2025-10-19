@@ -13,7 +13,6 @@ CREATE TABLE @database_schema.@table_prefix@cse_condition_concept_counts (
     cohort_definition_id bigint,
     database_id bigint,
     condition_concept_id bigint,
-    condition_concept_name varchar(255),
     occurrence_count bigint,
     descendant_occurrence_count bigint,
     primary key (cohort_definition_id, condition_concept_id, database_id)

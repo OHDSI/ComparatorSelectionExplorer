@@ -1,4 +1,72 @@
-# No library() calls at the top!
+# Power tab module server
+powerTabModuleServer <- function(id, qns) {
+  shiny::moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+
+    # Load cohort definitions for drop-downs
+    cohortDefs <- shiny::reactive({
+      getCohortDefinitions(qns)
+    })
+
+    shiny::observe({
+      cds <- cohortDefs()
+      if (nrow(cds)) {
+        choices <- cds$cohortDefinitionId
+        names(choices) <- cds$shortName
+        shiny::updateSelectInput(session, "selectedPowerTarget", choices = choices)
+        shiny::updateSelectInput(session, "selectedPowerComparator", choices = choices)
+      }
+    })
+
+    # Parse concept list from text area
+    parsedOutcomeConcepts <- shiny::reactive({
+      raw <- input$outcomeConceptList
+      if (is.null(raw) || raw == "") return(integer(0))
+      ids <- unlist(strsplit(raw, "[,\\s]+"))
+      ids <- ids[ids != ""]
+      as.numeric(ids)
+    })
+
+    # Compute MDRR when button clicked
+    powerResults <- shiny::eventReactive(input$computePower, {
+      shiny::validate(
+        shiny::need(input$selectedPowerTarget, "Select target cohort"),
+        shiny::need(input$selectedPowerComparator, "Select comparator cohort"),
+        shiny::need(length(parsedOutcomeConcepts()) > 0, "Enter at least one outcome concept ID")
+      )
+
+      getCohortMdrr(
+        qns = qns,
+        alpha = as.numeric(input$selectedPowerAlpha),
+        power = as.numeric(input$selectedPower),
+        outcomeConceptIds = parsedOutcomeConcepts(),
+        cohortIds = c(input$selectedPowerTarget, input$selectedPowerComparator),
+        useDescendants = input$useDescendantCounts
+      )
+    })
+
+    # Render gt table
+    output$powerResultsTable <- gt::render_gt({
+      res <- powerResults() |>
+        dplyr::select(-"cohortDefinitionId")
+      shiny::validate(shiny::need(nrow(res) > 0, "No results to display"))
+
+      res |>
+        gt::gt() |>
+        gt::fmt_number(columns = c(totalPersonTimeDays, baselineIncidence, expectedEvents, mdrr), decimals = 3) |>
+        gt::cols_label(
+          cohortName = "Exposure",
+          database = "Data source",
+          totalPersonTimeDays = "Total Person-Time (Days)",
+          baselineIncidence = "Baseline Incidence",
+          expectedEvents = "Expected Events",
+          mdrr = "MDRR"
+        ) |>
+        gt::tab_header(title = "Minimum Detectable Relative Risk (MDRR) Estimates") |>
+        gt::tab_options(table.font.size = "small", data_row.padding = gt::px(2))
+    })
+  })
+}
 
 comparatorSelectionAppModuleServer <- function(id, qns) {
 
@@ -843,6 +911,7 @@ createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix = "", .
   )
 
   server <- function(input, output, session) {
+    powerTabModuleServer("powerMod", qns)
     comparatorSelectionAppModuleServer("main", qns)
   }
 

@@ -177,37 +177,37 @@ exclusionCovariateUi <- function(ns) {
           exposure may lead to propensity score model fitting issues.
           To identify a list candidate covariates for exclusion, select prevalence thresholds below"),
     shiny::div(class = "inline-inputs",
-        shiny::tags$span("Show covariates with prevalance greater than"),
-        shiny::numericInput(ns("prevInputHighMax"),
-                            label = "",
-                            value = 95,
-                            step = 1,
-                            min = 0.0,
-                            max = 100.0),
-        shiny::tags$span("% and less than"),
-        shiny::numericInput(ns("prevInputHighMin"),
-                            label = "",
-                            value = 80,
-                            step = 1,
-                            min = 0.0,
-                            max = 100.0),
-        shiny::tags$span("% in one target/comparator"),
-        shiny::br(),
-        shiny::tags$span("As well as covariates with prevalanc greater than"),
-        shiny::numericInput(ns("prevInputLowMax"),
-                            label = "",
-                            value = 20,
-                            step = 1,
-                            min = 0.0,
-                            max = 100.0),
-        shiny::tags$span("% and less than"),
-        shiny::numericInput(ns("prevInputLowMin"),
-                            label = "",
-                            value = 5,
-                            step = 1,
-                            min = 0.0,
-                            max = 100.0),
-        shiny::tags$span("% in one target/comparator")
+               shiny::tags$span("Show covariates with prevalance greater than"),
+               shiny::numericInput(ns("prevInputHighMax"),
+                                   label = "",
+                                   value = 95,
+                                   step = 1,
+                                   min = 0.0,
+                                   max = 100.0),
+               shiny::tags$span("% and less than"),
+               shiny::numericInput(ns("prevInputHighMin"),
+                                   label = "",
+                                   value = 80,
+                                   step = 1,
+                                   min = 0.0,
+                                   max = 100.0),
+               shiny::tags$span("% in one target/comparator"),
+               shiny::br(),
+               shiny::tags$span("As well as covariates with prevalanc greater than"),
+               shiny::numericInput(ns("prevInputLowMax"),
+                                   label = "",
+                                   value = 20,
+                                   step = 1,
+                                   min = 0.0,
+                                   max = 100.0),
+               shiny::tags$span("% and less than"),
+               shiny::numericInput(ns("prevInputLowMin"),
+                                   label = "",
+                                   value = 5,
+                                   step = 1,
+                                   min = 0.0,
+                                   max = 100.0),
+               shiny::tags$span("% in one target/comparator")
     ),
     shinycssloaders::withSpinner(reactable::reactableOutput(ns("covTableCoOccurrence"))),
     shiny::div(
@@ -220,17 +220,113 @@ exclusionCovariateUi <- function(ns) {
 
 }
 
+powerUi <- function(id = "powerMod") {
+  ns <- shiny::NS(id)
+  shiny::fluidPage(
+    shinydashboard::box(
+      title = "Power Estimate Settings",
+      width = 12,
+      shiny::fluidRow(
+        shiny::column(
+          width = 4,
+          shiny::selectInput(
+            inputId = ns("selectedPowerTarget"),
+            label = "Select target exposure:",
+            choices = NULL,   # will be populated server-side
+            selected = NULL
+          )
+        ),
+        shiny::column(
+          width = 4,
+          shiny::selectInput(
+            inputId = ns("selectedPowerComparator"),
+            label = "Select comparator exposure:",
+            choices = NULL,   # will be populated server-side
+            selected = NULL
+          )
+        )
+      ),
+      shiny::fluidRow(
+        shiny::column(
+          width = 4,
+          shiny::selectInput(
+            inputId = ns("selectedPowerAlpha"),
+            label = "Significance level (alpha):",
+            choices = c("0.05", "0.01", "0.001"),
+            selected = "0.05"
+          )
+        ),
+        shiny::column(
+          width = 4,
+          shiny::selectInput(
+            inputId = ns("selectedPower"),
+            label = "Desired power:",
+            choices = c("0.80", "0.90", "0.95"),
+            selected = "0.80"
+          )
+        ),
+        shiny::column(
+          width = 4,
+          shiny::checkboxInput(
+            inputId = ns("useDescendantCounts"),
+            label = "Use descendant occurrence counts",
+            value = FALSE
+          )
+        ),
+        shiny::column(
+          width = 12,
+          shiny::tags$label("Outcome concept IDs (comma or space separated)"),
+          shiny::textAreaInput(
+            inputId = ns("outcomeConceptList"),
+            label = NULL,
+            placeholder = "e.g. 201826, 320128, 123456",
+            rows = 3,
+            resize = "vertical"
+          )
+        )
+      ),
+      shiny::actionButton(inputId = ns("computePower"), label = "Compute Power Estimates")
+    ),
+
+    shinydashboard::box(
+      width = 12,
+      title = "Power Estimates",
+
+      shiny::p("
+The Minimum Detectable Relative Risk (MDRR) is calculated from total person‑time, baseline incidence of the outcome, and chosen alpha and power to estimate the smallest relative risk that
+can be reliably estimated."),
+      shiny::p("
+This implementation uses all snomed condition codes and computes the record count and descendant record count using the snomed heirarchy.
+Well defined phenotype algorithms will likley adjust this estimate."),
+      shiny::p("
+Estimates of incidence between target and comparator populations are not adjusted for confounding variables and should not be interpreted as a treatment effect."),
+      shiny::p("0
+Only single outcome counts are included if they occur in the post exposure period, indiviudals can experience many outcomes outside of the time at risk.
+Currently, only time on treatement is considered in this analysis."),
+      shinycssloaders::withSpinner(
+        gt::gt_output(ns("powerResultsTable"))
+      )
+    )
+
+  )
+}
+
 
 comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
   ns <- shiny::NS(id)
   atcSelections <- c(0, 1)
-  names(atcSelections)  <- c("RxNorm Ingredients", "ATC Classes")
+  names(atcSelections) <- c("RxNorm Ingredients", "ATC Classes")
 
   menu <- shinydashboard::sidebarMenu(
     shinydashboard::menuItem(
       text = "Recommend Comparators",
       tabName = "comparators",
       icon = shiny::icon("table")
+    ),
+    shinydashboard::menuItem(
+      text = "Power estimates",
+      tabName = "power",
+      icon = shiny::icon("bolt")
     ),
     shinydashboard::menuItem(
       text = "About",
@@ -257,8 +353,8 @@ comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
       )
     ),
     shinydashboard::tabItem(
-      tabName = "exposureInfo",
-      shiny::div()
+      tabName = "power",
+      powerUi("powerMod")
     ),
     shinydashboard::tabItem(
       tabName = "comparators",

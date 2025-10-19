@@ -614,7 +614,7 @@ getCohortMdrr <- function(qns,
                           alpha = 0.05,
                           power = 0.80,
                           outcomeConceptIds,
-                          databaseId,
+                          databaseId = NULL,
                           cohortIds = NULL,
                           useDescendants = TRUE) {
   checkmate::assertClass(qns, "QueryNamespace")
@@ -629,21 +629,18 @@ getCohortMdrr <- function(qns,
     stop(sprintf("power must be one of: %s", paste(allowedPower, collapse = ", ")))
   }
 
-  checkmate::assertIntegerish(outcomeConceptIds, lower = 1)
-  checkmate::assertIntegerish(databaseId, lower = 1)
-  if (!is.null(cohortIds)) checkmate::assertIntegerish(cohortIds, lower = 1)
-  checkmate::assertLogical(useDescendants, len = 1)
-
   outcomeConceptIdsStr <- paste(outcomeConceptIds, collapse = ",")
   cohortIdsStr <- if (!is.null(cohortIds)) paste(cohortIds, collapse = ",") else ""
 
   qns$queryDb("
     SELECT
         pt.cohort_definition_id,
+        cd.cohort_name,
+        d.cdm_source_abbreviation as database,
         pt.total_person_time_days,
-        SUM({@use_descendants} ? cc.descendant_occurrence_count : cc.occurrence_count) / (pt.total_person_time_days / 365.25) AS baseline_incidence,
+        SUM(ABS({@use_descendants} ? {cc.descendant_occurrence_count} : {cc.occurrence_count})) / (pt.total_person_time_days / 365.25) AS baseline_incidence,
         (pt.total_person_time_days / 365.25) *
-        (SUM({@use_descendants} ? cc.descendant_occurrence_count : cc.occurrence_count) / (pt.total_person_time_days / 365.25)) AS expected_events,
+        (SUM(ABS({@use_descendants} ? {cc.descendant_occurrence_count} : {cc.occurrence_count})) / (pt.total_person_time_days / 365.25)) AS expected_events,
         EXP(
             (
                 CASE
@@ -660,16 +657,18 @@ getCohortMdrr <- function(qns,
                     ELSE NULL
                 END
             ) / SQRT((pt.total_person_time_days / 365.25) *
-                     (SUM({@use_descendants} ? cc.descendant_occurrence_count : cc.occurrence_count) / (pt.total_person_time_days / 365.25)))
+                     (SUM(ABS({@use_descendants} ? {cc.descendant_occurrence_count} : {cc.occurrence_count})) / (pt.total_person_time_days / 365.25)))
         ) AS mdrr
-    FROM @schema.cse_cohort_person_time pt
-    INNER JOIN @schema.cse_condition_concept_counts cc
+    FROM @schema.@cse_cohort_person_time pt
+    INNER JOIN @schema.@cse_condition_concept_counts cc
         ON pt.cohort_definition_id = cc.cohort_definition_id
         AND pt.database_id = cc.database_id
         AND cc.condition_concept_id IN (@outcome_concept_ids)
-    WHERE pt.database_id = @database_id
+    inner join @schema.@cse_cdm_source_info d on d.database_id = pt.database_id
+    inner join @schema.@cg_cohort_definition cd on cd.cohort_definition_id = pt.cohort_definition_id
+    WHERE 1 = 1
     {@cohort_ids != ''} ? {AND pt.cohort_definition_id IN (@cohort_ids)}
-    GROUP BY pt.cohort_definition_id, pt.total_person_time_days;
+    GROUP BY pt.cohort_definition_id, pt.total_person_time_days, d.cdm_source_abbreviation, cd.cohort_name;
   ",
   alpha = alpha,
   power = power,
