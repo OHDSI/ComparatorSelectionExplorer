@@ -8,8 +8,6 @@ createResultsQueryNamespace(
   connectionDetails,
   resultsSchema,
   tablePrefix = "",
-  dataModelSpecPath = system.file("settings", "resultsDataModel.csv", package =
-    "ComparatorSelectionExplorer"),
   usePooledConnection = FALSE
 )
 }
@@ -19,8 +17,6 @@ createResultsQueryNamespace(
 \item{resultsSchema}{The database schema where the results tables are located.}
 
 \item{tablePrefix}{Optional table prefix for the results tables (default is \code{""}).}
-
-\item{dataModelSpecPath}{Path to the results data model specification CSV file (default is \code{"resultsDataModel.csv"}).}
 
 \item{usePooledConnection}{Logical; whether to use pooled connections (default is \code{FALSE}).}
 }

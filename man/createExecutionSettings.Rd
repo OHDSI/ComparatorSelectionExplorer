@@ -22,6 +22,10 @@ createExecutionSettings(
   covariateDefTable = "cse_covariate_ref",
   covariateMeansTable = "cse_covariate_means",
   cosineSimStratifiedTable = "cse_cosine_sim",
+  conditionConceptCountsTable = "cse_condition_concept_counts",
+  cohortPersonTimeTable = "cse_cohort_person_time",
+  exportPreStudyDiagnostics = TRUE,
+  minPersonCount = 10,
   minExposureSize = 1000,
   logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
   exportDir = tempfile(),
@@ -72,6 +76,8 @@ cohortDefinitionSet}
 
 \item{cosineSimStratifiedTable}{(optional) where stratified cosine similarity scores are
 stored}
+
+\item{exportPreStudyDiagnostics}{(optional) export pre-study diagnostics for computation of MDRR power statistic}
 
 \item{minExposureSize}{(optional) Minimum number of exposures to be included in
 cosine similarity analysis (defaults to 1000).}
