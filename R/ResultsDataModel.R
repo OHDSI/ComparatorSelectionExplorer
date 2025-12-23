@@ -82,26 +82,50 @@ getResultsDataModelSpec <- function() {
 
 #' Upload Results
 #' @description
+#' Upload results to a database server from either a zip file or a pre-extracted folder.
 #'
-#' Upload results to database server
+#' @param connectionDetails  DatabaseConnector connection details object
+#' @param databaseSchema     String schema where database schema lives
+#' @param tablePrefix        (Optional) Use if a table prefix is used before table names (e.g. "cd_")
+#' @param zipFileName        Path to zip file containing results (optional if importFilePath is given)
+#' @param importFilePath     Path to already-extracted results folder (optional if zipFileName is given)
+#' @param ...                Additional parameters passed to ResultModelManager::uploadResults
 #'
-#' @param connectionDetails             DatabaseConnector connection details object
-#' @param databaseSchema                String schema where database schema lives
-#' @param tablePrefix                  (Optional) Use if a table prefix is used before table names (e.g. "cd_")
-#' @param zipFileName                  Path to zipFile containing results
-#' @param importFilpath                file path to export zipped results to before upload (optional - default is temporary)
-#' @param ...                          Elipsis  - see ResultModelManager::uploadResults
 #' @export
-uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tablePrefix = "", importFilpath = tempfile(), ...) {
+uploadResults <- function(connectionDetails,
+                           databaseSchema,
+                           zipFileName = NULL,
+                           importFilePath = NULL,
+                           tablePrefix = "",
+                           ...) {
 
-  if (!dir.exists(importFilpath)) {
-    dir.create(importFilpath)
+  # --- Validate inputs ---
+  if (is.null(zipFileName) && is.null(importFilePath)) {
+    stop("You must specify either 'zipFileName' or 'importFilePath'.", call. = FALSE)
   }
 
-  ResultModelManager::unzipResults(zipFileName, importFilpath)
+  # --- If zipFile is provided, unzip into a folder ---
+  if (!is.null(zipFileName)) {
+    if (!file.exists(zipFileName)) {
+      stop("Zip file does not exist: ", zipFileName)
+    }
+    # If no importFilePath specified, create a temp dir
+    if (is.null(importFilePath)) {
+      importFilePath <- tempfile()
+    }
+    if (!dir.exists(importFilePath)) {
+      dir.create(importFilePath, recursive = TRUE)
+    }
+    ResultModelManager::unzipResults(zipFileName, importFilePath)
+  }
 
+  # --- If only folder is provided, ensure it exists ---
+  if (!is.null(importFilePath) && !dir.exists(importFilePath)) {
+    stop("The specified importFilePath does not exist: ", importFilePath)
+  }
+
+  # --- Special handling for PostgreSQL partition creation ---
   if (connectionDetails$dbms == "postgresql") {
-    # this would be much cleaner with a trigger on insert to cdm_source_info table
     connection <- DatabaseConnector::connect(connectionDetails)
     on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
 
@@ -113,23 +137,31 @@ uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tableP
     PARTITION OF @database_schema.@table_prefixcse_covariate_mean FOR VALUES IN (@database_id);
     "
 
-    sourceInfo <- readr::read_csv(file.path(importFilpath, "cse_cdm_source_info.csv"),
-                                  show_col_types = FALSE)
+    sourceInfo <- readr::read_csv(
+      file.path(importFilePath, "cse_cdm_source_info.csv"),
+      show_col_types = FALSE
+    )
     databaseIds <- unique(sourceInfo$database_id)
 
     for (databaseId in databaseIds) {
-      DatabaseConnector::renderTranslateExecuteSql(connection,
-                                                   sql,
-                                                   database_schema = databaseSchema,
-                                                   database_id = databaseId,
-                                                   table_prefix = tablePrefix)
+      DatabaseConnector::renderTranslateExecuteSql(
+        connection,
+        sql,
+        database_schema = databaseSchema,
+        database_id = databaseId,
+        table_prefix = tablePrefix
+      )
     }
   }
-  ResultModelManager::uploadResults(connectionDetails = connectionDetails,
-                                    schema = databaseSchema,
-                                    resultsFolder = importFilpath,
-                                    tablePrefix = tablePrefix,
-                                    databaseIdentifierFile = "cse_cdm_source_info.csv",
-                                    specifications = getResultsDataModelSpec(),
-                                    ...)
+
+  # --- Upload results ---
+  ResultModelManager::uploadResults(
+    connectionDetails = connectionDetails,
+    schema = databaseSchema,
+    resultsFolder = importFilePath,
+    tablePrefix = tablePrefix,
+    databaseIdentifierFile = "cse_cdm_source_info.csv",
+    specifications = getResultsDataModelSpec(),
+    ...
+  )
 }
