@@ -36,5 +36,3 @@ cse_atc_level,atc_2_related,bigint,no,no,atc info
 cse_atc_level,atc_3_related,bigint,no,no,atc info
 cse_atc_level,atc_4_related,bigint,no,no,atc info
 cse_atc_level,atc_5_related,bigint,no,no,atc info
-cse_cohort_tag,cohort_definition_id,bigint,yes,no,cohort id
-cse_cohort_tag,tag,text,yes,no,a string tag
