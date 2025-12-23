@@ -63,7 +63,7 @@ exportResults <- function(executionSettings = NULL, ...) {
     invisible(NULL)
   }
 
-  ParallelLogger::logInfo("Exporting results")
+  ParallelLogger::logInfo("Exporting covariate def table")
 
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       "SELECT * FROM  @results_database_schema.@covariate_def_table",
@@ -74,6 +74,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       ),
                                                       covariate_def_table = executionSettings$covariateDefTable,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
+  ParallelLogger::logInfo("Exporting cse_cohort_count")
 
 
   sql <- "SELECT * FROM  @results_database_schema.@count_table ct WHERE ct.num_persons >= @min_exposure_size"
@@ -110,18 +111,23 @@ exportResults <- function(executionSettings = NULL, ...) {
   sql <- SqlRender::readSql(system.file(file.path("sql", "sql_server", "GetAtcLevels.sql"),
                                         package = utils::packageName()))
 
-  DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
-                                                      sql,
-                                                      fun = exportResultsFun,
-                                                      args = list(
-                                                        csvFilename = "cse_atc_level.csv",
-                                                        addDbId = FALSE
-                                                      ),
-                                                      vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema)
+  if (isTRUE(executionSettings$exportAtcLevels)) {
+    ParallelLogger::logInfo("Exporting cse_atc_level")
+    DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
+                                                        sql,
+                                                        fun = exportResultsFun,
+                                                        args = list(
+                                                          csvFilename = "cse_atc_level.csv",
+                                                          addDbId = FALSE
+                                                        ),
+                                                        vocabulary_database_schema = executionSettings$vocabularyDatabaseSchema)
+  }
   sql <- "
   SELECT t.* FROM  @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id = ct.cohort_definition_id
   WHERE ct.num_persons >= @min_exposure_size"
+
+  ParallelLogger::logInfo("Exporting cse_covariate_mean")
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       sql,
                                                       fun = exportResultsFun,
@@ -141,7 +147,7 @@ exportResults <- function(executionSettings = NULL, ...) {
   WHERE ct.num_persons >= @min_exposure_size
   AND ct2.num_persons >= @min_exposure_size
   "
-
+  ParallelLogger::logInfo("Exporting cse_cosine_similarity_score")
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       sql,
                                                       fun = exportResultsFun,
@@ -155,6 +161,8 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
 
   sql <- "SELECT * FROM @cdm_database_schema.cdm_source"
+
+  ParallelLogger::logInfo("Exporting cse_cdm_source_info")
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       sql,
                                                       fun = exportResultsFun,

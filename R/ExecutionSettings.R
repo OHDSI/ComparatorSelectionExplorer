@@ -45,7 +45,9 @@
 #' @param covariateDefTable                  (optional) where covariate definitions are stored
 #' @param covariateMeansTable                (optional) where covariate means are stored
 #' @param cosineSimStratifiedTable           (optional) where stratified cosine similarity scores are
-#'                                           stored
+#'                                           stored]
+#' @param exportAtcLevels                    (Optional) export ATC levels from vocabulary. Needed by shiny app for some features but very
+#'                                           large and can be avoided on most runs
 #' @param minExposureSize                    (optional) Minimum number of exposures to be included in
 #'                                           cosine similarity analysis (defaults to 1000).
 #' @param logFileLocation                    (optional) Log file location
@@ -73,6 +75,7 @@ createExecutionSettings <- function(connectionDetails = NULL,
                                     covariateDefTable = "cse_covariate_ref",
                                     covariateMeansTable = "cse_covariate_means",
                                     cosineSimStratifiedTable = "cse_cosine_sim",
+                                    exportAtcLevels = FALSE,
                                     minExposureSize = 1000,
                                     logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
                                     exportDir = tempfile(),

@@ -48,8 +48,6 @@ Suggests:
   withr,
   reticulate,
   duckdb
-Remotes:
-  OHDSI/CohortGenerator@develop
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
 Copyright: See file COPYRIGHTS
 Config/testthat/edition: 3

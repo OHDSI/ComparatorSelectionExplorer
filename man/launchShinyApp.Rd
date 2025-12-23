@@ -4,7 +4,7 @@
 \alias{launchShinyApp}
 \title{Launch the Comparator Selection Shiny App}
 \usage{
-launchShinyApp(connectionDetails, resultsSchema, tablePrefix, ...)
+launchShinyApp(connectionDetails, resultsSchema, tablePrefix = "", ...)
 }
 \arguments{
 \item{connectionDetails}{DatabaseConnector connection details object.}
