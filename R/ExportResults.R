@@ -99,7 +99,9 @@ exportResults <- function(executionSettings = NULL, ...) {
     if (grepl("ATC", tpl$name)) {
       tagId <- "ATC"
     }
-    tags <- data.frame(cohortDefinitionId = tpl$references$cohortId, tag = tagId)
+    tags <- data.frame(cohortDefinitionId = tpl$references$cohortId, tag = tagId) |>
+      dplyr::distinct()
+
     filepath <- file.path(executionSettings$exportDir, "cse_cohort_tag.csv")
     colnames(tags) <- tolower(SqlRender::camelCaseToSnakeCase(colnames(tags)))
     readr::write_csv(tags,
