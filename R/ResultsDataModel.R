@@ -129,12 +129,26 @@ uploadResults <- function(connectionDetails,
     connection <- DatabaseConnector::connect(connectionDetails)
     on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
 
-    sql <- "
-    CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_id
-    PARTITION OF @database_schema.@table_prefixcse_cosine_similarity_score FOR VALUES IN (@database_id);
+    # Covariate types to create as subpartitions
+    covariateTypes <- c("average", "Medical history", "Presentation", "Demographics", "prior meds", "visit context")
 
-    CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_covariate_mean_@database_id
-    PARTITION OF @database_schema.@table_prefixcse_covariate_mean FOR VALUES IN (@database_id);
+    # Create top-level partitions per database_id
+    sqlTop <- "
+      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_id
+      PARTITION OF @database_schema.@table_prefixcse_cosine_similarity_score
+      FOR VALUES IN (@database_id)
+      PARTITION BY LIST (covariate_type);
+
+      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_covariate_mean_@database_id
+      PARTITION OF @database_schema.@table_prefixcse_covariate_mean
+      FOR VALUES IN (@database_id);
+    "
+
+    # Create subpartitions for each covariate_type
+    sqlSub <- "
+      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_id_@covariate_slug
+      PARTITION OF @database_schema.@table_prefixcse_cosine_similarity_@database_id
+      FOR VALUES IN (@covariate_literal);
     "
 
     sourceInfo <- readr::read_csv(
@@ -144,13 +158,30 @@ uploadResults <- function(connectionDetails,
     databaseIds <- unique(sourceInfo$database_id)
 
     for (databaseId in databaseIds) {
+      # Create top-level partitions
       DatabaseConnector::renderTranslateExecuteSql(
         connection,
-        sql,
+        sqlTop,
         database_schema = databaseSchema,
         database_id = databaseId,
         table_prefix = tablePrefix
       )
+
+      # Create subpartitions
+      for (covType in covariateTypes) {
+        # Create slug for table names (replace spaces with underscores)
+        covSlug <- gsub(" ", "_", tolower(covType))
+
+        DatabaseConnector::renderTranslateExecuteSql(
+          connection,
+          sqlSub,
+          database_schema = databaseSchema,
+          database_id = databaseId,
+          table_prefix = tablePrefix,
+          covariate_slug = covSlug,
+          covariate_literal = covType
+        )
+      }
     }
   }
 
