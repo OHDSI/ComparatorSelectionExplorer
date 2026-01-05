@@ -148,7 +148,7 @@ uploadResults <- function(connectionDetails,
     sqlSub <- "
       CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_id_@covariate_slug
       PARTITION OF @database_schema.@table_prefixcse_cosine_similarity_@database_id
-      FOR VALUES IN (@covariate_literal);
+      FOR VALUES IN ('@covariate_literal');
     "
 
     sourceInfo <- readr::read_csv(
