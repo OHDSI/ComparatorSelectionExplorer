@@ -130,7 +130,7 @@ uploadResults <- function(connectionDetails,
     on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
 
     # Covariate types to create as subpartitions
-    covariateTypes <- c("average", "Medical history", "Presentation", "Demographics", "prior meds", "visit context")
+    covariateTypes <- c("average", "Medical history", "Presentation", "Demographics", "prior meds", "visit context", 'Co-occurrence')
 
     # Create top-level partitions per database_id
     sqlTop <- "
@@ -171,6 +171,7 @@ uploadResults <- function(connectionDetails,
       for (covType in covariateTypes) {
         # Create slug for table names (replace spaces with underscores)
         covSlug <- gsub(" ", "_", tolower(covType))
+        covSlug <- gsub("-", "_", tolower(covSlug))
 
         DatabaseConnector::renderTranslateExecuteSql(
           connection,
