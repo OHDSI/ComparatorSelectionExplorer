@@ -134,11 +134,11 @@ exportResults <- function(executionSettings = NULL, ...) {
                      na = "")
   })
 
-  sql <- SqlRender::readSql(system.file(file.path("sql", "sql_server", "GetAtcLevels.sql"),
-                                        package = utils::packageName()))
-
   if (isTRUE(executionSettings$exportAtcLevels)) {
     ParallelLogger::logInfo("Exporting cse_atc_level")
+
+    sql <- SqlRender::readSql(system.file(file.path("sql", "sql_server", "GetAtcLevels.sql"),
+                                        package = utils::packageName()))
     DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                         sql,
                                                         fun = exportResultsFun,
