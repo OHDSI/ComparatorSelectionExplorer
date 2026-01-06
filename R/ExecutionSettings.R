@@ -85,7 +85,7 @@ createExecutionSettings <- function(connectionDetails = NULL,
   checkmate::assertTRUE(is.null(cohortDefinitionSet) || CohortGenerator::isCohortDefinitionSet(cohortDefinitionSet))
   checkmate::assertIntegerish(databaseId, null.ok = TRUE)
   checkmate::assertString(databaseId, null.ok = TRUE)
-  checkmate::assertIntegerish(targetCohortIds, null.ok = TRUE)
+  checkmate::assertNumeric(targetCohortIds, null.ok = TRUE)
 
   executionSettings <- list(connectionDetails = connectionDetails,
                             cdmDatabaseSchema = cdmDatabaseSchema,
