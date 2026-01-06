@@ -63,8 +63,23 @@ exportResults <- function(executionSettings = NULL, ...) {
     invisible(NULL)
   }
 
-  ParallelLogger::logInfo("Exporting covariate def table")
+  # Is there a subset of cohorts to export data by
+  exportByTargetSet <- !is.null(executionSettings$targetCohortIds)
 
+  if (exportByTargetSet) {
+    targetSetTable <- data.frame(cohortDefinitionId = executionSettings$targetCohortIds)
+    DatabaseConnector::insertTable(connection,
+                                   data = targetSetTable,
+                                   tableName = "cse_target_export_ids",
+                                   camelCaseToSnakeCase = TRUE,
+                                   dropTableIfExists = TRUE,
+                                   createTable = TRUE,
+                                   tempTable = TRUE)
+
+    on.exit(DatabaseConnector::renderTranslateExecuteSql(connection, "DROP TABLE IF EXISTS #cse_target_export;"))
+  }
+
+  ParallelLogger::logInfo("Exporting covariate def table")
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       "SELECT * FROM  @results_database_schema.@covariate_def_table",
                                                       fun = exportResultsFun,
@@ -77,7 +92,11 @@ exportResults <- function(executionSettings = NULL, ...) {
   ParallelLogger::logInfo("Exporting cse_cohort_count")
 
 
-  sql <- "SELECT * FROM  @results_database_schema.@count_table ct WHERE ct.num_persons >= @min_exposure_size"
+  sql <- "SELECT * FROM  @results_database_schema.@count_table ct
+  {@export_by_target_set} ? {
+  INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct.cohort_definition_id
+  }
+  WHERE ct.num_persons >= @min_exposure_size"
   DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                       sql,
                                                       fun = exportResultsFun,
@@ -127,6 +146,9 @@ exportResults <- function(executionSettings = NULL, ...) {
   sql <- "
   SELECT t.* FROM  @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id = ct.cohort_definition_id
+  {@export_by_target_set} ? {
+  INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct.cohort_definition_id
+  }
   WHERE ct.num_persons >= @min_exposure_size"
 
   ParallelLogger::logInfo("Exporting cse_covariate_mean")
@@ -139,6 +161,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       ),
                                                       count_table = executionSettings$cohortCountTable,
                                                       min_exposure_size = executionSettings$minExposureSize,
+                                                      export_target_set = executionSettings$exportByTargetSet,
                                                       table = executionSettings$covariateMeansTable,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
 
@@ -146,6 +169,10 @@ exportResults <- function(executionSettings = NULL, ...) {
   SELECT t.* FROM @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id_1 = ct.cohort_definition_id
   INNER JOIN @results_database_schema.@count_table ct2 ON t.cohort_definition_id_2 = ct2.cohort_definition_id
+  {@export_by_target_set} ? {
+  INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct.cohort_definition_id
+  INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct2.cohort_definition_id
+  }
   WHERE ct.num_persons >= @min_exposure_size
   AND ct2.num_persons >= @min_exposure_size
   "
@@ -160,6 +187,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       count_table = executionSettings$cohortCountTable,
                                                       min_exposure_size = executionSettings$minExposureSize,
                                                       table = executionSettings$cosineSimStratifiedTable,
+                                                      export_target_set = executionSettings$exportByTargetSet,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
 
   sql <- "SELECT * FROM @cdm_database_schema.cdm_source"
