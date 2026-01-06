@@ -108,7 +108,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                         csvFilename = "cse_cohort_count.csv",
                                                         addDbId = TRUE
                                                       ),
-                                                      export_target_set = executionSettings$exportByTargetSet,
+                                                      export_target_set = exportByTargetSet,
                                                       count_table = executionSettings$cohortCountTable,
                                                       min_exposure_size = executionSettings$minExposureSize,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
@@ -166,7 +166,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       ),
                                                       count_table = executionSettings$cohortCountTable,
                                                       min_exposure_size = executionSettings$minExposureSize,
-                                                      export_target_set = executionSettings$exportByTargetSet,
+                                                      export_target_set = exportByTargetSet,
                                                       table = executionSettings$covariateMeansTable,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
 
@@ -192,7 +192,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       count_table = executionSettings$cohortCountTable,
                                                       min_exposure_size = executionSettings$minExposureSize,
                                                       table = executionSettings$cosineSimStratifiedTable,
-                                                      export_target_set = executionSettings$exportByTargetSet,
+                                                      export_target_set = exportByTargetSet,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
 
   sql <- "SELECT * FROM @cdm_database_schema.cdm_source"
