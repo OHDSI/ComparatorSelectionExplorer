@@ -68,6 +68,7 @@ exportResults <- function(executionSettings = NULL, ...) {
 
   if (exportByTargetSet) {
     targetSetTable <- data.frame(cohortDefinitionId = executionSettings$targetCohortIds)
+    DatabaseConnector::renderTranslateExecuteSql(executionSettings$connection, "DROP TABLE IF EXISTS #cse_target_export;")
     DatabaseConnector::insertTable(executionSettings$connection,
                                    data = targetSetTable,
                                    tableName = "cse_target_export",
@@ -96,7 +97,7 @@ exportResults <- function(executionSettings = NULL, ...) {
   ParallelLogger::logInfo("Exporting cse_cohort_count")
 
 
-  sql <- "SELECT * FROM  @results_database_schema.@count_table ct
+  sql <- "SELECT ct.* FROM  @results_database_schema.@count_table ct
   {@export_target_set} ? {
   INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct.cohort_definition_id
   }
@@ -176,7 +177,7 @@ exportResults <- function(executionSettings = NULL, ...) {
   INNER JOIN @results_database_schema.@count_table ct2 ON t.cohort_definition_id_2 = ct2.cohort_definition_id
   {@export_target_set} ? {
   INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct.cohort_definition_id
-  INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct2.cohort_definition_id
+  INNER JOIN #cse_target_export ctes2 ON ctes2.cohort_definition_id = ct2.cohort_definition_id
   }
   WHERE ct.num_persons >= @min_exposure_size
   AND ct2.num_persons >= @min_exposure_size
