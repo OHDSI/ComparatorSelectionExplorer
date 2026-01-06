@@ -68,7 +68,7 @@ exportResults <- function(executionSettings = NULL, ...) {
 
   if (exportByTargetSet) {
     targetSetTable <- data.frame(cohortDefinitionId = executionSettings$targetCohortIds)
-    DatabaseConnector::insertTable(connection,
+    DatabaseConnector::insertTable(executionSettings$connection,
                                    data = targetSetTable,
                                    tableName = "cse_target_export_ids",
                                    camelCaseToSnakeCase = TRUE,
