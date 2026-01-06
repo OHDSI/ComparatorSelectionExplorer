@@ -76,7 +76,11 @@ exportResults <- function(executionSettings = NULL, ...) {
                                    createTable = TRUE,
                                    tempTable = TRUE)
 
-    on.exit(DatabaseConnector::renderTranslateExecuteSql(connection, "DROP TABLE IF EXISTS #cse_target_export;"))
+    on.exit({
+      DatabaseConnector::renderTranslateExecuteSql(executionSettings$connection, "DROP TABLE IF EXISTS #cse_target_export;")
+      DatabaseConnector::disconnect(executionSettings$connection)
+      executionSettings$connection <- NULL
+    }, add = FALSE)
   }
 
   ParallelLogger::logInfo("Exporting covariate def table")
@@ -93,7 +97,7 @@ exportResults <- function(executionSettings = NULL, ...) {
 
 
   sql <- "SELECT * FROM  @results_database_schema.@count_table ct
-  {@export_by_target_set} ? {
+  {@export_target_set} ? {
   INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct.cohort_definition_id
   }
   WHERE ct.num_persons >= @min_exposure_size"
@@ -104,6 +108,7 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                         csvFilename = "cse_cohort_count.csv",
                                                         addDbId = TRUE
                                                       ),
+                                                      export_target_set = executionSettings$exportByTargetSet,
                                                       count_table = executionSettings$cohortCountTable,
                                                       min_exposure_size = executionSettings$minExposureSize,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
@@ -146,7 +151,7 @@ exportResults <- function(executionSettings = NULL, ...) {
   sql <- "
   SELECT t.* FROM  @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id = ct.cohort_definition_id
-  {@export_by_target_set} ? {
+  {@export_target_set} ? {
   INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct.cohort_definition_id
   }
   WHERE ct.num_persons >= @min_exposure_size"
@@ -169,7 +174,7 @@ exportResults <- function(executionSettings = NULL, ...) {
   SELECT t.* FROM @results_database_schema.@table t
   INNER JOIN @results_database_schema.@count_table ct ON t.cohort_definition_id_1 = ct.cohort_definition_id
   INNER JOIN @results_database_schema.@count_table ct2 ON t.cohort_definition_id_2 = ct2.cohort_definition_id
-  {@export_by_target_set} ? {
+  {@export_target_set} ? {
   INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct.cohort_definition_id
   INNER JOIN #cse_target_export ctes ON ctes.cohort_definition_id = ct2.cohort_definition_id
   }
