@@ -143,14 +143,6 @@ uploadResults <- function(connectionDetails,
       PARTITION OF @database_schema.@table_prefixcse_covariate_mean
       FOR VALUES IN (@database_id);
     "
-
-    # Create subpartitions for each covariate_type
-    sqlSub <- "
-      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_id_@covariate_slug
-      PARTITION OF @database_schema.@table_prefixcse_cosine_similarity_@database_id
-      FOR VALUES IN ('@covariate_literal');
-    "
-
     sourceInfo <- readr::read_csv(
       file.path(importFilePath, "cse_cdm_source_info.csv"),
       show_col_types = FALSE
@@ -166,23 +158,6 @@ uploadResults <- function(connectionDetails,
         database_id = databaseId,
         table_prefix = tablePrefix
       )
-
-      # Create subpartitions
-      for (covType in covariateTypes) {
-        # Create slug for table names (replace spaces with underscores)
-        covSlug <- gsub(" ", "_", tolower(covType))
-        covSlug <- gsub("-", "_", tolower(covSlug))
-
-        DatabaseConnector::renderTranslateExecuteSql(
-          connection,
-          sqlSub,
-          database_schema = databaseSchema,
-          database_id = databaseId,
-          table_prefix = tablePrefix,
-          covariate_slug = covSlug,
-          covariate_literal = covType
-        )
-      }
     }
   }
 
