@@ -63,6 +63,10 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
       getDatabaseSources(qns)
     })
 
+    getExposureTags <- shiny::reactive({
+      getCohortTags(qns)
+    })
+
     shiny::observe({
       shiny::withProgress({
         dbSources <- databaseSources()
@@ -110,8 +114,23 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
     })
 
     shiny::observe({
+
       shiny::withProgress({
-        cohortDefinitions <- cohortTable()
+        exposureTags <- getExposureTags()
+        shiny::updateSelectizeInput(
+            session,
+            "selectedExposureGroups",
+            choices = exposureTags$tag,
+            selected = exposureTags$tag[1],
+            server = TRUE)
+        }, message = "Getting exposure tags"
+      )
+    })
+
+
+    shiny::observeEvent(input$selectedExposureGroups, {
+      shiny::withProgress({
+        cohortDefinitions <- getCohortsByTag(qns, input$selectedExposureGroups)
         if (nrow(cohortDefinitions)) {
           exposureSelection <- cohortDefinitions$cohortDefinitionId
           names(exposureSelection) <- cohortDefinitions$shortName
@@ -125,29 +144,31 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
       }, message = "Loading cohort definitions")
     })
 
+
+    # shiny::observe({
+    #   shiny::withProgress({
+    #
+    #     cohortDefinitions <- dplyr::filter(cohortTable(), .data$isAtc %in% getTargetClassSelection())
+    #
+    #     if (nrow(cohortDefinitions)) {
+    #       exposureSelection <- cohortDefinitions$cohortDefinitionId
+    #       names(exposureSelection) <- cohortDefinitions$shortName
+    #       shiny::updateSelectizeInput(
+    #         session,
+    #         "selectedExposure",
+    #         choices = exposureSelection,
+    #         server = TRUE)
+    #     }
+    #   }, message = "Loading cohort definitions")
+    # })
+
+
     getTargetClassSelection <- shiny::reactive({
       atcSelection <- as.integer(input$selectedComparatorTypes)
       if (length(atcSelection) == 0) {
         atcSelection <- c(0, 1)
       }
       return(atcSelection)
-    })
-
-    shiny::observe({
-      shiny::withProgress({
-
-        cohortDefinitions <- dplyr::filter(cohortTable(), .data$isAtc %in% getTargetClassSelection())
-
-        if (nrow(cohortDefinitions)) {
-          exposureSelection <- cohortDefinitions$cohortDefinitionId
-          names(exposureSelection) <- cohortDefinitions$shortName
-          shiny::updateSelectizeInput(
-            session,
-            "selectedExposure",
-            choices = exposureSelection,
-            server = TRUE)
-        }
-      }, message = "Loading cohort definitions")
     })
 
     getDbSimilarity <- shiny::reactive({

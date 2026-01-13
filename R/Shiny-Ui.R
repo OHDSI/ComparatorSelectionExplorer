@@ -267,8 +267,16 @@ comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
           title = "Target Selection Settings",
           width = 12,
           shiny::fluidRow(
+
             shiny::column(
               width = 6,
+              shiny::selectInput(
+                inputId = ns("selectedExposureGroups"),
+                label = "Select exposure nesting:",
+                width = "100%",
+                choices = NULL,
+                multiple = FALSE
+            ),
               shiny::selectizeInput(
                 inputId = ns("selectedExposure"),
                 choices = NULL,

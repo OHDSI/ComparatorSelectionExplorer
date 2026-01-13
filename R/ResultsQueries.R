@@ -27,14 +27,31 @@ getCohortDefinitions <- function(qns) {
 #' Get any tags assigned to cohorts
 #' @param qns a query namespace object
 #' @param cohortIds optional cohort ids
-getCohortTags <- function(qns, cohortIds = NULL) {
+getCohortTags <- function(qns, cohortIds = '') {
   qns$queryDb("
-    SELECT DISTINCT TAG FROM @schema.@cse_cohort_tag
-    {@cohort_ids != ''} ? {WHERE cohort_definition_id IN (@cohort_ids)}",
-              cohort_ids = cohortIds
+    SELECT DISTINCT tag FROM @schema.@cse_cohort_tag
+    {@cohort_ids != ''} ? {WHERE cohort_definition_id IN (@cohort_ids)}", cohort_ids = cohortIds
   )
 }
 
+#' Get Cohorts by tag id
+#' @description
+#' Get any tags assigned to cohorts
+#' @param qns a query namespace object
+#' @param cohortIds optional cohort ids
+getCohortsByTag <- function(qns, tag) {
+  safe_tag <- gsub("'", "''", tag)  # escape single quotes
+  sql <-"
+    SELECT
+      t.cohort_definition_id,
+      cohort_name AS short_name
+    FROM @schema.@cg_cohort_definition t
+    INNER JOIN @schema.@cse_cohort_tag ct
+      ON t.cohort_definition_id = ct.cohort_definition_id
+    WHERE ct.tag = '@safe_tag'
+   "
+  qns$queryDb(sql, safe_tag = safe_tag)
+}
 
 #' Get Data Source Table for All Databases
 #'
