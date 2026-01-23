@@ -114,26 +114,15 @@ exportResults <- function(executionSettings = NULL, ...) {
                                                       min_exposure_size = executionSettings$minExposureSize,
                                                       results_database_schema = executionSettings$resultsDatabaseSchema)
 
-  # Add tags for all rxNorm and ATC cohorts
-  templateDefinitions <- CohortGenerator::getTemplateDefinitions(executionSettings$cohortDefinitionSet)
-  purrr::walk(templateDefinitions, function(tpl) {
-    if (grepl("RxNorm", tpl$name)) {
-      tagId <- "RxNorm"
-    }
-
-    if (grepl("ATC", tpl$name)) {
-      tagId <- "ATC"
-    }
-    tags <- data.frame(cohortDefinitionId = tpl$references$cohortId, tag = tagId) |>
-      dplyr::distinct()
-
-    filepath <- file.path(executionSettings$exportDir, "cse_cohort_tag.csv")
-    colnames(tags) <- tolower(SqlRender::camelCaseToSnakeCase(colnames(tags)))
-    readr::write_csv(tags,
+  # Export user-specified cohort tags
+  if (!is.null(executionSettings$cohortTags)) {
+    ParallelLogger::logInfo("Exporting cohort tags")
+    tagsDataFrame <- cohortTagsToDataFrame(executionSettings$cohortTags)
+    colnames(tagsDataFrame) <- tolower(SqlRender::camelCaseToSnakeCase(colnames(tagsDataFrame)))
+    readr::write_csv(tagsDataFrame,
                      file = file.path(executionSettings$exportDir, "cse_cohort_tag.csv"),
-                     append = file.exists(filepath),
                      na = "")
-  })
+  }
 
   if (isTRUE(executionSettings$exportAtcLevels)) {
     ParallelLogger::logInfo("Exporting cse_atc_level")

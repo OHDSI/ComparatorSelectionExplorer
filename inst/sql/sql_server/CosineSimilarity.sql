@@ -1,6 +1,7 @@
 {DEFAULT @dotproduct_concept = ''}
 {DEFAULT @vector_length = ''}
 {DEFAULT @target_cohort_ids = ''}
+{DEFAULT @cohort_tags = FALSE}
 {DEFAULT @exclude_co_occurrence_average = TRUE}
 
 
@@ -14,6 +15,7 @@
 --- @covariate_means_table: name of table where covariate means are stored
 --- @cosine_sim_table_2: name of output table where cosine similarity (stratified by covariate domain) data is stored
 --- @cosine_sim_table: name of output table where overall cosine similarity data is stored
+--- @cohort_tags: boolean indicating if cohort tags temp table (#cse_cohort_tags) has been created
 
 --vector length for all cohorts, used in denominator of cos similarity calculation
 drop table if exists #vector_length;
@@ -46,8 +48,26 @@ from @results_database_schema.@covariate_means_table scs1
 inner join @results_database_schema.@covariate_def_table scovd1 on scs1.covariate_id = scovd1.covariate_id
 inner join @results_database_schema.@covariate_means_table scs2 on scs1.covariate_id = scs2.covariate_id
 
--- Either compute half pairs or only pairs for specified target cohort ids
-where {@target_cohort_ids == ''} ? { scs1.cohort_definition_id  < scs2.cohort_definition_id} : {scs1.cohort_definition_id IN (@target_cohort_ids)}
+-- Either compute half pairs or only pairs for specified target cohort ids or tag groups
+where (
+  {@cohort_tags} ? {
+    -- When tags are specified, ensure both cohorts share at least one tag
+    EXISTS (
+      SELECT 1 FROM #cse_cohort_tags ct1
+      INNER JOIN #cse_cohort_tags ct2 
+        ON ct1.tag = ct2.tag
+      WHERE ct1.cohort_definition_id = scs1.cohort_definition_id
+        AND ct2.cohort_definition_id = scs2.cohort_definition_id
+        AND scs1.cohort_definition_id < scs2.cohort_definition_id
+    )
+  } : {
+    {@target_cohort_ids == ''} ? { 
+      scs1.cohort_definition_id < scs2.cohort_definition_id
+    } : {
+      scs1.cohort_definition_id IN (@target_cohort_ids)
+    }
+  }
+)
 group by scs1.cohort_definition_id, scs2.cohort_definition_id, scovd1.covariate_type
 ;
 

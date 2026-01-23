@@ -33,10 +33,15 @@
 #' @param exportZipFile                      Path to zip file output of project
 #' @param databaseName                       Database identifier (string)
 #' @param databaseId                         Database identifier integer (optional)
-#' @param targetCohortIds                    (optional) Integer ids for cohorts to limit cosine
-#'                                           similarity calculation to Must be a valid RxNorm
-#'                                           ingredient, ATC class or included in the
-#'                                           cohortDefinitionSet
+#' @param cohortTags                         (optional) Named list where names are tag names and values
+#'                                           are integer vectors of cohort IDs. Cosine similarity will
+#'                                           be calculated only within tag groups (cohorts sharing at
+#'                                           least one tag). Example: list("exposure" = c(1,2,3),
+#'                                           "outcome" = c(4,5)). If NULL, all cohorts are compared.
+#' @param targetCohortIds                    (optional, deprecated) Integer ids for cohorts to limit
+#'                                           cosine similarity calculation to. Use cohortTags instead.
+#'                                           Must be a valid RxNorm ingredient, ATC class or included
+#'                                           in the cohortDefinitionSet
 #'
 #' @param vocabularyDatabaseSchema           standard vocabulary database schema
 #' @param cohortTable                        cohort table for exposures
@@ -69,6 +74,7 @@ createExecutionSettings <- function(connectionDetails = NULL,
                                     cohortTable,
                                     tempEmulationSchema = getOption("sqlRenderTempEmulationSchema"),
                                     cohortDefinitionSet = NULL,
+                                    cohortTags = NULL,
                                     targetCohortIds = NULL,
                                     cohortCountTable = "cse_cohort_count",
                                     cohortDefinitionTable = "cse_cohort_definition",
@@ -85,7 +91,24 @@ createExecutionSettings <- function(connectionDetails = NULL,
   checkmate::assertTRUE(is.null(cohortDefinitionSet) || CohortGenerator::isCohortDefinitionSet(cohortDefinitionSet))
   checkmate::assertIntegerish(databaseId, null.ok = TRUE)
   checkmate::assertString(databaseId, null.ok = TRUE)
-  checkmate::assertNumeric(targetCohortIds, null.ok = TRUE)
+  
+  # Backward compatibility: convert targetCohortIds to cohortTags if provided
+  if (!is.null(targetCohortIds) && is.null(cohortTags)) {
+    ParallelLogger::logWarn("targetCohortIds is deprecated. Please use cohortTags instead.")
+    checkmate::assertNumeric(targetCohortIds)
+    cohortTags <- convertTargetCohortIdsToTags(targetCohortIds)
+  } else if (!is.null(targetCohortIds) && !is.null(cohortTags)) {
+    stop("Cannot specify both targetCohortIds and cohortTags. Please use cohortTags only.")
+  }
+  
+  # Validate cohortTags if provided
+  if (!is.null(cohortTags)) {
+    validateCohortTags(cohortTags)
+  }
+  
+  # Get flattened list of all cohort IDs for filtering
+  allTargetCohortIds <- flattenCohortTags(cohortTags)
+
 
   executionSettings <- list(connectionDetails = connectionDetails,
                             cdmDatabaseSchema = cdmDatabaseSchema,
@@ -104,9 +127,11 @@ createExecutionSettings <- function(connectionDetails = NULL,
                             cosineSimStratifiedTable = cosineSimStratifiedTable,
                             minExposureSize = minExposureSize,
                             exportDir = exportDir,
+                            exportAtcLevels = exportAtcLevels,
                             removeExportDir = removeExportDir,
                             cohortDefinitionSet = cohortDefinitionSet,
-                            targetCohortIds = targetCohortIds,
+                            cohortTags = cohortTags,
+                            targetCohortIds = allTargetCohortIds,
                             connection = connection)
   class(executionSettings) <- "executionSettings"
 

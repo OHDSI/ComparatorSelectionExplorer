@@ -33,7 +33,7 @@
 }
 
 
-.getCosineSimilaritySql <- function(executionSettings, dbms = DatabaseConnector::dbms(executionSettings$connection)) {
+.getCosineSimilaritySql <- function(executionSettings, hasCohortTags = FALSE, dbms = DatabaseConnector::dbms(executionSettings$connection)) {
   sql <- SqlRender::loadRenderTranslateSql("CosineSimilarity.sql",
                                            packageName = utils::packageName(),
                                            dbms = dbms,
@@ -45,7 +45,8 @@
                                            covariate_def_table = executionSettings$covariateDefTable,
                                            covariate_means_table = executionSettings$covariateMeansTable,
                                            cosine_sim_table_2 = executionSettings$cosineSimStratifiedTable,
-                                           target_cohort_ids = executionSettings$targetCohortIds) |>
+                                           target_cohort_ids = executionSettings$targetCohortIds,
+                                           cohort_tags = hasCohortTags) |>
     as.character()
   return(sql)
 }
@@ -68,9 +69,24 @@ generateSimilarityScores <- function(executionSettings = NULL, ...) {
   DatabaseConnector::executeSql(executionSettings$connection, sql)
 
   ParallelLogger::logInfo("Computing cosine similarity")
-  sql <- .getCosineSimilaritySql(executionSettings)
+  
+  # Create temp table for cohort tags if tags are specified
+  hasCohortTags <- FALSE
+  if (!is.null(executionSettings$cohortTags)) {
+    ParallelLogger::logInfo("Creating temporary table for cohort tags")
+    hasCohortTags <- cohortTagsToTempTable(executionSettings$cohortTags, executionSettings$connection)
+  }
+  
+  sql <- .getCosineSimilaritySql(executionSettings, hasCohortTags = hasCohortTags)
 
   DatabaseConnector::executeSql(executionSettings$connection, sql)
+  
+  # Clean up temp table if created
+  if (hasCohortTags) {
+    DatabaseConnector::renderTranslateExecuteSql(executionSettings$connection, "DROP TABLE IF EXISTS #cse_cohort_tags;")
+  }
+  
   executionSettings$cosineSimilarityExecuted <- TRUE
   invisible(executionSettings)
 }
+
