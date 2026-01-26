@@ -233,6 +233,11 @@ comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
       icon = shiny::icon("table")
     ),
     shinydashboard::menuItem(
+      text = "Cohorts",
+      tabName = "cohortGenerator",
+      icon = shiny::icon("users")
+    ),
+    shinydashboard::menuItem(
       text = "About",
       tabName = "about",
       icon = shiny::icon("table")
@@ -255,6 +260,10 @@ comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
           shiny::htmlTemplate(system.file("shiny", "license.html", package = "ComparatorSelectionExplorer"))
         )
       )
+    ),
+    shinydashboard::tabItem(
+      tabName = "cohortGenerator",
+      OhdsiShinyModules::cohortGeneratorViewer(ns("cohortGeneratorModule"))
     ),
     shinydashboard::tabItem(
       tabName = "exposureInfo",

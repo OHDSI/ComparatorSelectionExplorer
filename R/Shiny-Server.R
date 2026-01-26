@@ -1,6 +1,6 @@
 # No library() calls at the top!
 
-comparatorSelectionAppModuleServer <- function(id, qns) {
+comparatorSelectionAppModuleServer <- function(id, qns, resultsSchema, tablePrefix) {
 
   # decimal formatters
   fmtSim <- "%.3f"
@@ -66,6 +66,24 @@ comparatorSelectionAppModuleServer <- function(id, qns) {
     getExposureTags <- shiny::reactive({
       getCohortTags(qns)
     })
+
+    # Initialize CohortGenerator module
+    # Use the existing connection handler from qns
+    connectionHandler <- qns$getConnectionHandler()
+
+    # Create result database settings for CohortGenerator
+    resultDatabaseSettings <- list(
+      schema = resultsSchema,
+      tablePrefix = tablePrefix,
+      cgTablePrefix = "cg_"
+    )
+
+    # Call the CohortGenerator server module
+    OhdsiShinyModules::cohortGeneratorServer(
+      id = "cohortGeneratorModule",
+      connectionHandler = connectionHandler,
+      resultDatabaseSettings = resultDatabaseSettings
+    )
 
     shiny::observe({
       shiny::withProgress({
@@ -864,7 +882,7 @@ createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix = "", .
   )
 
   server <- function(input, output, session) {
-    comparatorSelectionAppModuleServer("main", qns)
+    comparatorSelectionAppModuleServer("main", qns, resultsSchema, tablePrefix)
   }
 
   app <- shiny::shinyApp(ui = ui, server = server, onStart = function() {

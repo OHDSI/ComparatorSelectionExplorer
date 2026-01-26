@@ -31,7 +31,7 @@ Imports:
   CohortGenerator,
   shiny,
   shinyjs,
-  reactable,
+  reactable
 Suggests:
   scales,
   ggplot2,
@@ -39,6 +39,7 @@ Suggests:
   htmltools,
   shinycssloaders,
   shinydashboard,
+  OhdsiShinyModules,
   stringr,
   tippy,
   tidyr,
@@ -48,6 +49,8 @@ Suggests:
   withr,
   reticulate,
   duckdb
+Remotes:
+    OHDSI/OhdsiShinyModules
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
 Copyright: See file COPYRIGHTS
 Config/testthat/edition: 3
