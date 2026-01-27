@@ -1,5 +1,36 @@
 tags <- shiny::tags
 
+#' Cohort Generator UI Module
+#'
+#' Internal module for displaying cohort definitions and counts
+#'
+#' @param id Namespace id
+#' @return Shiny UI
+cohortGeneratorUi <- function(id) {
+  ns <- shiny::NS(id)
+  shiny::fluidPage(
+    shinydashboard::box(
+      width = 12,
+      title = "Cohort Definitions",
+      shiny::fluidRow(
+        shiny::column(
+          width = 4,
+          shiny::selectizeInput(
+            inputId = ns("selectedCohortTag"),
+            label = "Select cohort group:",
+            choices = NULL,
+            multiple = FALSE,
+            width = "100%"
+          )
+        )
+      ),
+      shinycssloaders::withSpinner(
+        reactable::reactableOutput(ns("cohortCountsTable"))
+      )
+    )
+  )
+}
+
 covariateUi <- function(ns) {
   shiny::tagList(
     shiny::tags$h3(shiny::strong("Visualizations")),
@@ -263,7 +294,7 @@ comparatorSelectionUi <- function(id = "comparatorSelectionExplorer") {
     ),
     shinydashboard::tabItem(
       tabName = "cohortGenerator",
-      OhdsiShinyModules::cohortGeneratorViewer(ns("cohortGeneratorModule"))
+      cohortGeneratorUi(ns("cohortGeneratorModule"))
     ),
     shinydashboard::tabItem(
       tabName = "exposureInfo",

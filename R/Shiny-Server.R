@@ -1,5 +1,103 @@
 # No library() calls at the top!
 
+#' Cohort Generator Server Module
+#'
+#' Internal module server for displaying cohort definitions and counts
+#'
+#' @param id Namespace id
+#' @param qns QueryNamespace object
+#' @return Server logic
+cohortGeneratorServer <- function(id, qns) {
+  shiny::moduleServer(id, function(input, output, session) {
+
+    # Load tags on initialization
+    shiny::observe({
+      shiny::withProgress({
+        cohortTags <- getCohortTags(qns)
+        shiny::updateSelectizeInput(
+          session,
+          "selectedCohortTag",
+          choices = cohortTags$tag,
+          selected = cohortTags$tag[1],
+          server = TRUE
+        )
+      }, message = "Loading cohort groups...")
+    })
+
+    # Reactive for cohort data with counts - single query per tag
+    cohortDataWithCounts <- shiny::eventReactive(input$selectedCohortTag, {
+      shiny::withProgress({
+        getCohortsByTagWithCounts(qns, input$selectedCohortTag)
+      }, message = paste("Loading cohorts for", input$selectedCohortTag))
+    })
+
+    # Render simple reactable with cohort names and counts
+    output$cohortCountsTable <- reactable::renderReactable({
+      cohortData <- cohortDataWithCounts()
+
+      if (is.null(cohortData) || nrow(cohortData) == 0) {
+        return(reactable::reactable(
+          data = data.frame(Message = "No cohorts found for this group"),
+          columns = list(
+            Message = reactable::colDef(name = "")
+          )
+        ))
+      }
+
+      reactable::reactable(
+        data = cohortData,
+        columns = list(
+          cohortDefinitionId = reactable::colDef(
+            name = "Cohort ID",
+            align = "center",
+            minWidth = 100
+          ),
+          shortName = reactable::colDef(
+            name = "Cohort Name",
+            align = "left",
+            minWidth = 300
+          ),
+          totalSubjects = reactable::colDef(
+            name = "Total Subjects",
+            align = "center",
+            cell = function(value) {
+              prettyNum(value, big.mark = ",")
+            },
+            minWidth = 120
+          ),
+          totalEntries = reactable::colDef(
+            name = "Total Entries",
+            align = "center",
+            cell = function(value) {
+              prettyNum(value, big.mark = ",")
+            },
+            minWidth = 120
+          ),
+          numDatabases = reactable::colDef(
+            name = "# Databases",
+            align = "center",
+            minWidth = 100
+          )
+        ),
+        searchable = TRUE,
+        filterable = TRUE,
+        showPageSizeOptions = TRUE,
+        pageSizeOptions = c(10, 25, 50, 100),
+        defaultPageSize = 25,
+        striped = TRUE,
+        compact = TRUE,
+        theme = reactable::reactableTheme(
+          borderColor = "#dfe2e5",
+          stripedColor = "#f6f8fa",
+          highlightColor = "#eab676",
+          cellPadding = "8px 12px",
+          searchInputStyle = list(width = "100%")
+        )
+      )
+    })
+  })
+}
+
 comparatorSelectionAppModuleServer <- function(id, qns, resultsSchema, tablePrefix) {
 
   # decimal formatters
@@ -67,23 +165,8 @@ comparatorSelectionAppModuleServer <- function(id, qns, resultsSchema, tablePref
       getCohortTags(qns)
     })
 
-    # Initialize CohortGenerator module
-    # Use the existing connection handler from qns
-    connectionHandler <- qns$getConnectionHandler()
-
-    # Create result database settings for CohortGenerator
-    resultDatabaseSettings <- list(
-      schema = resultsSchema,
-      tablePrefix = tablePrefix,
-      cgTablePrefix = "cg_"
-    )
-
-    # Call the CohortGenerator server module
-    OhdsiShinyModules::cohortGeneratorServer(
-      id = "cohortGeneratorModule",
-      connectionHandler = connectionHandler,
-      resultDatabaseSettings = resultDatabaseSettings
-    )
+    # Initialize custom CohortGenerator module
+    cohortGeneratorServer("cohortGeneratorModule", qns)
 
     shiny::observe({
       shiny::withProgress({
@@ -151,7 +234,8 @@ comparatorSelectionAppModuleServer <- function(id, qns, resultsSchema, tablePref
         cohortDefinitions <- getCohortsByTag(qns, input$selectedExposureGroups)
         if (nrow(cohortDefinitions)) {
           exposureSelection <- cohortDefinitions$cohortDefinitionId
-          names(exposureSelection) <- cohortDefinitions$shortName
+          names(exposureSelection) <- paste(cohortDefinitions$shortName, "(",
+                                            cohortDefinitions$cohortDefinitionId,")")
           shiny::updateSelectizeInput(
             session,
             "selectedExposure",
@@ -161,24 +245,6 @@ comparatorSelectionAppModuleServer <- function(id, qns, resultsSchema, tablePref
         }
       }, message = "Loading cohort definitions")
     })
-
-
-    # shiny::observe({
-    #   shiny::withProgress({
-    #
-    #     cohortDefinitions <- dplyr::filter(cohortTable(), .data$isAtc %in% getTargetClassSelection())
-    #
-    #     if (nrow(cohortDefinitions)) {
-    #       exposureSelection <- cohortDefinitions$cohortDefinitionId
-    #       names(exposureSelection) <- cohortDefinitions$shortName
-    #       shiny::updateSelectizeInput(
-    #         session,
-    #         "selectedExposure",
-    #         choices = exposureSelection,
-    #         server = TRUE)
-    #     }
-    #   }, message = "Loading cohort definitions")
-    # })
 
 
     getTargetClassSelection <- shiny::reactive({

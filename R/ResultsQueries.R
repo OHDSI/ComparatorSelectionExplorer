@@ -48,8 +48,39 @@ getCohortsByTag <- function(qns, tag) {
     FROM @schema.@cg_cohort_definition t
     INNER JOIN @schema.@cse_cohort_tag ct
       ON t.cohort_definition_id = ct.cohort_definition_id
+    INNER JOIN @schema.@cse_cohort_count cc
+      ON t.cohort_definition_id = cc.cohort_definition_id
     WHERE ct.tag = '@safe_tag'
+    GROUP BY t.cohort_definition_id, cohort_name
+    HAVING MAX(cc.num_persons) > 0
    "
+  qns$queryDb(sql, safe_tag = safe_tag)
+}
+
+#' Get Cohorts by Tag with Counts
+#' @description
+#' Get cohorts by tag with their counts across all databases (only cohorts with count > 0)
+#' @param qns a query namespace object
+#' @param tag the tag to filter by
+getCohortsByTagWithCounts <- function(qns, tag) {
+  safe_tag <- gsub("'", "''", tag)  # escape single quotes
+  sql <- "
+    SELECT
+      t.cohort_definition_id,
+      cohort_name AS short_name,
+      SUM(cc.cohort_subjects) AS total_subjects,
+      SUM(cc.cohort_entries) AS total_entries,
+      COUNT(DISTINCT cc.database_id) AS num_databases
+    FROM @schema.@cg_cohort_definition t
+    INNER JOIN @schema.@cse_cohort_tag ct
+      ON t.cohort_definition_id = ct.cohort_definition_id
+    INNER JOIN @schema.@cg_cohort_count cc
+      ON t.cohort_definition_id = cc.cohort_id
+    WHERE ct.tag = '@safe_tag'
+      AND cc.cohort_subjects > 0
+    GROUP BY t.cohort_definition_id, cohort_name
+    ORDER BY cohort_name
+  "
   qns$queryDb(sql, safe_tag = safe_tag)
 }
 
@@ -650,3 +681,60 @@ createResultsQueryNamespace <- function(
   )
   return(qns)
 }
+
+#' Get Cohort Definitions for Cohort Generator Module
+#'
+#' Queries the cg_cohort_definition table for cohort definitions
+#'
+#' @param qns A QueryNamespace object.
+#'
+#' @return A data.frame of cohort definitions with id and name.
+#'
+#' @examples
+#' \dontrun{
+#' # qns <- createResultsQueryNamespace(...)
+#' # getCohortGeneratorDefinitions(qns)
+#' }
+getCohortGeneratorDefinitions <- function(qns) {
+  checkmate::assertClass(qns, "QueryNamespace")
+  qns$queryDb("
+    SELECT
+      cohort_definition_id,
+      cohort_name
+    FROM @schema.@cg_cohort_definition
+    ORDER BY cohort_name
+  ")
+}
+
+#' Get Cohort Counts by Cohort Definition ID
+#'
+#' Queries the cg_cohort_count table for counts across databases for a specific cohort
+#'
+#' @param qns A QueryNamespace object.
+#' @param cohortDefinitionId Cohort definition ID to get counts for.
+#'
+#' @return A data.frame of cohort counts by database.
+#'
+#' @examples
+#' \dontrun{
+#' # qns <- createResultsQueryNamespace(...)
+#' # getCohortGeneratorCounts(qns, cohortDefinitionId = 123)
+#' }
+getCohortGeneratorCounts <- function(qns, cohortDefinitionId) {
+  checkmate::assertClass(qns, "QueryNamespace")
+  checkmate::assertIntegerish(cohortDefinitionId, len = 1)
+
+  qns$queryDb("
+    SELECT
+      cc.database_id,
+      ds.cdm_source_abbreviation,
+      cc.cohort_entries,
+      cc.cohort_subjects
+    FROM @schema.@cg_cohort_count cc
+    INNER JOIN @schema.@cse_cdm_source_info ds
+      ON cc.database_id = ds.database_id
+    WHERE cc.cohort_definition_id = @cohort_definition_id
+    ORDER BY ds.cdm_source_abbreviation
+  ", cohort_definition_id = cohortDefinitionId)
+}
+
