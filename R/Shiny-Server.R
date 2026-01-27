@@ -396,7 +396,7 @@ comparatorSelectionAppModuleServer <- function(id, qns, resultsSchema, tablePref
           data = dplyr::select(resSum, "isAtc2", "shortName", "rank", "avg", "nDatabases", "atc3Related", "atc4Related", "cohortDefinitionId2"),
           details = function(index) {
             cohortId <- resSum$cohortDefinitionId2[index]
-            detailData <- resAll[resAll$shortName == resSum$shortName[index], c("databaseId", "cdmSourceAbbreviation", "numPersons", "cosineSimilarity", "cdmSpecificRankStr")]
+            detailData <- resAll[resAll$shortName == resSum$shortName[index], c("databaseId", "cdmSourceAbbreviation", "numPersons", "targetNumPersons", "cosineSimilarity", "cdmSpecificRankStr")]
             detailData <- detailData[order(detailData$cdmSourceAbbreviation),]
 
             selectionJs <- sprintf("
@@ -418,7 +418,14 @@ comparatorSelectionAppModuleServer <- function(id, qns, resultsSchema, tablePref
                     headerVAlign = "bottom",
                     minWidth = 125),
                   "numPersons" = reactable::colDef(
-                    name = "Sample Size",
+                    name = "Comparator Sample Size",
+                    align = "center",
+                    cell = function(value) { prettyNum(value, big.mark = ",") },
+                    vAlign = "center",
+                    headerVAlign = "bottom",
+                    minWidth = 125),
+                  "targetNumPersons" = reactable::colDef(
+                    name = "Target Sample Size",
                     align = "center",
                     cell = function(value) { prettyNum(value, big.mark = ",") },
                     vAlign = "center",

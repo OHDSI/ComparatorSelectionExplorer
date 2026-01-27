@@ -392,7 +392,8 @@ getCohortSimilarityScores <- function(qns, targetCohortId, weights = NULL) {
               sum(cosine_similarity * weight) as cosine_similarity,
               atc_4_related,
               atc_3_related,
-              num_persons
+              num_persons,
+              target_num_persons
             from (
               select distinct
                 csi.database_id,
@@ -427,7 +428,12 @@ getCohortSimilarityScores <- function(qns, targetCohortId, weights = NULL) {
               case
                     when t.cohort_definition_id_1 = @targetCohortId then ec.num_persons
                     else ec2.num_persons
-              end as num_persons
+              end as num_persons,
+
+              case
+                    when t.cohort_definition_id_2 = @targetCohortId then ec.num_persons
+                    else ec2.num_persons
+              end as target_num_persons
 
               from @schema.@cse_cosine_similarity_score  t
 	              inner join @schema.@cse_cohort_count ec ON ec.cohort_definition_id = t.cohort_definition_id_2
@@ -447,7 +453,7 @@ getCohortSimilarityScores <- function(qns, targetCohortId, weights = NULL) {
 	              and t.covariate_type not in  ('average', 'Co-occurrence')
 	          ) domains
 	        group by database_id, cdm_source_abbreviation, cohort_definition_id_2, is_atc_2, short_name,
-	             atc_4_related, atc_3_related, num_persons
+	             atc_4_related, atc_3_related, num_persons, target_num_persons
 	        order by database_id, cdm_source_abbreviation, cosine_similarity desc
           ", targetCohortId = targetCohortId,
     demographicsWeight = demographicsWeight,
