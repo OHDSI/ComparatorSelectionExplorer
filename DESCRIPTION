@@ -29,8 +29,10 @@ Imports:
   digest,
   shiny,
   shinyjs,
-  reactable
+  reactable,
+  httr
 Suggests:
+  plumber,
   scales,
   ggplot2,
   plotly,
