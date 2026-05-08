@@ -87,10 +87,16 @@ createExecutionSettings <- function(connectionDetails = NULL,
                                     exportDir = tempfile(),
                                     removeExportDir = TRUE,
                                     exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_", cdmDatabaseSchema, ".zip"))) {
-  checkmate::assertClass(connectionDetails, "ConnectionDetails", null.ok = TRUE)
+  checkmate::assert(
+    checkmate::checkClass(connectionDetails, "ConnectionDetails", null.ok = TRUE),
+    checkmate::checkClass(connection, "DatabaseConnectorConnection", null.ok = TRUE),
+    combine = "or"
+  )
+  if (is.null(connectionDetails) && is.null(connection)) {
+    stop("Either connectionDetails or connection must be provided")
+  }
   checkmate::assertTRUE(is.null(cohortDefinitionSet) || CohortGenerator::isCohortDefinitionSet(cohortDefinitionSet))
   checkmate::assertIntegerish(databaseId, null.ok = TRUE)
-  checkmate::assertString(databaseId, null.ok = TRUE)
   
   # Backward compatibility: convert targetCohortIds to cohortTags if provided
   if (!is.null(targetCohortIds) && is.null(cohortTags)) {
@@ -147,6 +153,10 @@ createExecutionSettings <- function(connectionDetails = NULL,
   # Get database ID from cdm_source table
   if (is.null(executionSettings$connection)) {
     executionSettings$connection <- DatabaseConnector::connect(executionSettings$connectionDetails)
+    on.exit({
+      DatabaseConnector::disconnect(executionSettings$connection)
+      executionSettings$connection <- NULL
+    }, add = TRUE)
   }
 
   executionSettings$databaseId <- databaseId

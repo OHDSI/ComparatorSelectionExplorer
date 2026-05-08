@@ -21,14 +21,13 @@ Imports:
   DatabaseConnector (>= 6.0.0),
   ParallelLogger,
   ResultModelManager (>= 0.4.0),
-  CohortGenerator,
+  CohortGenerator (>= 1.1.0),
   checkmate,
   SqlRender (>= 1.9.0),
   readr,
   dplyr,
   digest,
   purrr,
-  CohortGenerator,
   shiny,
   shinyjs,
   reactable
@@ -39,7 +38,6 @@ Suggests:
   htmltools,
   shinycssloaders,
   shinydashboard,
-  OhdsiShinyModules,
   stringr,
   tippy,
   tidyr,
@@ -49,8 +47,6 @@ Suggests:
   withr,
   reticulate,
   duckdb
-Remotes:
-    OHDSI/OhdsiShinyModules
 BugReports: https://github.com/OHDSI/ComparatorSelectionExplorer/issues
 Copyright: See file COPYRIGHTS
 Config/testthat/edition: 3

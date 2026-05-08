@@ -1,30 +1,30 @@
 test_that("validateCohortTags works correctly", {
   # Valid tags
   validTags <- list("exposure" = c(1, 2, 3), "outcome" = c(4, 5))
-  expect_true(validateCohortTags(validTags))
+  expect_true(ComparatorSelectionExplorer:::validateCohortTags(validTags))
   
   # NULL is valid
-  expect_true(validateCohortTags(NULL))
+  expect_true(ComparatorSelectionExplorer:::validateCohortTags(NULL))
   
   # Invalid: not a list
-  expect_error(validateCohortTags(c(1, 2, 3)), "must be a named list")
+  expect_error(ComparatorSelectionExplorer:::validateCohortTags(c(1, 2, 3)), "must be a named list")
   
   # Invalid: unnamed list
-  expect_error(validateCohortTags(list(c(1, 2), c(3, 4))), "must be a named list")
+  expect_error(ComparatorSelectionExplorer:::validateCohortTags(list(c(1, 2), c(3, 4))), "must be a named list")
   
   # Invalid: non-numeric values
-  expect_error(validateCohortTags(list("tag1" = c("a", "b"))), "must be numeric")
+  expect_error(ComparatorSelectionExplorer:::validateCohortTags(list("tag1" = c("a", "b"))), "must be numeric")
 })
 
 test_that("flattenCohortTags extracts unique IDs", {
   tags <- list("exposure" = c(1, 2, 3), "outcome" = c(3, 4, 5))
-  flattened <- flattenCohortTags(tags)
+  flattened <- ComparatorSelectionExplorer:::flattenCohortTags(tags)
   
   expect_equal(sort(flattened), c(1, 2, 3, 4, 5))
   expect_type(flattened, "integer")
   
   # NULL returns NULL
-  expect_null(flattenCohortTags(NULL))
+  expect_null(ComparatorSelectionExplorer:::flattenCohortTags(NULL))
 })
 
 test_that("cohortTagsToDataFrame creates correct structure", {
@@ -34,7 +34,7 @@ test_that("cohortTagsToDataFrame creates correct structure", {
     "indication" = c(1, 3)
   )
   
-  df <- cohortTagsToDataFrame(tags)
+  df <- ComparatorSelectionExplorer:::cohortTagsToDataFrame(tags)
   
   expect_s3_class(df, "data.frame")
   expect_equal(ncol(df), 2)
@@ -60,7 +60,7 @@ test_that("cohortTagsToDataFrame creates correct structure", {
 })
 
 test_that("cohortTagsToDataFrame handles NULL correctly", {
-  df <- cohortTagsToDataFrame(NULL)
+  df <- ComparatorSelectionExplorer:::cohortTagsToDataFrame(NULL)
   
   expect_s3_class(df, "data.frame")
   expect_equal(nrow(df), 0)
@@ -69,14 +69,14 @@ test_that("cohortTagsToDataFrame handles NULL correctly", {
 
 test_that("convertTargetCohortIdsToTags provides backward compatibility", {
   oldFormat <- c(1, 2, 3, 4, 5)
-  converted <- convertTargetCohortIdsToTags(oldFormat)
+  converted <- ComparatorSelectionExplorer:::convertTargetCohortIdsToTags(oldFormat)
   
   expect_type(converted, "list")
   expect_equal(names(converted), "default")
   expect_equal(converted$default, as.integer(oldFormat))
   
   # NULL returns NULL
-  expect_null(convertTargetCohortIdsToTags(NULL))
+  expect_null(ComparatorSelectionExplorer:::convertTargetCohortIdsToTags(NULL))
 })
 
 test_that("cohortTagsToDataFrame maintains cohort-tag relationships", {
@@ -87,7 +87,7 @@ test_that("cohortTagsToDataFrame maintains cohort-tag relationships", {
     "tag3" = c(1, 2, 4)
   )
   
-  df <- cohortTagsToDataFrame(tags)
+  df <- ComparatorSelectionExplorer:::cohortTagsToDataFrame(tags)
   
   # Cohort 1 should appear in tag1 and tag3
   cohort1Rows <- df[df$cohortDefinitionId == 1, ]
