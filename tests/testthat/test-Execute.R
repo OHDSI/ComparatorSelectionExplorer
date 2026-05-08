@@ -9,14 +9,14 @@ test_that("Execution", {
 
 
   subsetDef <- CohortGenerator::createCohortSubsetDefinition("Test subset",
-                                                             definitionId = 1,
-                                                             identifierExpression = "targetId * 100 + definitionId",
-                                                             subsetOperators = list(
-                                                               CohortGenerator::createDemographicSubset(
-                                                                 ageMin = 18,
-                                                                 ageMax = 64
-                                                               )
-                                                             ))
+                                                              definitionId = 1,
+                                                              identifierExpression = "targetId * 100 + definitionId",
+                                                              subsetOperators = list(
+                                                                CohortGenerator::createDemographicSubsetOperator(
+                                                                  ageMin = 18,
+                                                                  ageMax = 64
+                                                                )
+                                                              ))
   rxNormDefinition <-
     CohortGenerator::createRxNormCohortTemplateDefinition(
       connection = connection,
@@ -36,17 +36,19 @@ test_that("Execution", {
                                                resultsDatabaseSchema = "main",
                                                cohortTable = "cse_cohort")
 
-  CohortGenerator::runCohortGeneration(
-    connectionDetails = connectionDetails,
-    cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
-    tempEmulationSchema = executionSettings$tempEmulationSchema,
-    cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
-    cohortTableNames = executionSettings$cohortTableNames,
-    cohortDefinitionSet = executionSettings$cohortDefinitionSet,
-    outputFolder = tempfile(),
-    databaseId = executionSettings$databaseId,
-    incremental = TRUE,
-    incrementalFolder = tempfile()
+  withr::local_options(list(vroom.show_col_types = FALSE))
+  suppressWarnings(
+    CohortGenerator::runCohortGeneration(
+      connectionDetails = connectionDetails,
+      cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+      tempEmulationSchema = executionSettings$tempEmulationSchema,
+      cohortDatabaseSchema = executionSettings$cohortDatabaseSchema,
+      cohortTableNames = executionSettings$cohortTableNames,
+      cohortDefinitionSet = executionSettings$cohortDefinitionSet,
+      outputFolder = tempfile(),
+      databaseId = executionSettings$databaseId,
+      incremental = TRUE
+    )
   )
 
   unlink(executionSettings$exportZipFile)

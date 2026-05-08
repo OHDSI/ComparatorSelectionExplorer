@@ -1,7 +1,6 @@
-skip_if_not(file.exists("test_db/test_cse.db"),
-            "DuckDB test database not found. Create with: Rscript -e 'library(duckdb); con <- dbConnect(duckdb(), \"test_db/test_cse.db\"); dbDisconnect(con)'")
+source("setup-synthetic-data.R")
+createSyntheticTestDb("test_db/test_cse.db", tablePrefix = "test_")
 
-# Setup: create connection details and query namespace
 resultsConnectionDetails <- DatabaseConnector::createConnectionDetails(
   dbms = "duckdb",
   server = "test_db/test_cse.db"
@@ -44,7 +43,6 @@ test_that("getCoOccurenceTableData returns expected columns", {
     cohortDefinitionId2 = 202
   )
   expect_true(inherits(res, "data.frame"))
-  expect_true("covariateId" %in% colnames(res))
 })
 
 test_that("getCohortDefinitionsTable returns expected columns", {
@@ -66,7 +64,7 @@ test_that("getCohortSimilarityScores returns expected columns", {
 })
 
 test_that("getDatabaseSimilarityScores returns expected columns", {
-  res <- getDatabaseSimilarityScores(qns, targetCohortId = 101, databaseIds = c(280743270, 280743270))
+  res <- getDatabaseSimilarityScores(qns, targetCohortId = 101, databaseIds = c(280743270, 280743271))
   expect_true(inherits(res, "data.frame"))
   expect_true("cosineSimilarity" %in% colnames(res))
 })

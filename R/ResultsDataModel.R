@@ -75,7 +75,7 @@ createResultsDataModel <- function(connectionDetails, databaseSchema, tablePrefi
 #' @export
 getResultsDataModelSpec <- function() {
   specPath <- system.file("settings", "resultsDataModel.csv", package = "ComparatorSelectionExplorer")
-  spec <- readr::read_csv(specPath, show_col_types = FALSE)
+  spec <- readr::read_csv(specPath, show_col_types = FALSE, col_types = readr::cols(.default = "c"))
   colnames(spec) <- SqlRender::snakeCaseToCamelCase(colnames(spec))
   return(spec)
 }

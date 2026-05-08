@@ -1,5 +1,5 @@
-skip_if_not(file.exists("test_db/test_cse.db"),
-            "DuckDB test database not found. Create with: Rscript -e 'library(duckdb); con <- dbConnect(duckdb(), \"test_db/test_cse.db\"); dbDisconnect(con)'")
+source("setup-synthetic-data.R")
+createSyntheticTestDb("test_db/test_cse.db", tablePrefix = "test_")
 
 test_that("launchShinyApp launches app without error", {
   connectionDetails <- DatabaseConnector::createConnectionDetails(
@@ -8,21 +8,17 @@ test_that("launchShinyApp launches app without error", {
   )
   resultsSchema <- "main"
   tablePrefix <- "test_"
-  # This test only checks that launchShinyApp returns an app object; does not actually run the app interactively
   app <- createShinyApp(connectionDetails, resultsSchema, tablePrefix)
   expect_true(inherits(app, "shiny.appobj"))
 })
 
-
 test_that("comparatorSelectionAppModuleServer registers outputs", {
-  # Setup dummy QueryNamespace (or real one if possible)
   connectionDetails <- DatabaseConnector::createConnectionDetails(
     dbms = "duckdb",
     server = "test_db/test_cse.db"
   )
   qns <- createResultsQueryNamespace(connectionDetails, "main", tablePrefix = "test_")
 
-  # Create test session
   shiny::testServer(comparatorSelectionAppModuleServer, args = list(qns = qns), {
     expect_true(TRUE)
   })

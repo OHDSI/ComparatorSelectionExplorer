@@ -676,7 +676,7 @@ createResultsQueryNamespace <- function(
   usePooledConnection = FALSE
 ) {
   dataModelSpec <- getResultsDataModelSpec() |>
-    dplyr::bind_rows(CohortGenerator::getResultsDataModelSpecifications())
+    dplyr::bind_rows(suppressWarnings(CohortGenerator::getResultsDataModelSpecifications()))
 
   qns <- ResultModelManager::createQueryNamespace(
     connectionDetails = connectionDetails,
