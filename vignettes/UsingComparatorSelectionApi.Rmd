@@ -1,0 +1,292 @@
+---
+title: "Using the Comparator Selection API"
+author: "James P. Gilbert"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+vignette: >
+  %\VignetteIndexEntry{Using the Comparator Selection API}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteDepends{ComparatorSelectionExplorer}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+The Comparator Selection Explorer ships with a Plumber-based REST API that exposes
+cohort search and comparator ranking endpoints. You can host the API on a server
+and interact with it programmatically using the built-in R client or any HTTP
+client.
+
+## Quick Start
+
+### 1. Host the API
+
+```{r}
+library(ComparatorSelectionExplorer)
+
+connectionDetails <- DatabaseConnector::createConnectionDetails(
+  dbms = "postgresql",
+  server = "localhost/ohdsi",
+  user = "user",
+  password = Sys.getenv("DB_PASSWORD"),
+  cdmSchema = "cdm",
+  resultsSchema = "results"
+)
+
+startComparatorApi(
+  connectionDetails = connectionDetails,
+  resultsSchema = "results",
+  tablePrefix = "cse_",
+  port = 8080
+)
+```
+
+The server blocks the R session. In production, run it as a background process
+or deploy it as a system service (see *Hosting* section below).
+
+### 2. Connect an R Client
+
+From another R session (or a separate script), create a client pointing at the
+running server:
+
+```{r}
+library(ComparatorSelectionExplorer)
+
+client <- createApiClient(host = "localhost", port = 8080)
+```
+
+## API Endpoints
+
+### Health Check
+
+```{r}
+client$health()
+#> $status
+#> [1] "ok"
+```
+
+### List Data Sources
+
+```{r}
+client$databases()
+#>   database_id cdm_source_abbreviation
+#> 1   280743270                    CCAE
+#> 2   280743271                    MDCR
+```
+
+### Search Cohorts
+
+Search all cohorts by name (case-insensitive). Optionally filter by tag
+(`"RxNorm"`, `"ATC"`, etc.).
+
+```{r}
+# Return all cohorts
+all <- client$search()
+
+# Search by keyword
+matched <- client$search(q = "ibuprofen")
+
+# Filter by tag
+rxnorm_cohorts <- client$search(tag = "RxNorm")
+
+# Both
+atc_drugs <- client$search(q = "class", tag = "ATC")
+```
+
+### Get Comparator Rankings
+
+This is the primary endpoint. It returns comparators ranked by average cosine
+similarity across databases.
+
+```{r}
+result <- client$rankings(
+  targetCohortId = 101,
+  database_ids = c(280743270, 280743271),
+  min_databases = 2,
+  comparator_type = "RxNorm",
+  weight_demo = 20,
+  weight_pres = 25,
+  weight_hist = 20,
+  weight_meds = 20,
+  weight_visit = 15
+)
+
+result$targetCohortId
+#> [1] 101
+
+result$totalComparators
+#> [1] 5
+
+result$rankings
+#>   rank comparatorId       comparatorName comparatorType avgSimilarity avgCdmRank nDatabases
+#> 1    1          102         RxNorm - Drug B        RxNorm         0.874        1.5          2
+#> 2    2          202           ATC - Class Y           ATC         0.801        2.5          2
+```
+
+#### Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `targetCohortId` | (required) | ID of the target cohort |
+| `database_ids` | all | Restrict to specific databases |
+| `min_databases` | `2` | Minimum databases a comparator must appear in |
+| `comparator_type` | both | `"ATC"`, `"RxNorm"`, or `""` for both |
+| `weight_demo` | `20` | Weight for Demographics domain (0-100) |
+| `weight_pres` | `20` | Weight for Presentation domain (0-100) |
+| `weight_hist` | `20` | Weight for Medical history domain (0-100) |
+| `weight_meds` | `20` | Weight for Prior medications domain (0-100) |
+| `weight_visit` | `20` | Weight for Visit context domain (0-100) |
+
+Weights are normalised to sum to 1 before scoring.
+
+### Compare Two Cohorts
+
+Retrieve per-domain similarity scores for a specific cohort pair in a specific
+database.
+
+```{r}
+result <- client$compare(
+  cohortId1 = 101,
+  cohortId2 = 202,
+  database_id = "280743270"
+)
+
+result$domainScores
+#>        covariateType cosineSimilarity
+#> 1       Demographics            0.912
+#> 2       Presentation            0.845
+#> 3    Medical history            0.768
+#> 4         prior meds            0.891
+#> 5      visit context            0.722
+#> 6            average            0.828
+```
+
+## Error Handling
+
+The client throws an error with a descriptive message when the server returns an
+HTTP error:
+
+```{r, error = TRUE}
+client$search(q = "nonexistent_cohort_xyz")
+#> Error: No cohorts match the search criteria
+```
+
+Use `tryCatch` in production code:
+
+```{r, error = TRUE}
+tryCatch(
+  client$rankings(99999, min_databases = 1),
+  error = function(e) message("API error: ", e$message)
+)
+```
+
+## Hosting the API
+
+### Single-session (ad-hoc)
+
+The simplest approach — run `startComparatorApi()` in a terminal or R session:
+
+```r
+library(ComparatorSelectionExplorer)
+
+connectionDetails <- DatabaseConnector::createConnectionDetails(
+  dbms = "postgresql",
+  server = "localhost/ohdsi",
+  user = "analyst",
+  password = Sys.getenv("DB_PASSWORD"),
+  cdmSchema = "cdm",
+  resultsSchema = "results"
+)
+
+startComparatorApi(
+  connectionDetails = connectionDetails,
+  resultsSchema = "results",
+  tablePrefix = "cse_",
+  host = "0.0.0.0",
+  port = 8080
+)
+```
+
+Use `host = "0.0.0.0"` to accept connections from other machines (default is
+`"127.0.0.1"` which only allows local connections).
+
+### Background R process (Linux / macOS)
+
+Start the API in a detached R process using `nohup` or `systemd`.
+
+**nohup example:**
+
+```bash
+nohup Rscript -e '
+  library(ComparatorSelectionExplorer)
+  conn <- DatabaseConnector::createConnectionDetails(...)
+  startComparatorApi(conn, "results", port = 8080)
+' > api.log 2>&1 &
+```
+
+### Docker
+
+Build a minimal Docker image:
+
+```dockerfile
+FROM rocker/r-ver:4.4
+RUN R -e "install.packages(c('ComparatorSelectionExplorer', 'plumber', 'DatabaseConnector'))"
+COPY connection_config.rds /opt/api/
+CMD R -e "startComparatorApi(readRDS('/opt/api/connection_config.rds'), 'results', port = 8080)"
+```
+
+### Process management with `systemd`
+
+Create `/etc/systemd/system/cse-api.service`:
+
+```ini
+[Unit]
+Description=Comparator Selection Explorer API
+After=network.target
+
+[Service]
+Type=simple
+User=analyst
+WorkingDirectory=/opt/cse-api
+ExecStart=/usr/bin/Rscript -e '
+  library(ComparatorSelectionExplorer)
+  conn <- DatabaseConnector::createConnectionDetails(
+    dbms = "postgresql",
+    server = Sys.getenv("DB_SERVER"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD")
+  )
+  startComparatorApi(conn, "results", port = 8080)
+'
+Restart=always
+EnvironmentFile=/opt/cse-api/.env
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable cse-api
+sudo systemctl start cse-api
+```
+
+### Security considerations
+
+- The API does not include authentication. Protect it with a reverse proxy
+  (nginx, Apache) or a firewall.
+- Use `host = "127.0.0.1"` (the default) and tunnel through SSH when accessing
+  remotely: `ssh -L 8080:localhost:8080 user@server`
+- Database credentials are handled by `DatabaseConnector` — keep them out of
+  logs and version control.
+- The API is read-only: it only queries the results schema and never writes data.
