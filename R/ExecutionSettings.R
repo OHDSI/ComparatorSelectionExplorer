@@ -1,6 +1,6 @@
 # Copyright 2025 Observational Health Data Sciences and Informatics
 #
-# This file is part of CohortGenerator
+# This file is part of ComparatorSelectionExplorer
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,11 +28,6 @@
 #'                                           stored
 #' @param cohortDefinitionSet                CohortGenerator::cohortDefinitionSet - intended to be
 #'                                           custom exposures or indication cohorts
-#' @param tempEmulationSchema                String DatabaseSchema - temp emulation schema for oracle,
-#'                                           bigquery
-#' @param exportZipFile                      Path to zip file output of project
-#' @param databaseName                       Database identifier (string)
-#' @param databaseId                         Database identifier integer (optional)
 #' @param cohortTags                         (optional) Named list where names are tag names and values
 #'                                           are integer vectors of cohort IDs. Cosine similarity will
 #'                                           be calculated only within tag groups (cohorts sharing at
@@ -42,7 +37,11 @@
 #'                                           cosine similarity calculation to. Use cohortTags instead.
 #'                                           Must be a valid RxNorm ingredient, ATC class or included
 #'                                           in the cohortDefinitionSet
-#'
+#' @param tempEmulationSchema                String DatabaseSchema - temp emulation schema for oracle,
+#'                                           bigquery
+#' @param exportZipFile                      Path to zip file output of project
+#' @param databaseName                       Database identifier (string)
+#' @param databaseId                         Database identifier integer (optional)
 #' @param vocabularyDatabaseSchema           standard vocabulary database schema
 #' @param cohortTable                        cohort table for exposures
 #' @param cohortCountTable                   (optional) count tabls
@@ -153,10 +152,7 @@ createExecutionSettings <- function(connectionDetails = NULL,
   # Get database ID from cdm_source table
   if (is.null(executionSettings$connection)) {
     executionSettings$connection <- DatabaseConnector::connect(executionSettings$connectionDetails)
-    on.exit({
-      DatabaseConnector::disconnect(executionSettings$connection)
-      executionSettings$connection <- NULL
-    }, add = TRUE)
+    executionSettings$connectionInternallyCreated <- TRUE
   }
 
   executionSettings$databaseId <- databaseId

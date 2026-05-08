@@ -1,5 +1,5 @@
 test_that("comparatorSelectionUi renders expected elements", {
-  ui <- comparatorSelectionUi("test")
+  ui <- ComparatorSelectionExplorer:::comparatorSelectionUi("test")
   html <- as.character(ui)
 
   # Check for dashboard header
@@ -28,7 +28,7 @@ test_that("comparatorSelectionUi renders expected elements", {
 
 test_that("exclusionCovariateUi renders expected elements", {
   ns <- shiny::NS("test")
-  ui <- exclusionCovariateUi(ns)
+  ui <- ComparatorSelectionExplorer:::exclusionCovariateUi(ns)
   html <- as.character(ui)
 
   # Check for numeric inputs
@@ -44,7 +44,7 @@ test_that("exclusionCovariateUi renders expected elements", {
 
 test_that("covariateUi renders expected elements", {
   ns <- shiny::NS("test")
-  ui <- covariateUi(ns)
+  ui <- ComparatorSelectionExplorer:::covariateUi(ns)
 
   # Should be a tagList
   expect_true(inherits(ui, "shiny.tag.list"))

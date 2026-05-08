@@ -1,3 +1,6 @@
+skip_if_not(file.exists("test_db/test_cse.db"),
+            "DuckDB test database not found. Create with: Rscript -e 'library(duckdb); con <- dbConnect(duckdb(), \"test_db/test_cse.db\"); dbDisconnect(con)'")
+
 # Setup: create connection details and query namespace
 resultsConnectionDetails <- DatabaseConnector::createConnectionDetails(
   dbms = "duckdb",

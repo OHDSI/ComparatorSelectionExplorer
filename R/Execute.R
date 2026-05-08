@@ -1,6 +1,6 @@
 # Copyright 2025 Observational Health Data Sciences and Informatics
 #
-# This file is part of CohortGenerator
+# This file is part of ComparatorSelectionExplorer
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,10 @@ execute <- function(executionSettings = NULL, ...) {
   executionSettings <- generateSimilarityScores(executionSettings)
   executionSettings <- exportResults(executionSettings)
 
-  # 3. export results and zip
+  if (isTRUE(executionSettings$connectionInternallyCreated) && !is.null(executionSettings$connection)) {
+    DatabaseConnector::disconnect(executionSettings$connection)
+    executionSettings$connection <- NULL
+  }
+
   invisible(executionSettings)
 }

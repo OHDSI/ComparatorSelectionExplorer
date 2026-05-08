@@ -1,6 +1,6 @@
 # Copyright 2025 Observational Health Data Sciences and Informatics
 #
-# This file is part of CohortGenerator
+# This file is part of ComparatorSelectionExplorer
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ migrateDataModel <- function(connectionDetails, databaseSchema, tablePrefix = ""
 
   ParallelLogger::logInfo("Updating version number")
   updateVersionSql <- SqlRender::loadRenderTranslateSql("UpdateVersionNumber.sql",
-                                                        packageName = utils::packageName(),
+                                                         packageName = "ComparatorSelectionExplorer",
                                                         database_schema = databaseSchema,
                                                         table_prefix = tablePrefix,
                                                         dbms = connectionDetails$dbms)
@@ -57,7 +57,7 @@ getDataMigrator <- function(connectionDetails, databaseSchema, tablePrefix = "")
                                                tablePrefix = tablePrefix,
                                                packageTablePrefix = "cse_",
                                                migrationPath = "migrations",
-                                               packageName = utils::packageName())
+                                                packageName = "ComparatorSelectionExplorer")
 }
 
 #' Create the results data model tables on a database server.
@@ -74,7 +74,7 @@ createResultsDataModel <- function(connectionDetails, databaseSchema, tablePrefi
 #'
 #' @export
 getResultsDataModelSpec <- function() {
-  specPath <- system.file("settings", "resultsDataModel.csv", package = utils::packageName())
+  specPath <- system.file("settings", "resultsDataModel.csv", package = "ComparatorSelectionExplorer")
   spec <- readr::read_csv(specPath, show_col_types = FALSE)
   colnames(spec) <- SqlRender::snakeCaseToCamelCase(colnames(spec))
   return(spec)

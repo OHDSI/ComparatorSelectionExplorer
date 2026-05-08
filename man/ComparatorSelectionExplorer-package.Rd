@@ -20,6 +20,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Jamie Gilbert \email{gilbert@ohdsi.org}
   \item Justin Bohn
   \item Chris Knoll
   \item Patrick Ryan

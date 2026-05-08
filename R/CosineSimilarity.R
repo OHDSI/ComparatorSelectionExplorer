@@ -1,6 +1,6 @@
 # Copyright 2025 Observational Health Data Sciences and Informatics
 #
-# This file is part of CohortGenerator
+# This file is part of ComparatorSelectionExplorer
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 .getFeaturesSql <- function(executionSettings, dbms = DatabaseConnector::dbms(executionSettings$connection)) {
   sql <- SqlRender::loadRenderTranslateSql("SelectiveFeatureExtraction.sql",
-                                           packageName = utils::packageName(),
+                                           packageName = "ComparatorSelectionExplorer",
                                            dbms = dbms,
                                            cohort_counts = executionSettings$cohortCountTable,
                                            cohort = executionSettings$cohortTableNames$cohortTable,
@@ -35,7 +35,7 @@
 
 .getCosineSimilaritySql <- function(executionSettings, hasCohortTags = FALSE, dbms = DatabaseConnector::dbms(executionSettings$connection)) {
   sql <- SqlRender::loadRenderTranslateSql("CosineSimilarity.sql",
-                                           packageName = utils::packageName(),
+                                           packageName = "ComparatorSelectionExplorer",
                                            dbms = dbms,
                                            cohort_definition = executionSettings$cohortDefinitionTable,
                                            cdm_database_schema = executionSettings$cdmDatabaseSchema,

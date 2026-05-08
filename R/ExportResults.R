@@ -1,6 +1,6 @@
 # Copyright 2025 Observational Health Data Sciences and Informatics
 #
-# This file is part of CohortGenerator
+# This file is part of ComparatorSelectionExplorer
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,9 +79,7 @@ exportResults <- function(executionSettings = NULL, ...) {
 
     on.exit({
       DatabaseConnector::renderTranslateExecuteSql(executionSettings$connection, "DROP TABLE IF EXISTS #cse_target_export;")
-      DatabaseConnector::disconnect(executionSettings$connection)
-      executionSettings$connection <- NULL
-    }, add = FALSE)
+    }, add = TRUE)
   }
 
   ParallelLogger::logInfo("Exporting covariate def table")
@@ -128,7 +126,7 @@ exportResults <- function(executionSettings = NULL, ...) {
     ParallelLogger::logInfo("Exporting cse_atc_level")
 
     sql <- SqlRender::readSql(system.file(file.path("sql", "sql_server", "GetAtcLevels.sql"),
-                                        package = utils::packageName()))
+                                        package = "ComparatorSelectionExplorer"))
     DatabaseConnector::renderTranslateQueryApplyBatched(executionSettings$connection,
                                                         sql,
                                                         fun = exportResultsFun,

@@ -7,9 +7,9 @@
 uploadResults(
   connectionDetails,
   databaseSchema,
-  zipFileName,
+  zipFileName = NULL,
+  importFilePath = NULL,
   tablePrefix = "",
-  importFilpath = tempfile(),
   ...
 )
 }
@@ -18,14 +18,14 @@ uploadResults(
 
 \item{databaseSchema}{String schema where database schema lives}
 
-\item{zipFileName}{Path to zipFile containing results}
+\item{zipFileName}{Path to zip file containing results (optional if importFilePath is given)}
+
+\item{importFilePath}{Path to already-extracted results folder (optional if zipFileName is given)}
 
 \item{tablePrefix}{(Optional) Use if a table prefix is used before table names (e.g. "cd_")}
 
-\item{importFilpath}{file path to export zipped results to before upload (optional - default is temporary)}
-
-\item{...}{Elipsis  - see ResultModelManager::uploadResults}
+\item{...}{Additional parameters passed to ResultModelManager::uploadResults}
 }
 \description{
-Upload results to database server
+Upload results to a database server from either a zip file or a pre-extracted folder.
 }

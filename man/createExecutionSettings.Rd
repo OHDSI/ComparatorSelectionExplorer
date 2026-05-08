@@ -16,6 +16,7 @@ createExecutionSettings(
   cohortTable,
   tempEmulationSchema = getOption("sqlRenderTempEmulationSchema"),
   cohortDefinitionSet = NULL,
+  cohortTags = NULL,
   targetCohortIds = NULL,
   cohortCountTable = "cse_cohort_count",
   cohortDefinitionTable = "cse_cohort_definition",
@@ -58,10 +59,16 @@ bigquery}
 \item{cohortDefinitionSet}{CohortGenerator::cohortDefinitionSet - intended to be
 custom exposures or indication cohorts}
 
-\item{targetCohortIds}{(optional) Integer ids for cohorts to limit cosine
-similarity calculation to Must be a valid RxNorm
-ingredient, ATC class or included in the
-cohortDefinitionSet}
+\item{cohortTags}{(optional) Named list where names are tag names and values
+are integer vectors of cohort IDs. Cosine similarity will
+be calculated only within tag groups (cohorts sharing at
+least one tag). Example: list("exposure" = c(1,2,3),
+"outcome" = c(4,5)). If NULL, all cohorts are compared.}
+
+\item{targetCohortIds}{(optional, deprecated) Integer ids for cohorts to limit
+cosine similarity calculation to. Use cohortTags instead.
+Must be a valid RxNorm ingredient, ATC class or included
+in the cohortDefinitionSet}
 
 \item{cohortCountTable}{(optional) count tabls}
 

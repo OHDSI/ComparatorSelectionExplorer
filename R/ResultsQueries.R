@@ -36,9 +36,9 @@ getCohortTags <- function(qns, cohortIds = '') {
 
 #' Get Cohorts by tag id
 #' @description
-#' Get any tags assigned to cohorts
+#' Get cohorts assigned to a specific tag
 #' @param qns a query namespace object
-#' @param cohortIds optional cohort ids
+#' @param tag the tag to filter by
 getCohortsByTag <- function(qns, tag) {
   safe_tag <- gsub("'", "''", tag)  # escape single quotes
   sql <-"
