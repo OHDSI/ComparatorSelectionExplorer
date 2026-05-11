@@ -5,7 +5,7 @@
 #' @param qns A QueryNamespace object.
 #'
 #' @return A data.frame of cohort definitions.
-#'
+#' @export 
 #' @examples
 #' # qns <- createResultsQueryNamespace(...)
 #' # getCohortDefinitions(qns)
@@ -33,6 +33,7 @@ getCohortDefinitions <- function(qns, search = NULL, tag = NULL) {
 #' Get any tags assigned to cohorts
 #' @param qns a query namespace object
 #' @param cohortIds optional cohort ids
+#' @export 
 getCohortTags <- function(qns, cohortIds = '') {
   qns$queryDb("
     SELECT DISTINCT tag FROM @schema.@cse_cohort_tag
@@ -68,6 +69,7 @@ getCohortsByTag <- function(qns, tag) {
 #' Get cohorts by tag with their counts across all databases (only cohorts with count > 0)
 #' @param qns a query namespace object
 #' @param tag the tag to filter by
+#' @export 
 getCohortsByTagWithCounts <- function(qns, tag) {
   safe_tag <- gsub("'", "''", tag)  # escape single quotes
   sql <- "
@@ -98,7 +100,7 @@ getCohortsByTagWithCounts <- function(qns, tag) {
 #' @param reactableTable Logical. If TRUE (default), returns a Reactable table; otherwise returns a data.frame.
 #'
 #' @return A Reactable table or data.frame of database sources.
-#'
+#' @export 
 #' @examples
 #' # getDbDataSourcesTable(qns)
 getDbDataSourcesTable <- function(qns, reactableTable = TRUE) {
@@ -141,7 +143,7 @@ getDbDataSourcesTable <- function(qns, reactableTable = TRUE) {
 #' @param cohortDefinitionId2 Comparator cohort definition ID.
 #'
 #' @return A data.frame with co-occurrence covariate data.
-#'
+#' @export 
 #' @examples
 #' # getCoOccurenceTableData(qns, ...)
 getCoOccurenceTableData <- function(qns,
@@ -246,7 +248,7 @@ getCoOccurenceTableData <- function(qns,
 #' @param counts Logical. Whether to include counts (default TRUE).
 #'
 #' @return A data.frame of cohort definitions and counts.
-#'
+#' @export 
 #' @examples
 #' # getCohortDefinitionsTable(qns, databaseId = "CCAE")
 getCohortDefinitionsTable <- function(qns, databaseId, counts = TRUE) {
@@ -280,7 +282,7 @@ getCohortDefinitionsTable <- function(qns, databaseId, counts = TRUE) {
 #' @param cohortDefinitionId2 Comparator cohort definition ID.
 #'
 #' @return A data.frame with covariate means and std. differences.
-#'
+#' @export 
 #' @examples
 #' # getPairwiseCovariateData(qns, "CCAE", 101, 202)
 getPairwiseCovariateData <- function(qns, databaseId, cohortDefinitionId1, cohortDefinitionId2) {
@@ -355,7 +357,7 @@ getPairwiseCovariateData <- function(qns, databaseId, cohortDefinitionId1, cohor
 #' @param targetCohortId Integer or character. The target cohort definition ID.
 #' @param weights optional named vector of numeric weights Demographics, "Medical history" "Presentation" "prior meds" "visit context"
 #' with numeric values to adjust
-#'
+#' @export 
 #' @return A data.frame with similarity scores.
 #'
 #' @examples
@@ -480,7 +482,7 @@ getCohortSimilarityScores <- function(qns, targetCohortId, weights = NULL) {
 #' @param databaseIds Character vector of database IDs.
 #'
 #' @return A data.frame with similarity scores for the specified databases.
-#'
+#' @export 
 #' @examples
 #' # getDatabaseSimilarityScores(qns, 101, c("CCAE", "MDCR"))
 getDatabaseSimilarityScores <- function(qns, targetCohortId, databaseIds) {
@@ -536,7 +538,7 @@ getDatabaseSimilarityScores <- function(qns, targetCohortId, databaseIds) {
 #' @param weights a set of numeric weights > 0 to scale each covariate domain in the cosine similarity calculation (optional)
 #' @param fmtSim  number of signficant figures to format float output
 #' @return A Reactable table or data.frame of cosine similarity values.
-#'
+#' @export 
 #' @examples
 #' # getDbCosineSimilarityTable(qns, 101, 202, "CCAE", TRUE)
 getDbCosineSimilarityTable <- function(qns, targetCohortId, comparatorCohortId, databaseId, weights = NULL, returnReactable = FALSE, fmtSim = "%.3f") {
@@ -641,7 +643,7 @@ getDbCosineSimilarityTable <- function(qns, targetCohortId, comparatorCohortId, 
 #' @param qns A QueryNamespace object.
 #'
 #' @return A data.frame of all database sources.
-#'
+#' @export 
 #' @examples
 #' # getDatabaseSources(qns)
 getDatabaseSources <- function(qns) {
@@ -701,7 +703,7 @@ createResultsQueryNamespace <- function(
 #' @param qns A QueryNamespace object.
 #'
 #' @return A data.frame of cohort definitions with id and name.
-#'
+#' @export 
 #' @examples
 #' \dontrun{
 #' # qns <- createResultsQueryNamespace(...)
@@ -726,7 +728,7 @@ getCohortGeneratorDefinitions <- function(qns) {
 #' @param cohortDefinitionId Cohort definition ID to get counts for.
 #'
 #' @return A data.frame of cohort counts by database.
-#'
+#' @export 
 #' @examples
 #' \dontrun{
 #' # qns <- createResultsQueryNamespace(...)

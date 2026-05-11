@@ -4,7 +4,7 @@
 \alias{getCohortDefinitions}
 \title{Get Cohort Definitions}
 \usage{
-getCohortDefinitions(qns)
+getCohortDefinitions(qns, search = NULL, tag = NULL)
 }
 \arguments{
 \item{qns}{A QueryNamespace object.}
