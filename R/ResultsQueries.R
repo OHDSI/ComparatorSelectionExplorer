@@ -9,7 +9,7 @@
 #' @examples
 #' # qns <- createResultsQueryNamespace(...)
 #' # getCohortDefinitions(qns)
-getCohortDefinitions <- function(qns) {
+getCohortDefinitions <- function(qns, search = NULL, tag = NULL) {
   checkmate::assertClass(qns, "QueryNamespace")
   qns$queryDb("select distinct
                t.cohort_definition_id,
@@ -18,7 +18,13 @@ getCohortDefinitions <- function(qns) {
              from @schema.@cg_cohort_definition t
              left join @schema.@cse_cohort_tag ct on t.cohort_definition_id = ct.cohort_definition_id AND tag = 'ATC'
              where t.cohort_definition_id is not null
-             order by cohort_name")
+             {@search != ''} ? {AND cohort_name ILIKE '@search'}
+             {@tag != ''} ? {AND t.cohort_definition_id IN (
+               SELECT cohort_definition_id FROM @schema.@cse_cohort_tag WHERE tag = '@tag'
+             )}
+             order by cohort_name",
+             search = if (is.null(search)) '' else paste0('%', search, '%'),
+             tag = if (is.null(tag)) '' else tag)
 }
 
 

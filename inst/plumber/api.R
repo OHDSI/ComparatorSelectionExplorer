@@ -1,6 +1,20 @@
 # plumber API endpoint definitions for ComparatorSelectionExplorer
 # Mounted by startComparatorApi()
-# Shared state: qns (QueryNamespace), tablePrefix (character)
+# Shared state: qns (QueryNamespace), tablePrefix (character), isLocalhost (logical)
+
+# Shared error handler: exposes SQL detail only on localhost deployments.
+# On remote hosts the full message is logged server-side and a generic message
+# is returned to the caller to avoid leaking schema/SQL information.
+apiError <- function(res, e, status = 500) {
+  msg <- conditionMessage(e)
+  ParallelLogger::logError(msg)
+  res$status <- status
+  if (isTRUE(isLocalhost)) {
+    list(error = msg)
+  } else {
+    list(error = "Internal server error")
+  }
+}
 
 #* @apiTitle Comparator Selection Explorer API
 #* @apiDescription REST API for searching cohorts and retrieving comparator rankings
@@ -14,7 +28,6 @@ function(res) {
 #* List available data sources
 #* @get /api/databases
 function(req, res) {
-  qns <- req$pr$get_shared("qns")
   tryCatch({
     result <- getDatabaseSources(qns)
     if (nrow(result) == 0) {
@@ -22,10 +35,7 @@ function(req, res) {
       return(list(error = "No databases found"))
     }
     jsonlite::toJSON(result, na = "null")
-  }, error = function(e) {
-    res$status <- 500
-    list(error = conditionMessage(e))
-  })
+  }, error = function(e) apiError(res, e))
 }
 
 #* Search cohorts by name, optionally filtered by tag
@@ -33,30 +43,19 @@ function(req, res) {
 #* @param tag   Optional. Filter cohorts by tag (e.g. "RxNorm", "ATC").
 #* @get /api/cohorts
 function(req, res, q = "", tag = "") {
-  qns <- req$pr$get_shared("qns")
   tryCatch({
-    cohorts <- getCohortDefinitions(qns)
-    if (nrow(cohorts) == 0) {
-      res$status <- 404
-      return(list(error = "No cohorts found"))
-    }
-    if (nchar(q) > 0) {
-      cohorts <- cohorts[grepl(q, cohorts$shortName, ignore.case = TRUE), , drop = FALSE]
-    }
-    if (nchar(tag) > 0) {
-      tagDf <- getCohortTags(qns, cohortIds = cohorts$cohortDefinitionId)
-      cohortIdsWithTag <- tagDf$cohortDefinitionId[tagDf$tag == tag]
-      cohorts <- cohorts[cohorts$cohortDefinitionId %in% cohortIdsWithTag, , drop = FALSE]
-    }
+    # Push name search and tag filter into SQL so the trigram index is used
+    cohorts <- getCohortDefinitions(
+      qns,
+      search = if (nchar(q) > 0) q else NULL,
+      tag    = if (nchar(tag) > 0) tag else NULL
+    )
     if (nrow(cohorts) == 0) {
       res$status <- 404
       return(list(error = "No cohorts match the search criteria"))
     }
     jsonlite::toJSON(cohorts, na = "null")
-  }, error = function(e) {
-    res$status <- 500
-    list(error = conditionMessage(e))
-  })
+  }, error = function(e) apiError(res, e))
 }
 
 #* Get comparator rankings for a target cohort
@@ -70,13 +69,13 @@ function(req, res, q = "", tag = "") {
 #* @param weight_meds     Weight for Prior meds domain (0-100, default: 20)
 #* @param weight_visit    Weight for Visit context domain (0-100, default: 20)
 #* @serializer unboxedJSON
-#* @get /api/cohorts/<id:int>/rankings
+#* @get /api/cohorts/<id:dbl>/rankings
 function(req, res, id, database_ids = "", min_databases = 2,
          comparator_type = "", weight_demo = 20, weight_pres = 20,
          weight_hist = 20, weight_meds = 20, weight_visit = 20) {
-  qns <- req$pr$get_shared("qns")
   tryCatch({
     weights <- c(
+
       Demographics = as.numeric(weight_demo) / 100,
       Presentation = as.numeric(weight_pres) / 100,
       `Medical history` = as.numeric(weight_hist) / 100,
@@ -162,22 +161,29 @@ function(req, res, id, database_ids = "", min_databases = 2,
       totalComparators = nrow(result),
       rankings = result
     ), na = "null")
-  }, error = function(e) {
-    res$status <- 500
-    list(error = conditionMessage(e))
-  })
+  }, error = function(e) apiError(res, e))
 }
 
 #* Compare two cohorts in a specific database (per-domain similarity)
 #* @param id1         First cohort definition ID (target)
 #* @param id2         Second cohort definition ID (comparator)
-#* @param database_id Database ID to compare within
+#* @param database_id Database ID to compare within. If omitted, the first database that has data for this pair is used.
 #* @serializer unboxedJSON
-#* @get /api/cohorts/<id1:int>/compare/<id2:int>
+#* @get /api/cohorts/<id1:dbl>/compare/<id2:dbl>
 function(req, res, id1, id2, database_id = "") {
-  qns <- req$pr$get_shared("qns")
   tryCatch({
-    db_id <- if (nchar(database_id) > 0) database_id else NULL
+    db_id <- if (nchar(database_id) > 0) as.numeric(database_id) else NULL
+
+    # getDbCosineSimilarityTable requires a concrete database_id.
+    # When none is supplied, resolve it from the similarity score table.
+    if (is.null(db_id)) {
+      available <- getDatabaseSources(qns)
+      if (is.null(available) || nrow(available) == 0) {
+        res$status <- 404
+        return(list(error = "No databases found"))
+      }
+      db_id <- available$databaseId[1]
+    }
 
     detail <- getDbCosineSimilarityTable(
       qns,
@@ -196,11 +202,8 @@ function(req, res, id1, id2, database_id = "") {
     jsonlite::toJSON(list(
       targetCohortId = id1,
       comparatorCohortId = id2,
-      databaseId = if (is.null(db_id)) "all" else db_id,
+      databaseId = db_id,
       domainScores = detail
     ), na = "null")
-  }, error = function(e) {
-    res$status <- 500
-    list(error = conditionMessage(e))
-  })
+  }, error = function(e) apiError(res, e))
 }

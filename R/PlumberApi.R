@@ -19,10 +19,10 @@
 #' startComparatorApi(connectionDetails, "results_schema", tablePrefix = "cse_")
 #' }
 startComparatorApi <- function(connectionDetails,
-                                resultsSchema,
-                                tablePrefix = "",
-                                port = 8080,
-                                host = "127.0.0.1") {
+                               resultsSchema,
+                               tablePrefix = "",
+                               port = 8080,
+                               host = "127.0.0.1") {
   if (!requireNamespace("plumber", quietly = TRUE)) {
     stop("The 'plumber' package is required to run the API. Install with: install.packages(\"plumber\")", call. = FALSE)
   }
@@ -34,13 +34,18 @@ startComparatorApi <- function(connectionDetails,
   )
 
   apiPath <- system.file("plumber", "api.R", package = "ComparatorSelectionExplorer")
-  pr <- plumber::plumb(apiPath)
-  pr$set_shared("qns", qns)
-  pr$set_shared("tablePrefix", tablePrefix)
 
-  pr$registerHook("exit", function() {
-    qns$closeConnection()
-  })
+  # Inject shared state via the envir parameter on Plumber$new().
+  # plumb() does not expose envir, but Plumber$new() does; route handlers in
+  # api.R reference qns and tablePrefix via lexical scoping in that environment.
+  apiEnv <- new.env(parent = globalenv())
+  apiEnv$qns <- qns
+  apiEnv$tablePrefix <- tablePrefix
+  apiEnv$isLocalhost <- host %in% c("127.0.0.1", "localhost", "::1")
+
+  pr <- plumber::Plumber$new(apiPath, envir = apiEnv)
+
+  on.exit(qns$closeConnection(), add = TRUE)
 
   plumber::pr_run(pr, host = host, port = port)
 }
