@@ -43,7 +43,7 @@ exportResults <- function(executionSettings = NULL, ...) {
   }
 
   if (!dir.exists(executionSettings$exportDir)) {
-    dir.create(executionSettings$exportDir)
+    dir.create(executionSettings$exportDir, recursive = TRUE)
   }
 
   exportResultsFun <- function(data, position, csvFilename, addDbId = FALSE, ...) {
