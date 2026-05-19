@@ -84,7 +84,7 @@ cohortTagsToDataFrame <- function(cohortTags) {
   for (tagName in names(cohortTags)) {
     cohortIds <- cohortTags[[tagName]]
     tagsList[[tagName]] <- data.frame(
-      cohortDefinitionId = as.integer(cohortIds),
+      cohortDefinitionId = as.numeric(cohortIds),
       tag = tagName,
       stringsAsFactors = FALSE
     )
