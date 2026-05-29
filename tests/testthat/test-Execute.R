@@ -1,4 +1,5 @@
 test_that("Execution", {
+  skip_on_cran()
   connection <- DatabaseConnector::connect(connectionDetails)
   on.exit(DatabaseConnector::disconnect(connection))
   addFakeAtcVocab(connection)

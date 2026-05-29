@@ -1,3 +1,5 @@
+skip_on_cran()
+
 source("setup-synthetic-data.R")
 createSyntheticTestDb("test_db/test_cse.db", tablePrefix = "test_")
 

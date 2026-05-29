@@ -1,3 +1,5 @@
+skip_on_cran()
+
 if (dir.exists(Sys.getenv("DATABASECONNECTOR_JAR_FOLDER"))) {
   jdbcDriverFolder <- Sys.getenv("DATABASECONNECTOR_JAR_FOLDER")
 } else {
@@ -36,7 +38,6 @@ if (!(Sys.getenv("CDM5_POSTGRESQL_USER") == "" &
 }
 
 test_that("Results creation and upload works on postgres", {
-  skip_on_cran()
   skip_if_offline()
   skip_if(Sys.getenv("CDM5_POSTGRESQL_SERVER") == "")
   withr::local_options(list(vroom.show_col_types = FALSE))
