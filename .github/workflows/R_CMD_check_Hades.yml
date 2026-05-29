@@ -23,7 +23,7 @@ jobs:
         config:
           - {os: windows-latest, r: 'release', rspm: "https://cloud.r-project.org"}
           - {os: macOS-latest, r: 'release', rspm: "https://cloud.r-project.org"}
-          - {os: ubuntu-22.04, r: 'release', rspm: "https://packagemanager.posit.co/cran/__linux__/jammy/latest"}
+          - {os: ubuntu-latest, r: 'release', rspm: "https://packagemanager.posit.co/cran/__linux__/noble/latest"}
 
     env:
       GITHUB_PAT: ${{ secrets.GH_TOKEN }}
@@ -78,12 +78,13 @@ jobs:
       - name: Install system requirements
         if: runner.os == 'Linux'
         run: |
+          UBUNTU_VER=$(source /etc/os-release && echo "$VERSION_ID")
           sudo apt-get install -y libssh-dev
           Rscript -e 'install.packages("remotes")'
           while read -r cmd
           do
             eval sudo $cmd
-          done < <(Rscript -e 'writeLines(remotes::system_requirements("ubuntu", "22.04"))')
+          done < <(Rscript -e "writeLines(remotes::system_requirements('ubuntu', '${UBUNTU_VER}'))")
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
