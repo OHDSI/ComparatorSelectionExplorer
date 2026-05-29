@@ -18,23 +18,51 @@ This intends to be a brief guide on usage or the comparator selection explorer
 
 ## Creating CDM settings
 
-```{r}
+```{r, eval = FALSE}
+library(ComparatorSelectionExplorer)
 
+# Construct settings for your CDM and results schema.
+executionSettings <- createExecutionSettings(
+  connectionDetails = connectionDetails,
+  cdmDatabaseSchema = "cdm_schema",
+  vocabularyDatabaseSchema = "cdm_schema",
+  resultsDatabaseSchema = "results_schema",
+  cohortTable = "cse_cohort"
+)
 ```
 
 ## Executing
 
-```{r}
-
+```{r, eval = FALSE}
+# Run cohort generation, similarity calculations, and export.
+execute(executionSettings)
 ```
 
 ## Running using indication subsets
 
-## Creating Results Database Schema and uploading data
-```{r}
+You can define cohort tags and subset logic in `createExecutionSettings()`
+to limit execution to specific indication families.
 
+## Creating Results Database Schema and uploading data
+```{r, eval = FALSE}
+# Create (or migrate) the destination data model.
+createResultsDataModel(
+  connectionDetails = connectionDetails,
+  databaseSchema = "results_schema",
+  tablePrefix = "cse_"
+)
+
+# Upload previously exported results zip.
+uploadResults(
+  connectionDetails = connectionDetails,
+  databaseSchema = "results_schema",
+  zipFileName = "cse_results_main.zip",
+  tablePrefix = "cse_"
+)
 ```
 ## Using the shiny explorer
-```{r}
-
+```{r, eval = FALSE}
+# Create app object and run it.
+app <- createShinyApp(connectionDetails, "results_schema", tablePrefix = "cse_")
+shiny::runApp(app)
 ```

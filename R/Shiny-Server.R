@@ -98,6 +98,23 @@ cohortGeneratorServer <- function(id, qns) {
   })
 }
 
+.assertShinyRuntimeDependencies <- function() {
+  requiredPackages <- c("shiny", "shinydashboard", "shinycssloaders", "plotly", "reactable")
+  installed <- vapply(requiredPackages, requireNamespace, FUN.VALUE = logical(1), quietly = TRUE)
+  missingPackages <- requiredPackages[!installed]
+
+  if (length(missingPackages) > 0) {
+    stop(
+      paste0(
+        "createShinyApp() requires optional packages that are not installed: ",
+        paste(missingPackages, collapse = ", "),
+        ". Install them to run the Shiny explorer."
+      ),
+      call. = FALSE
+    )
+  }
+}
+
 comparatorSelectionAppModuleServer <- function(id, qns, resultsSchema, tablePrefix) {
 
   # decimal formatters
@@ -940,6 +957,7 @@ comparatorSelectionAppModuleServer <- function(id, qns, resultsSchema, tablePref
 #' @param connectionDetails DatabaseConnector connection details object.
 #' @param resultsSchema Character. Results database schema.
 #' @param tablePrefix Character. Optional table prefix for results tables. Default is "".
+#' @param usePooledConnection Logical. Use pooled DB connections for app sessions. Default is TRUE.
 #' @param ... additional parameters to pass to shiny::shinyApp
 #' @return A Shiny app object (invisibly; called for its side effect of launching the app).
 #' @export
@@ -947,9 +965,14 @@ comparatorSelectionAppModuleServer <- function(id, qns, resultsSchema, tablePref
 #' \dontrun{
 #' createShinyApp(connectionDetails, "results_schema", tablePrefix = "myPrefix_")
 #' }
-createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix = "", ...) {
+createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix = "", usePooledConnection = TRUE, ...) {
+  .assertShinyRuntimeDependencies()
 
-  qns <- createResultsQueryNamespace(connectionDetails = connectionDetails, resultsSchema = resultsSchema, tablePrefix = tablePrefix, usePooledConnection = TRUE, ...)
+  qns <- createResultsQueryNamespace(connectionDetails = connectionDetails,
+                                     resultsSchema = resultsSchema,
+                                     tablePrefix = tablePrefix,
+                                     usePooledConnection = usePooledConnection,
+                                     ...)
   ui <- shiny::fluidPage(
     comparatorSelectionUi("main")
   )
@@ -964,6 +987,8 @@ createShinyApp <- function(connectionDetails, resultsSchema, tablePrefix = "", .
       qns$closeConnection()
     })
   }, ...)
+
+  attr(app, "queryNamespace") <- qns
 
 
   return(invisible(app))

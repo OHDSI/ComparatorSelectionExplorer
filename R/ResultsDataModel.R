@@ -129,35 +129,67 @@ uploadResults <- function(connectionDetails,
     connection <- DatabaseConnector::connect(connectionDetails)
     on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
 
-    # Covariate types to create as subpartitions
-    covariateTypes <- c("average", "Medical history", "Presentation", "Demographics", "prior meds", "visit context", 'Co-occurrence')
-
     # Create top-level partitions per database_id
     sqlTop <- "
-      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_id
+      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_partition_suffix
       PARTITION OF @database_schema.@table_prefixcse_cosine_similarity_score
       FOR VALUES IN (@database_id)
       PARTITION BY LIST (covariate_type);
 
-      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_covariate_mean_@database_id
+      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_covariate_mean_@database_partition_suffix
       PARTITION OF @database_schema.@table_prefixcse_covariate_mean
       FOR VALUES IN (@database_id);
     "
+
+    sqlSub <- "
+      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_partition_suffix_@covariate_partition_suffix
+      PARTITION OF @database_schema.@table_prefixcse_cosine_similarity_@database_partition_suffix
+      FOR VALUES IN ('@covariate_type');
+    "
+
     sourceInfo <- readr::read_csv(
       file.path(importFilePath, "cse_cdm_source_info.csv"),
-      show_col_types = FALSE
+      show_col_types = FALSE,
+      col_types = readr::cols(.default = "c")
     )
+    cosineSimilarity <- readr::read_csv(
+      file.path(importFilePath, "cse_cosine_similarity_score.csv"),
+      show_col_types = FALSE,
+      col_types = readr::cols(.default = "c")
+    )
+
     databaseIds <- unique(sourceInfo$database_id)
+    covariateTypes <- unique(cosineSimilarity$covariate_type)
 
     for (databaseId in databaseIds) {
+      databasePartitionSuffix <- tolower(gsub("[^a-zA-Z0-9]+", "_", as.character(databaseId)))
+
       # Create top-level partitions
       DatabaseConnector::renderTranslateExecuteSql(
         connection,
         sqlTop,
         database_schema = databaseSchema,
         database_id = databaseId,
-        table_prefix = tablePrefix
+        table_prefix = tablePrefix,
+        database_partition_suffix = databasePartitionSuffix
       )
+
+      # Create covariate-type partitions for each database partition
+      for (covariateType in covariateTypes) {
+        covariateTypeValue <- as.character(covariateType)
+        covariateTypeEscaped <- gsub("'", "''", covariateTypeValue)
+        covariatePartitionSuffix <- tolower(gsub("[^a-zA-Z0-9]+", "_", covariateTypeValue))
+
+        DatabaseConnector::renderTranslateExecuteSql(
+          connection,
+          sqlSub,
+          database_schema = databaseSchema,
+          table_prefix = tablePrefix,
+          database_partition_suffix = databasePartitionSuffix,
+          covariate_partition_suffix = covariatePartitionSuffix,
+          covariate_type = covariateTypeEscaped
+        )
+      }
     }
   }
 

@@ -66,12 +66,16 @@ test_that("Execution", {
   resultsConnectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "sqlite",
                                                                          server = "test.sqlite")
   on.exit(unlink("test.sqlite"), add = TRUE)
-  createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = "cse_")
+  suppressWarnings(
+    createResultsDataModel(resultsConnectionDetails, "main", tablePrefix = "cse_")
+  )
 
-  uploadResults(connectionDetails = resultsConnectionDetails,
-                databaseSchema = "main",
-                zipFileName = executionSettings$exportZipFile,
-                forceOverWriteOfSpecifications = FALSE,
-                purgeSiteDataBeforeUploading = FALSE,
-                tablePrefix = "cse_")
+  suppressWarnings(
+    uploadResults(connectionDetails = resultsConnectionDetails,
+                  databaseSchema = "main",
+                  zipFileName = executionSettings$exportZipFile,
+                  forceOverWriteOfSpecifications = FALSE,
+                  purgeSiteDataBeforeUploading = FALSE,
+                  tablePrefix = "cse_")
+  )
 })

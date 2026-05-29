@@ -15,7 +15,7 @@
 # limitations under the License.
 
 .zipResults <- function(executionSettings) {
-  message("Creating zip file ", executionSettings$exportZipFile)
+  ParallelLogger::logInfo("Creating zip file ", executionSettings$exportZipFile)
   pwd <- getwd()
   on.exit(setwd(pwd))
   setwd(executionSettings$exportDir)
