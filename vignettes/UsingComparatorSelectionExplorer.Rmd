@@ -16,53 +16,114 @@ vignette: >
 
 This intends to be a brief guide on usage or the comparator selection explorer
 
-## Creating CDM settings
+ComparatorSelectionExplorer runs three main steps:
+
+1. Generate or load exposure/outcome cohorts.
+2. Compute covariate prevalence summaries and cosine similarity scores.
+3. Export results and optionally explore them in the Shiny app or through the API.
+
+This vignette shows a reproducible development workflow using Eunomia as the CDM source.
+
+## Create a Eunomia-backed setup
+
+The following example uses Eunomia's synthetic CDM to make local testing and
+package evaluation reproducible.
 
 ```{r, eval = FALSE}
 library(ComparatorSelectionExplorer)
+library(Eunomia)
+library(CohortGenerator)
 
-# Construct settings for your CDM and results schema.
-executionSettings <- createExecutionSettings(
-  connectionDetails = connectionDetails,
-  cdmDatabaseSchema = "cdm_schema",
-  vocabularyDatabaseSchema = "cdm_schema",
-  resultsDatabaseSchema = "results_schema",
-  cohortTable = "cse_cohort"
+# Reproducible local CDM connection.
+connectionDetails <- Eunomia::getEunomiaConnectionDetails()
+
+# Example cohort set shipped with CohortGenerator.
+cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(
+  settingsFileName = "Cohorts.csv",
+  jsonFolder = "cohorts",
+  sqlFolder = "sql/sql_server"
 )
 ```
 
-## Executing
+## Define cohort tag groups
+
+Tag groups are configured with `cohortTags` as a named list of cohort IDs.
+These tags constrain cosine similarity calculation.
+
+- Cohorts that share at least one tag are compared.
+- Cohorts with no shared tag are not compared.
+- If `cohortTags = NULL`, similarity is computed across all eligible cohorts.
 
 ```{r, eval = FALSE}
-# Run cohort generation, similarity calculations, and export.
+# Example IDs must exist in your cohortDefinitionSet.
+# Replace with IDs relevant to your study.
+cohortTags <- list(
+  nsaid = c(1, 2, 3),
+  gi_risk = c(4, 5, 6),
+  cardio_risk = c(7, 8)
+)
+```
+
+## Create execution settings
+
+```{r, eval = FALSE}
+# Settings object passed to execute(), exportResults(), and related helpers.
+executionSettings <- createExecutionSettings(
+  connectionDetails = connectionDetails,
+  cdmDatabaseSchema = "main",
+  vocabularyDatabaseSchema = "main",
+  resultsDatabaseSchema = "main",
+  cohortDatabaseSchema = "main",
+  cohortTable = "cse_cohort",
+  cohortDefinitionSet = cohortDefinitionSet,
+  cohortTags = cohortTags,
+  minExposureSize = 1000,
+  exportZipFile = file.path(tempdir(), "cse_results_main.zip")
+)
+```
+
+## Execute the workflow
+
+```{r, eval = FALSE}
+# Runs cohort generation, feature extraction, cosine similarity, and export.
 execute(executionSettings)
 ```
 
-## Running using indication subsets
+## Create or migrate results tables and upload
 
-You can define cohort tags and subset logic in `createExecutionSettings()`
-to limit execution to specific indication families.
+Use these helpers when loading exported zip results into a destination schema.
 
-## Creating Results Database Schema and uploading data
 ```{r, eval = FALSE}
-# Create (or migrate) the destination data model.
+# Create or migrate package results tables.
 createResultsDataModel(
   connectionDetails = connectionDetails,
-  databaseSchema = "results_schema",
+  databaseSchema = "main",
   tablePrefix = "cse_"
 )
 
-# Upload previously exported results zip.
+# Upload a previously exported zip file.
 uploadResults(
   connectionDetails = connectionDetails,
-  databaseSchema = "results_schema",
-  zipFileName = "cse_results_main.zip",
+  databaseSchema = "main",
+  zipFileName = executionSettings$exportZipFile,
   tablePrefix = "cse_"
 )
 ```
-## Using the shiny explorer
+
+## Explore results in Shiny
+
 ```{r, eval = FALSE}
-# Create app object and run it.
-app <- createShinyApp(connectionDetails, "results_schema", tablePrefix = "cse_")
+# Launch UI against populated results tables.
+app <- createShinyApp(connectionDetails, "main", tablePrefix = "cse_")
 shiny::runApp(app)
 ```
+
+## Summary
+
+For reproducible local usage:
+
+1. Use Eunomia as the CDM source.
+2. Build `executionSettings` with a cohort definition set and optional `cohortTags`.
+3. Run `execute()` to produce similarity outputs.
+4. Use `createResultsDataModel()` and `uploadResults()` for loading/export workflows.
+5. Use `createShinyApp()` (or API endpoints) for interactive exploration.
