@@ -1,11 +1,12 @@
 skip_on_cran()
 
 source("setup-synthetic-data.R")
-createSyntheticTestDb("test_db/test_cse.db", tablePrefix = "test_")
+dbPath <- tempfile(pattern = "test_cse_api_client_", tmpdir = "test_db", fileext = ".db")
+createSyntheticTestDb(dbPath, tablePrefix = "test_")
 
 connectionDetails <- DatabaseConnector::createConnectionDetails(
   dbms = "duckdb",
-  server = "test_db/test_cse.db"
+  server = dbPath
 )
 
 qns <- createResultsQueryNamespace(connectionDetails, "main", tablePrefix = "test_")

@@ -1,7 +1,8 @@
 skip_on_cran()
 
 source("setup-synthetic-data.R")
-createSyntheticTestDb("test_db/test_cse.db", tablePrefix = "test_")
+dbPath <- tempfile(pattern = "test_cse_shiny_server_", tmpdir = "test_db", fileext = ".db")
+createSyntheticTestDb(dbPath, tablePrefix = "test_")
 
 skip_if_not_installed("shiny")
 skip_if_not_installed("shinydashboard")
@@ -12,7 +13,7 @@ skip_if_not_installed("reactable")
 test_that("launchShinyApp launches app without error", {
   connectionDetails <- DatabaseConnector::createConnectionDetails(
     dbms = "duckdb",
-    server = "test_db/test_cse.db"
+    server = dbPath
   )
   resultsSchema <- "main"
   tablePrefix <- "test_"
@@ -24,7 +25,7 @@ test_that("launchShinyApp launches app without error", {
 test_that("comparatorSelectionAppModuleServer registers outputs", {
   connectionDetails <- DatabaseConnector::createConnectionDetails(
     dbms = "duckdb",
-    server = "test_db/test_cse.db"
+    server = dbPath
   )
   qns <- createResultsQueryNamespace(connectionDetails, "main", tablePrefix = "test_")
   on.exit(qns$closeConnection(), add = TRUE)
