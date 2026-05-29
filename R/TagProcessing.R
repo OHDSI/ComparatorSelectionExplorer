@@ -74,7 +74,7 @@ flattenCohortTags <- function(cohortTags) {
 #' @keywords internal
 cohortTagsToDataFrame <- function(cohortTags) {
   if (is.null(cohortTags)) {
-    return(data.frame(cohortDefinitionId = integer(0), tag = character(0)))
+    return(data.frame(cohortDefinitionId = numeric(0), tag = character(0)))
   }
   
   validateCohortTags(cohortTags)
