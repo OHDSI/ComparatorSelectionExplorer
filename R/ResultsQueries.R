@@ -3,6 +3,8 @@
 #' Queries the database for available cohort definitions.
 #'
 #' @param qns A QueryNamespace object.
+#' @param search Optional string used to filter cohort names.
+#' @param tag Optional string used to restrict cohorts to a specific tag.
 #'
 #' @return A data.frame of cohort definitions.
 #' @export 

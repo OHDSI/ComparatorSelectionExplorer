@@ -11,3 +11,5 @@ inst/shiny/rsconnect/
 errorReportSql.txt
 postgresql-*.jar
 cse-execution-log-main.txt
+/doc/
+/Meta/

@@ -8,6 +8,10 @@ getCohortDefinitions(qns, search = NULL, tag = NULL)
 }
 \arguments{
 \item{qns}{A QueryNamespace object.}
+
+\item{search}{Optional string used to filter cohort names.}
+
+\item{tag}{Optional string used to restrict cohorts to a specific tag.}
 }
 \value{
 A data.frame of cohort definitions.

@@ -11,3 +11,5 @@ cse-execution-log-main.txt
 errorReportSql.txt
 .github/
 ^inst/shiny/rsconnect$
+^doc$
+^Meta$

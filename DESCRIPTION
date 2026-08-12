@@ -12,7 +12,7 @@ Authors@R: c(
   )
 Maintainer: Jamie Gilbert <gilbert@ohdsi.org>
 Description: Utility to select comparators for new user cohort population effect estimation.
-License: Apache License
+License: Apache License (== 2.0)
 VignetteBuilder: knitr
 Encoding: UTF-8
 Depends:

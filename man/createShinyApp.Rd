@@ -4,7 +4,13 @@
 \alias{createShinyApp}
 \title{Launch the Comparator Selection Shiny App}
 \usage{
-createShinyApp(connectionDetails, resultsSchema, tablePrefix = "", ...)
+createShinyApp(
+  connectionDetails,
+  resultsSchema,
+  tablePrefix = "",
+  usePooledConnection = TRUE,
+  ...
+)
 }
 \arguments{
 \item{connectionDetails}{DatabaseConnector connection details object.}
@@ -12,6 +18,8 @@ createShinyApp(connectionDetails, resultsSchema, tablePrefix = "", ...)
 \item{resultsSchema}{Character. Results database schema.}
 
 \item{tablePrefix}{Character. Optional table prefix for results tables. Default is "".}
+
+\item{usePooledConnection}{Logical. Use pooled DB connections for app sessions. Default is TRUE.}
 
 \item{...}{additional parameters to pass to shiny::shinyApp}
 }

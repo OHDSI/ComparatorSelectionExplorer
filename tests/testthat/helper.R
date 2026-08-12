@@ -284,11 +284,8 @@ testPlatform <- function(dbmsDetails) {
     cohortDefinitionSet = executionSettings$cohortDefinitionSet,
     outputFolder = platformOutputFolder,
     databaseId = executionSettings$databaseId,
-    incremental = TRUE,
-    incrementalFolder = tempfile()
+    incremental = TRUE
   )
-
-  unlink(executionSettings$exportZipFile)
 
   on.exit({
     unlink(executionSettings$exportZipFile)
@@ -345,8 +342,7 @@ createTestDb <- function(resultsConnectionDetails, tablePrefix, resultsTestSchem
     cohortDefinitionSet = executionSettings$cohortDefinitionSet,
     outputFolder = cgResFolder,
     databaseId = executionSettings$databaseId,
-    incremental = TRUE,
-    incrementalFolder = tempfile()
+    incremental = TRUE
   )
 
   CohortGenerator::createResultsDataModel(resultsConnectionDetails, resultsTestSchema, tablePrefix = tablePrefix)
@@ -355,8 +351,6 @@ createTestDb <- function(resultsConnectionDetails, tablePrefix, resultsTestSchem
                                  tablePrefix = tablePrefix,
                                  resultsFolder = cgResFolder,
                                  purgeSiteDataBeforeUploading = FALSE)
-
-  unlink(executionSettings$exportZipFile)
 
   on.exit({
     unlink(executionSettings$exportZipFile)

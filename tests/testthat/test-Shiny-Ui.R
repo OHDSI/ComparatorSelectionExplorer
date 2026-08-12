@@ -1,3 +1,9 @@
+skip_if_not_installed("shiny")
+skip_if_not_installed("shinydashboard")
+skip_if_not_installed("shinycssloaders")
+skip_if_not_installed("plotly")
+skip_if_not_installed("reactable")
+
 test_that("comparatorSelectionUi renders expected elements", {
   ui <- ComparatorSelectionExplorer:::comparatorSelectionUi("test")
   html <- as.character(ui)

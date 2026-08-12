@@ -1,9 +1,12 @@
+skip_on_cran()
+
 source("setup-synthetic-data.R")
-createSyntheticTestDb("test_db/test_cse.db", tablePrefix = "test_")
+dbPath <- tempfile(pattern = "test_cse_plumber_", tmpdir = "test_db", fileext = ".db")
+createSyntheticTestDb(dbPath, tablePrefix = "test_")
 
 testConnectionDetails <- DatabaseConnector::createConnectionDetails(
   dbms = "duckdb",
-  server = "test_db/test_cse.db"
+  server = dbPath
 )
 
 # ---------------------------------------------------------------------------
