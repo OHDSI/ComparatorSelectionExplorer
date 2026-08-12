@@ -6,7 +6,7 @@
 \alias{ComparatorSelectionExplorer-package}
 \title{ComparatorSelectionExplorer: OHDSI Comparator Selection Explorer}
 \description{
-Comparator Selection Explorer package, generate cosine similarity scores for pairs of exposure cohorts
+Utility to select comparators for new user cohort population effect estimation.
 }
 \seealso{
 Useful links:

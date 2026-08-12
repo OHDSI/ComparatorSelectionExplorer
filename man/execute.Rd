@@ -13,6 +13,5 @@ execute(executionSettings = NULL, ...)
 }
 \description{
 Execute data generation step on a given OMOP CDM - connect, create cohorts and generate data
-
 Data can be transferred with the OhdsiSharing package
 }

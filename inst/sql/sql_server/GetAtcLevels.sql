@@ -1,20 +1,22 @@
 with classes as (
 
     select
-        cd.cohort_definition_id,
+        cd.concept_id,
         ca.ancestor_concept_id as atc_concept_id
-    from  @results_database_schema.@table cd
-    join @vocabulary_database_schema.concept_ancestor ca
+    from @vocabulary_database_schema.concept cd
+    inner join @vocabulary_database_schema.concept_ancestor ca
         on cd.concept_id = ca.descendant_concept_id
-    join @vocabulary_database_schema.concept c
+    inner join @vocabulary_database_schema.concept c
         on ca.ancestor_concept_id = c.concept_id and c.vocabulary_id = 'ATC'
+
+     WHERE cd.vocabulary_id = 'RxNorm'
 ),
 
 classmates as (
 
     select
-        c1.cohort_definition_id as cohort_definition_id_1,
-        c2.cohort_definition_id as cohort_definition_id_2,
+        c1.concept_id as concept_id_1,
+        c2.concept_id as concept_id_2,
         c1.atc_concept_id,
         case
             when c.concept_class_id = 'ATC 1st' then 1
@@ -25,16 +27,16 @@ classmates as (
             else null
         end as atc_level
     from classes c1
-    join classes c2
+    inner join classes c2
         on c1.atc_concept_id = c2.atc_concept_id and
-           c1.cohort_definition_id <> c2.cohort_definition_id
+           c1.concept_id <> c2.concept_id
     left join @vocabulary_database_schema.concept as c
         on c1.atc_concept_id = c.concept_id
 )
 
 select
-    cohort_definition_id_1,
-    cohort_definition_id_2,
+    concept_id_1 as drug_concept_id_1,
+    concept_id_2 as drug_concept_id_2,
     max(atc_level) as level_closest_atc_relation,
     min(atc_level) as level_furthest_atc_relation,
     case
@@ -58,4 +60,4 @@ select
         else 0
     end as atc_5_related
 from classmates
-group by cohort_definition_id_1, cohort_definition_id_2
+group by concept_id_1, concept_id_2

@@ -5,40 +5,38 @@
 \title{createExecutionSettings}
 \usage{
 createExecutionSettings(
-  connectionDetails,
+  connectionDetails = NULL,
   connection = NULL,
   databaseName = NULL,
   databaseId = NULL,
   cdmDatabaseSchema,
   vocabularyDatabaseSchema = cdmDatabaseSchema,
-  incrementalFolder = paste0("incremental_", cdmDatabaseSchema),
   resultsDatabaseSchema,
   cohortDatabaseSchema = resultsDatabaseSchema,
-  cohortTable = "cse_cohort",
-  tempEmulationSchema = getOption("tempEmulationSchema"),
+  cohortTable,
+  tempEmulationSchema = getOption("sqlRenderTempEmulationSchema"),
   cohortDefinitionSet = NULL,
-  indicationCohortSubsetDefintions = list(),
+  cohortTags = NULL,
   targetCohortIds = NULL,
   cohortCountTable = "cse_cohort_count",
   cohortDefinitionTable = "cse_cohort_definition",
   covariateDefTable = "cse_covariate_ref",
   covariateMeansTable = "cse_covariate_means",
   cosineSimStratifiedTable = "cse_cosine_sim",
+  exportAtcLevels = FALSE,
   minExposureSize = 1000,
   logFileLocation = paste0("cse-execution-log-", cdmDatabaseSchema, ".txt"),
   exportDir = tempfile(),
   removeExportDir = TRUE,
-  generateCohortDefinitionSet = FALSE,
   exportZipFile = file.path(normalizePath(getwd()), paste0("cse_results_",
-    cdmDatabaseSchema, ".zip")),
-  .callbackFun = NULL
+    cdmDatabaseSchema, ".zip"))
 )
 }
 \arguments{
 \item{connectionDetails}{DatabaseConnector::connectionDetails instance}
 
-\item{connection}{DatabaseConnector::connection (defaults to null). Use for persistent storage of
-reference}
+\item{connection}{DatabaseConnector::connection (defaults to null). Use for
+persistent storage of reference}
 
 \item{databaseName}{Database identifier (string)}
 
@@ -48,26 +46,29 @@ reference}
 
 \item{vocabularyDatabaseSchema}{standard vocabulary database schema}
 
-\item{incrementalFolder}{folder for storage of incremental results for cohort generation}
-
-\item{resultsDatabaseSchema}{String Database schema - where similarity scores are stored}
+\item{resultsDatabaseSchema}{String Database schema - where similarity scores are
+stored}
 
 \item{cohortDatabaseSchema}{String Database schema - where cohort table is created}
 
-\item{cohortTable}{(optional) cohort table}
+\item{cohortTable}{cohort table for exposures}
 
-\item{tempEmulationSchema}{String DatabaseSchema - temp emulation schema for oracle, bigquery}
+\item{tempEmulationSchema}{String DatabaseSchema - temp emulation schema for oracle,
+bigquery}
 
-\item{cohortDefinitionSet}{CohortGenerator::cohortDefinitionSet - intended to be custom exposures or
-indication cohorts}
+\item{cohortDefinitionSet}{CohortGenerator::cohortDefinitionSet - intended to be
+custom exposures or indication cohorts}
 
-\item{indicationCohortSubsetDefintions}{List of CohortGenerator::cohortSubsetDefinitions these subsets will be applied
-to all cohorts used in this study. See cohortGenerator package documentation for
-detailed instructions on creating cohort subsets}
+\item{cohortTags}{(optional) Named list where names are tag names and values
+are integer vectors of cohort IDs. Cosine similarity will
+be calculated only within tag groups (cohorts sharing at
+least one tag). Example: list("exposure" = c(1,2,3),
+"outcome" = c(4,5)). If NULL, all cohorts are compared.}
 
-\item{targetCohortIds}{(optional) Integer ids for cohorts to limit cosine similarity calculation to
-Must be a valid RxNorm ingredient, ATC class or included in the
-cohortDefinitionSet}
+\item{targetCohortIds}{(optional, deprecated) Integer ids for cohorts to limit
+cosine similarity calculation to. Use cohortTags instead.
+Must be a valid RxNorm ingredient, ATC class or included
+in the cohortDefinitionSet}
 
 \item{cohortCountTable}{(optional) count tabls}
 
@@ -77,22 +78,23 @@ cohortDefinitionSet}
 
 \item{covariateMeansTable}{(optional) where covariate means are stored}
 
-\item{cosineSimStratifiedTable}{(optional) where stratified cosine similarity scores are stored}
+\item{cosineSimStratifiedTable}{(optional) where stratified cosine similarity scores are
+stored]}
 
-\item{minExposureSize}{(optional) Minimum number of exposures to be included in cosine similarity
-analysis (defaults to 1000).}
+\item{exportAtcLevels}{(Optional) export ATC levels from vocabulary. Needed by shiny app for some features but very
+large and can be avoided on most runs}
+
+\item{minExposureSize}{(optional) Minimum number of exposures to be included in
+cosine similarity analysis (defaults to 1000).}
 
 \item{logFileLocation}{(optional) Log file location}
 
-\item{exportDir}{(optional) Folder to store results files in before export (default is tempdir)}
+\item{exportDir}{(optional) Folder to store results files in before export
+(default is tempdir)}
 
 \item{removeExportDir}{(optional) remove the export dir after creating zip files?}
 
-\item{generateCohortDefinitionSet}{Boolean - generate the user specified cohortDefinitionSet}
-
 \item{exportZipFile}{Path to zip file output of project}
-
-\item{.callbackFun}{Used internally - an on.exit call for disconnection from db}
 }
 \value{
 executionSettings object

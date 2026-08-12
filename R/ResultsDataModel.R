@@ -1,6 +1,6 @@
-# Copyright 2022 Observational Health Data Sciences and Informatics
+# Copyright 2025 Observational Health Data Sciences and Informatics
 #
-# This file is part of CohortGenerator
+# This file is part of ComparatorSelectionExplorer
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,12 +27,12 @@
 migrateDataModel <- function(connectionDetails, databaseSchema, tablePrefix = "") {
   ParallelLogger::logInfo("Migrating data set")
   migrator <- getDataMigrator(connectionDetails = connectionDetails, databaseSchema = databaseSchema, tablePrefix = tablePrefix)
-  on.exit(migrator$finalize(), add = TRUE)
+  on.exit(migrator$closeConnection(), add = TRUE)
   migrator$executeMigrations()
 
   ParallelLogger::logInfo("Updating version number")
   updateVersionSql <- SqlRender::loadRenderTranslateSql("UpdateVersionNumber.sql",
-                                                        packageName = utils::packageName(),
+                                                         packageName = "ComparatorSelectionExplorer",
                                                         database_schema = databaseSchema,
                                                         table_prefix = tablePrefix,
                                                         dbms = connectionDetails$dbms)
@@ -55,8 +55,9 @@ getDataMigrator <- function(connectionDetails, databaseSchema, tablePrefix = "")
   ResultModelManager::DataMigrationManager$new(connectionDetails = connectionDetails,
                                                databaseSchema = databaseSchema,
                                                tablePrefix = tablePrefix,
+                                               packageTablePrefix = "cse_",
                                                migrationPath = "migrations",
-                                               packageName = utils::packageName())
+                                                packageName = "ComparatorSelectionExplorer")
 }
 
 #' Create the results data model tables on a database server.
@@ -73,61 +74,133 @@ createResultsDataModel <- function(connectionDetails, databaseSchema, tablePrefi
 #'
 #' @export
 getResultsDataModelSpec <- function() {
-  specPath <- system.file("settings", "resultsDataModel.csv", package = utils::packageName())
-  spec <- readr::read_csv(specPath, show_col_types = FALSE)
+  specPath <- system.file("settings", "resultsDataModel.csv", package = "ComparatorSelectionExplorer")
+  spec <- readr::read_csv(specPath, show_col_types = FALSE, col_types = readr::cols(.default = "c"))
   colnames(spec) <- SqlRender::snakeCaseToCamelCase(colnames(spec))
   return(spec)
 }
 
 #' Upload Results
 #' @description
+#' Upload results to a database server from either a zip file or a pre-extracted folder.
 #'
-#' Upload results to database server
+#' @param connectionDetails  DatabaseConnector connection details object
+#' @param databaseSchema     String schema where database schema lives
+#' @param tablePrefix        (Optional) Use if a table prefix is used before table names (e.g. "cd_")
+#' @param zipFileName        Path to zip file containing results (optional if importFilePath is given)
+#' @param importFilePath     Path to already-extracted results folder (optional if zipFileName is given)
+#' @param ...                Additional parameters passed to ResultModelManager::uploadResults
 #'
-#' @param connectionDetails             DatabaseConnector connection details object
-#' @param databaseSchema                String schema where database schema lives
-#' @param tablePrefix                  (Optional) Use if a table prefix is used before table names (e.g. "cd_")
-#' @param zipFileName                  Path to zipFile containing results
-#' @param importFilpath                file path to export zipped results to before upload (optional - default is temporary)
-#' @param ...                          Elipsis  - see ResultModelManager::uploadResults
 #' @export
-uploadResults <- function(connectionDetails, databaseSchema, zipFileName, tablePrefix = "", importFilpath = tempfile(), ...) {
+uploadResults <- function(connectionDetails,
+                           databaseSchema,
+                           zipFileName = NULL,
+                           importFilePath = NULL,
+                           tablePrefix = "",
+                           ...) {
 
-  if (!dir.exists(importFilpath)) {
-    dir.create(importFilpath)
+  # --- Validate inputs ---
+  if (is.null(zipFileName) && is.null(importFilePath)) {
+    stop("You must specify either 'zipFileName' or 'importFilePath'.", call. = FALSE)
   }
 
-  ResultModelManager::unzipResults(zipFileName, importFilpath)
+  # --- If zipFile is provided, unzip into a folder ---
+  if (!is.null(zipFileName)) {
+    if (!file.exists(zipFileName)) {
+      stop("Zip file does not exist: ", zipFileName)
+    }
+    # If no importFilePath specified, create a temp dir
+    if (is.null(importFilePath)) {
+      importFilePath <- tempfile()
+    }
+    if (!dir.exists(importFilePath)) {
+      dir.create(importFilePath, recursive = TRUE)
+    }
+    ResultModelManager::unzipResults(zipFileName, importFilePath)
+  }
 
+  # --- If only folder is provided, ensure it exists ---
+  if (!is.null(importFilePath) && !dir.exists(importFilePath)) {
+    stop("The specified importFilePath does not exist: ", importFilePath)
+  }
+
+  # --- Special handling for PostgreSQL partition creation ---
   if (connectionDetails$dbms == "postgresql") {
-    # this would be much cleaner with a trigger on insert to cdm_source_info table
     connection <- DatabaseConnector::connect(connectionDetails)
     on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
 
-    sql <- "
-    CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcosine_similarity_@database_id
-    PARTITION OF @database_schema.@table_prefixcosine_similarity_score FOR VALUES IN (@database_id);
+    # Create top-level partitions per database_id
+    sqlTop <- "
+      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_partition_suffix
+      PARTITION OF @database_schema.@table_prefixcse_cosine_similarity_score
+      FOR VALUES IN (@database_id)
+      PARTITION BY LIST (covariate_type);
 
-    CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcovariate_mean_@database_id
-    PARTITION OF @database_schema.@table_prefixcovariate_mean FOR VALUES IN (@database_id);
+      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_covariate_mean_@database_partition_suffix
+      PARTITION OF @database_schema.@table_prefixcse_covariate_mean
+      FOR VALUES IN (@database_id);
     "
 
-    sourceInfo <- readr::read_csv(file.path(importFilpath, "cdm_source_info.csv"),
-                                  show_col_types = FALSE)
+    sqlSub <- "
+      CREATE TABLE IF NOT EXISTS @database_schema.@table_prefixcse_cosine_similarity_@database_partition_suffix_@covariate_partition_suffix
+      PARTITION OF @database_schema.@table_prefixcse_cosine_similarity_@database_partition_suffix
+      FOR VALUES IN ('@covariate_type');
+    "
+
+    sourceInfo <- readr::read_csv(
+      file.path(importFilePath, "cse_cdm_source_info.csv"),
+      show_col_types = FALSE,
+      col_types = readr::cols(.default = "c")
+    )
+    cosineSimilarity <- readr::read_csv(
+      file.path(importFilePath, "cse_cosine_similarity_score.csv"),
+      show_col_types = FALSE,
+      col_types = readr::cols(.default = "c")
+    )
+
     databaseIds <- unique(sourceInfo$database_id)
+    covariateTypes <- unique(cosineSimilarity$covariate_type)
 
     for (databaseId in databaseIds) {
-      DatabaseConnector::renderTranslateExecuteSql(connection,
-                                                   sql,
-                                                   database_schema = databaseSchema,
-                                                   database_id = databaseId,
-                                                   table_prefix = tablePrefix)
+      databasePartitionSuffix <- tolower(gsub("[^a-zA-Z0-9]+", "_", as.character(databaseId)))
+
+      # Create top-level partitions
+      DatabaseConnector::renderTranslateExecuteSql(
+        connection,
+        sqlTop,
+        database_schema = databaseSchema,
+        database_id = databaseId,
+        table_prefix = tablePrefix,
+        database_partition_suffix = databasePartitionSuffix
+      )
+
+      # Create covariate-type partitions for each database partition
+      for (covariateType in covariateTypes) {
+        covariateTypeValue <- as.character(covariateType)
+        covariateTypeEscaped <- gsub("'", "''", covariateTypeValue)
+        covariatePartitionSuffix <- tolower(gsub("[^a-zA-Z0-9]+", "_", covariateTypeValue))
+
+        DatabaseConnector::renderTranslateExecuteSql(
+          connection,
+          sqlSub,
+          database_schema = databaseSchema,
+          table_prefix = tablePrefix,
+          database_partition_suffix = databasePartitionSuffix,
+          covariate_partition_suffix = covariatePartitionSuffix,
+          covariate_type = covariateTypeEscaped
+        )
+      }
     }
   }
-  ResultModelManager::uploadResults(connectionDetails = connectionDetails,
-                                    schema = databaseSchema,
-                                    resultsFolder = importFilpath,
-                                    tablePrefix = tablePrefix,
-                                    specifications = getResultsDataModelSpec(),
-                                    ...)
+
+  # --- Upload results ---
+  ResultModelManager::uploadResults(
+    connectionDetails = connectionDetails,
+    schema = databaseSchema,
+    resultsFolder = importFilePath,
+    tablePrefix = tablePrefix,
+    databaseIdentifierFile = "cse_cdm_source_info.csv",
+    specifications = getResultsDataModelSpec(),
+    ...
+  )
 }

@@ -1,6 +1,6 @@
-# Copyright 2022 Observational Health Data Sciences and Informatics
+# Copyright 2025 Observational Health Data Sciences and Informatics
 #
-# This file is part of CohortGenerator
+# This file is part of ComparatorSelectionExplorer
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,24 +15,28 @@
 # limitations under the License.
 
 
-#' @title Execute Package
-#' @description Execute data generation step on a given OMOP CDM - connect, create cohorts and generate data
-#'
+#' @title
+#' Execute Package
+#' @description
+#' Execute data generation step on a given OMOP CDM - connect, create cohorts and generate data
 #' Data can be transferred with the OhdsiSharing package
 #'
-#' @param executionSettings             settings greated with @seealso createExecutionSettings
-#' @param ...                           settings greated with @seealso createExecutionSettings
+#' @param executionSettings   settings greated with @seealso createExecutionSettings
+#' @param ...                 settings greated with @seealso createExecutionSettings
 #' @export
 execute <- function(executionSettings = NULL, ...) {
 
   if (is.null(executionSettings) || missing(executionSettings)) {
-    executionSettings <- createExecutionSettings(..., .callbackFun = on.exit)
+    executionSettings <- createExecutionSettings(...)
   }
 
-  executionSettings <- createCohorts(executionSettings)
   executionSettings <- generateSimilarityScores(executionSettings)
   executionSettings <- exportResults(executionSettings)
 
-  # 3. export results and zip
+  if (isTRUE(executionSettings$connectionInternallyCreated) && !is.null(executionSettings$connection)) {
+    DatabaseConnector::disconnect(executionSettings$connection)
+    executionSettings$connection <- NULL
+  }
+
   invisible(executionSettings)
 }

@@ -1,4 +1,7 @@
 ^renv$
+^sql$
+^extras$
+^docs$
 ^renv\.lock$
 ^.*\.Rproj$
 ^\.Rproj\.user$
@@ -7,3 +10,6 @@ $.log
 cse-execution-log-main.txt
 errorReportSql.txt
 .github/
+^inst/shiny/rsconnect$
+^doc$
+^Meta$
